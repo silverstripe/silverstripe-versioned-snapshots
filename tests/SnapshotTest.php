@@ -12,6 +12,7 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Gallery;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImageJoin;
+use SilverStripe\Versioned\ChangeSetItem;
 
 class SnapshotTest extends FunctionalTest
 {
@@ -26,6 +27,7 @@ class SnapshotTest extends FunctionalTest
         Gallery::class,
         GalleryImage::class,
         GalleryImageJoin::class,
+        ChangeSetItem::class,
     ];
 
     public function testHistoryIncludesOwnedObjects()
@@ -46,8 +48,12 @@ class SnapshotTest extends FunctionalTest
         $a2->write();
         $a2->publishRecursive();
 
-        // Starting point. An entry for draft and publish, plus a snapshot (empty)
-        $this->assertCount(3, $a1->getHistoryIncludingOwned());
+        // Starting point. An entry for draft and publish
+        $historyA1 = 2;
+        $historyA2 = 2;
+
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
+        $this->assertCount($historyA2, $a2->getHistoryIncludingOwned());
 
         /* @var DataObject|SnapshotPublishable $a1Block1 */
         $a1Block1 = new Block(['Title' => 'Block 1 on A1', 'ParentID' => $a1->ID]);
@@ -60,7 +66,8 @@ class SnapshotTest extends FunctionalTest
         //   block2 (draft, new) *
 
         // A new entry for each block added.
-        $this->assertCount(5, $a1->getHistoryIncludingOwned());
+        $historyA1 += 2;
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
 
         /* @var DataObject|SnapshotPublishable $a2Block1 */
         $a2Block1 = new Block(['Title' => 'Block 1 on A2', 'ParentID' => $a2->ID]);
@@ -73,7 +80,8 @@ class SnapshotTest extends FunctionalTest
         //   block1 (draft, new) *
 
         // A new entry for the one block added to the SIBLING.
-        $this->assertCount(4, $a2->getHistoryIncludingOwned());
+        $historyA2 += 1;
+        $this->assertCount($historyA2, $a2->getHistoryIncludingOwned());
 
 
         $a1->Title = 'A1 Block Page -- changed';
@@ -86,7 +94,8 @@ class SnapshotTest extends FunctionalTest
         //   block1 (draft, new)
 
         // A new entry for the modified BlockPage
-        $this->assertCount(6, $a1->getHistoryIncludingOwned());
+        $historyA1 += 1;
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
 
         $a1Block1->Title = 'Block 1 on A1 -- changed';
         $a1Block1->write();
@@ -98,7 +107,8 @@ class SnapshotTest extends FunctionalTest
         //   block1 (draft, new)
 
         // A new entry for the modified Block <- BlockPage
-        $this->assertCount(7, $a1->getHistoryIncludingOwned());
+        $historyA1 += 1;
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
 
         // A1 will publish its two blocks
         $this->assertTrue($a1->hasOwnedModifications());
@@ -112,8 +122,8 @@ class SnapshotTest extends FunctionalTest
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
+                [$a1Block2, ActivityEntry::CREATED],
                 [$a1Block1, ActivityEntry::MODIFIED],
-                [$a1Block2, ActivityEntry::CREATED]
             ]
         );
 
@@ -122,7 +132,8 @@ class SnapshotTest extends FunctionalTest
         $gallery1 = new Gallery(['Title' => 'Gallery 1 on Block 1 on A1', 'BlockID' => $a1Block1->ID]);
         $gallery1->write();
         // A new entry for the Gallery <- Block <- BlockPage
-        $this->assertCount(8, $a1->getHistoryIncludingOwned());
+        $historyA1 += 1;
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
 
         // A1 (draft, modified)
         //   block1 (draft, modified)
@@ -144,8 +155,8 @@ class SnapshotTest extends FunctionalTest
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
-                [$a1Block1, ActivityEntry::MODIFIED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
             ]
         );
@@ -161,7 +172,8 @@ class SnapshotTest extends FunctionalTest
         //   block1 (draft, new)
 
         // A new entry for the modified Gallery <- Block <- BlockPage
-        $this->assertCount(9, $a1->getHistoryIncludingOwned());
+        $historyA1 += 1;
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
 
         // A1 will still publish two blocks and a gallery
         $this->assertTrue($a1->hasOwnedModifications());
@@ -177,8 +189,8 @@ class SnapshotTest extends FunctionalTest
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
-                [$a1Block1, ActivityEntry::MODIFIED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
             ]
@@ -207,8 +219,8 @@ class SnapshotTest extends FunctionalTest
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
-                [$a1Block1, ActivityEntry::MODIFIED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
                 [$galleryItem1, ActivityEntry::ADDED, $gallery1],
@@ -217,7 +229,8 @@ class SnapshotTest extends FunctionalTest
         );
 
         // Two new entries for the new GalleryItem <- Gallery <- Block <- BlockPage
-        $this->assertCount(11, $a1->getHistoryIncludingOwned());
+        $historyA1 += 2;
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
 
         /* @var DataObject|SnapshotPublishable $gallery1a */
         $gallery1a = new Gallery(['Title' => 'Gallery 1 on Block 1 on A2', 'BlockID' => $a2Block1->ID]);
@@ -236,7 +249,8 @@ class SnapshotTest extends FunctionalTest
         //          image1 (draft, new) *
 
         // New gallery, new image
-        $this->assertCount(6, $a2->getHistoryIncludingOwned());
+        $historyA2 += 2;
+        $this->assertCount($historyA2, $a2->getHistoryIncludingOwned());
 
         $this->assertTrue($a2->hasOwnedModifications());
 
@@ -264,8 +278,8 @@ class SnapshotTest extends FunctionalTest
         //   block1 (draft, new)
         //       gallery1a (draft, new)
         //          image1 (draft, modified) *
-
-        $this->assertCount(7, $a2->getHistoryIncludingOwned());
+        $historyA2 += 1;
+        $this->assertCount($historyA2, $a2->getHistoryIncludingOwned());
 
         $this->assertTrue($a2->hasOwnedModifications());
 
@@ -280,8 +294,8 @@ class SnapshotTest extends FunctionalTest
                 [$galleryItem1, ActivityEntry::MODIFIED],
             ]
         );
-
-        $this->assertCount(12, $a1->getHistoryIncludingOwned());
+        $historyA1 += 1;
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
 
         $this->assertTrue($a1->hasOwnedModifications());
 
@@ -291,8 +305,8 @@ class SnapshotTest extends FunctionalTest
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
-                [$a1Block1, ActivityEntry::MODIFIED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
                 [$galleryItem1, ActivityEntry::ADDED, $gallery1],
@@ -304,7 +318,8 @@ class SnapshotTest extends FunctionalTest
         $a1->publishRecursive();
 
         // New new live, new draft versions
-        $this->assertCount(14, $a1->getHistoryIncludingOwned());
+        $historyA1 = 4;
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
 
         $this->assertFalse($a1->hasOwnedModifications());
         $this->assertTrue($a2->hasOwnedModifications());
@@ -320,7 +335,8 @@ class SnapshotTest extends FunctionalTest
         $gallery1->Title = 'Gallery 1 is changed again';
         $gallery1->write();
 
-        $this->assertCount(14, $a1->getHistoryIncludingOwned());
+        $historyA1 += 1;
+        $this->assertCount($historyA1, $a1->getHistoryIncludingOwned());
         $this->assertTrue($a1->hasOwnedModifications());
 
         $activity = $a1->getActivityFeed();
@@ -389,16 +405,19 @@ class SnapshotTest extends FunctionalTest
     {
         $this->assertCount(sizeof($objs), $activity);
         foreach ($activity as $i => $entry) {
-            list ($obj, $action, $owner) = $entry;
+            if (!isset($objs[$i][2])) {
+                $objs[$i][2] = null;
+            }
+            list ($obj, $action, $owner) = $objs[$i];
             $this->assertEquals(
                 SnapshotPublishable::hashObject($obj),
-                SnapshotPublishable::hashObject($activity->Subject)
+                    SnapshotPublishable::hashObject($entry->Subject)
             );
-            $this->assertEquals($action, $activity->Action);
+            $this->assertEquals($action, $entry->Action);
             if ($owner) {
                 $this->assertEquals(
                     SnapshotPublishable::hashObject($owner),
-                    SnapshotPublishable::hashObject($activity->Owner)
+                    SnapshotPublishable::hashObject($entry->Owner)
                 );
             }
         }

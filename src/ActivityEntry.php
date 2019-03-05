@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots;
 
-use SilverStripe\Versioned\Versioned_Version;
 use SilverStripe\View\ArrayData;
 
 class ActivityEntry extends ArrayData
@@ -38,7 +37,7 @@ class ActivityEntry extends ArrayData
         }
 
         return new static([
-            'Subject' => $item,
+            'Subject' => $item->getItem(),
             'Action' => $flag,
             'Owner' => null,
         ]);
