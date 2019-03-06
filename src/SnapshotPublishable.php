@@ -61,33 +61,40 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
+     * @param int $sinceVersion
+     * @return DataList
+     */
+    public function getSnapshots($sinceVersion)
+    {
+        $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
+        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
+
+        $where = [
+            ['ObjectHash = ?' => static::hashObject($this->owner)],
+            ['Version >= ?' => $sinceVersion],
+        ];
+
+        $result = Snapshot::get()
+            ->innerJoin($itemTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
+            ->where($where)
+            ->sort('Created DESC');
+
+        return $result;
+    }
+
+    /**
      * @return DataList
      */
     public function getSnapshotsSinceLastPublish()
     {
         $class = get_class($this->owner);
         $id = $this->owner->ID;
-
         $publishedVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
-        $hash = static::hash($class, $id);
-        $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
-        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
-        $result = Snapshot::get()
-            ->innerJoin($itemTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
-            ->where([
-                // Only snapshots that this record was involved in
-                ['ObjectHash = ?' => $hash],
-                // After it was published
-                ['Version >= ?' => $publishedVersion],
-                // But not snapshots that were instantiated by itself.
-                // Making a change to an intermediate node should only affect its owners' activity,
-                // not its owned nodes.
-                ['OriginHash != ?' => $hash],
-            ])
-            ->sort('Created DESC');
-
-        return $result;
+        return $this->owner->getSnapshots($publishedVersion)
+            ->exclude([
+                'OriginHash' => static::hashObject($this->owner),
+            ]);
     }
 
     /**
@@ -110,7 +117,10 @@ class SnapshotPublishable extends RecursivePublishable
                     // Only get the items that were the subject of a user's action
                     "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
                 )
-                ->sort('Created ASC');
+                ->sort([
+                    "\"$snapshotTable\".\"Created\"" =>  "ASC",
+                    "\"$snapshotTable\".\"ID\"" => "ASC"
+                ]);
 
             return $result;
         }
@@ -300,13 +310,12 @@ class SnapshotPublishable extends RecursivePublishable
         $this->doSnapshot();
     }
 
-    public function createSnapshotItem($publish = false)
+    public function createSnapshotItem()
     {
         $version = Versioned::get_latest_version($this->owner->baseClass(), $this->owner->ID);
         return SnapshotItem::create([
             'ObjectClass' => get_class($this->owner),
             'ObjectID' => $this->owner->ID,
-            'WasPublished' => $publish,
             'WasDraft' => $version->WasDraft,
             'WasDeleted' => $version->WasDeleted,
             'Version' => $version->Version,
@@ -318,8 +327,29 @@ class SnapshotPublishable extends RecursivePublishable
     public function onAfterPublish()
     {
         if ($this->activeSnapshot) {
-            $this->activeSnapshot->Items()->add($this->owner->createSnapshotItem(true));
+            $item = $this->owner->createSnapshotItem();
+            $item->WasPublished = true;
+            $this->activeSnapshot->Items()->add($item);
         }
+    }
+
+    public function onBeforeRevertToLive()
+    {
+        $this->openSnapshot();
+        $this->doSnapshot();
+    }
+
+    /**
+     * Tidy up all the irrelevant snapshot records now that the changes have been reverted.
+     */
+    public function onAfterRevertToLive()
+    {
+        $snapshots = $this->getSnapshots($this->owner->Version)
+            ->filter([
+                'OriginHash' => static::hashObject($this->owner),
+            ]);
+
+        $snapshots->removeAll();
     }
 
     /**

@@ -34,6 +34,10 @@ class Snapshot extends DataObject
 
     private static $default_sort = 'ID ASC';
 
+    private static $cascade_deletes = [
+        'Items',
+    ];
+
     public function canCreate($member = null, $context = [])
     {
         return Permission::checkMember($member, 'CMS_ACCESS_CMSMain');

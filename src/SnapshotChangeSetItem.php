@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots;
 
-
 use SilverStripe\ORM\DataExtension;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\ChangeSetItem;
@@ -28,6 +27,4 @@ class SnapshotChangeSetItem extends DataExtension
             $type = ChangeSetItem::CHANGE_MODIFIED;
         }
     }
-
-
 }

@@ -15,12 +15,14 @@ class ActivityEntry extends ArrayData
 
     const ADDED = 'ADDED';
 
+    const REMOVED = 'REMOVED';
+
     public static function createFromSnapshotItem(SnapshotItem $item)
     {
         if ($item->LinkedToObject()->exists()) {
             return new static([
                 'Subject' => $item->LinkedToObject(),
-                'Action' => self::ADDED,
+                'Action' => $item->WasDeleted ? self::REMOVED : self::ADDED,
                 'Owner' => $item->LinkedFromObject(),
             ]);
         }
