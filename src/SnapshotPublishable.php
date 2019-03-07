@@ -29,6 +29,11 @@ class SnapshotPublishable extends RecursivePublishable
     protected $activeSnapshot = null;
 
     /**
+     * @var array
+     */
+    protected $ownershipChanges = [];
+
+    /**
      * @param $class
      * @param $id
      * @return string
@@ -179,45 +184,28 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * Returns a mix of Version objects and SnapshotItem
-     * @todo Make this a homogeneous list of types
-     * @return ArrayList
+     * @return bool
      */
-    public function getHistoryIncludingOwned()
+    protected function requiresSnapshot()
     {
-        $class = get_class($this->owner);
-        $id = $this->owner->ID;
+        $owner = $this->owner;
+        $owners = $owner->findOwners();
 
-        $list = ArrayList::create();
-        $versions = Versioned::get_all_versions($class, $id);
-
-        foreach ($versions as $version) {
-            $list->push($version);
-        }
-        $snapshots = $this->owner->getSnapshotsSinceLastPublish();
-        foreach ($snapshots as $snapshot) {
-            $list->push($snapshot);
-        }
-
-        return $list;
+        return $owners->exists() || $owner->isManyManyLinkingObject();
     }
 
     /**
-     * @return void
+     * @return Snapshot|null
      */
     protected function doSnapshot()
     {
+        // Block nested snapshots. One user action = one snapshot
         if ($this->activeSnapshot) {
-            return;
+            return null;
         }
-        /* @var DataObject|SnapshotPublishable $owner */
         $owner = $this->owner;
-        $owners = $owner->findOwners();
-        if (!$owners->exists()) {
-            if (!$owner->isManyManyLinkingObject()) {
-                return;
-            }
-
+        /* @var DataObject|SnapshotPublishable $owner */
+        if ($this->isManyManyLinkingObject()) {
             foreach ($owner->getManyManyOwnership() as $spec) {
                 /* @var DataObject|SnapshotPublishable $parent */
                 list ($parentClass, $parentName, $parent, $child) = $spec;
@@ -229,17 +217,17 @@ class SnapshotPublishable extends RecursivePublishable
                 $this->closeSnapshot();
             }
 
-            return;
+            return null;
         }
 
         $this->openSnapshot();
         $this->addToSnapshot($owner);
 
-        foreach ($owners as $owner) {
+        foreach ($this->owner->findOwners() as $owner) {
             $this->addToSnapshot($owner);
         }
 
-        $this->closeSnapshot();
+        return $this->closeSnapshot();
     }
 
     /**
@@ -295,29 +283,82 @@ class SnapshotPublishable extends RecursivePublishable
         $this->activeSnapshot->Items()->add($item);
     }
 
+    /**
+     * @return Snapshot
+     */
     protected function closeSnapshot()
     {
+        $snapshot = $this->activeSnapshot;
         $this->activeSnapshot = null;
+
+        return $snapshot;
+    }
+
+    public function onBeforeWrite()
+    {
+        if($this->requiresSnapshot()) {
+            $this->ownershipChanges = $this->getChangedOwnership();
+        }
     }
 
     public function onAfterWrite()
     {
+        if ($this->activeSnapshot || !$this->requiresSnapshot()) {
+            return;
+        }
+
         $this->doSnapshot();
+
+        // If ownership has changed, relocate the activity to the new owner.
+        // There is no point to showing the old owner as "modified" since there
+        // is nothing the user can do about it. Recursive publishing the old owner
+        // will not affect this record, as it is no longer in its ownership graph.
+        foreach ($this->ownershipChanges as $spec) {
+            /* @var DataObject|SnapshotPublishable|Versioned $previousOwner */
+            $previousOwner = $spec['previous'];
+            $previousOwners = array_merge([$previousOwner], $previousOwner->findOwners()->toArray());
+
+            /* @var DataObject|SnapshotPublishable|Versioned $currentOwner */
+            $currentOwner = $spec['current'];
+            $currentOwners = array_merge([$currentOwner], $currentOwner->findOwners()->toArray());
+
+            $previousHashes = array_map([static::class, 'hashObject'], $previousOwners);
+            $snapshotsToMigrate = $previousOwner->getSnapshotsSinceLastPublish();
+
+            // Todo: bulk update, optimise
+            foreach ($snapshotsToMigrate as $snapshot) {
+                $itemsToDelete = $snapshot->Items()->filter([
+                    'ObjectHash' => $previousHashes
+                ]);
+                $itemsToDelete->removeAll();
+
+                /* @var DataObject|SnapshotPublishable $owner */
+                foreach($currentOwners as $owner) {
+                    $item = $owner->createSnapshotItem();
+                    $item->SnapshotID = $snapshot->ID;
+                    $item->write();
+                }
+            }
+        }
+        $this->ownershipChanges = [];
     }
 
     public function onAfterDelete()
     {
-        $this->doSnapshot();
+        if (!$this->activeSnapshot && $this->requiresSnapshot()) {
+            $this->doSnapshot();
+        }
     }
 
     public function createSnapshotItem()
     {
+        /* @var Versioned|DataObject $version */
         $version = Versioned::get_latest_version($this->owner->baseClass(), $this->owner->ID);
         return SnapshotItem::create([
             'ObjectClass' => get_class($this->owner),
             'ObjectID' => $this->owner->ID,
             'WasDraft' => $version->WasDraft,
-            'WasDeleted' => $version->WasDeleted,
+            'WasDeleted' => $version->WasDeleted || $version->isOnLiveOnly(),
             'Version' => $version->Version,
             'LinkedObjectClass' => null,
             'LinkedObjectID' => 0
@@ -335,8 +376,10 @@ class SnapshotPublishable extends RecursivePublishable
 
     public function onBeforeRevertToLive()
     {
-        $this->openSnapshot();
-        $this->doSnapshot();
+        if (!$this->activeSnapshot && $this->requiresSnapshot()) {
+            $this->openSnapshot();
+            $this->doSnapshot();
+        }
     }
 
     /**
@@ -350,6 +393,37 @@ class SnapshotPublishable extends RecursivePublishable
             ]);
 
         $snapshots->removeAll();
+    }
+
+    public function getChangedOwnership()
+    {
+        $hasOne = $this->owner->hasOne();
+        $fields = array_map(function ($field) {
+            return $field . 'ID';
+        }, array_keys($hasOne));
+        $changed = $this->owner->getChangedFields($fields);
+        $map = array_combine($fields, array_values($hasOne));
+        $result = [];
+        foreach ($fields as $field) {
+            if (isset($changed[$field])) {
+                $spec = $changed[$field];
+                if (
+                    !is_numeric($spec['before'])
+                    || !is_numeric($spec['after'])
+                    || $spec['before'] == $spec['after']
+                ) {
+                    continue;
+                }
+
+                $class = $map[$field];
+                $result[] = [
+                    'previous' => DataObject::get_by_id($class, $spec['before']),
+                    'current' => DataObject::get_by_id($class, $spec['after']),
+                ];
+            }
+        }
+
+        return $result;
     }
 
     /**
