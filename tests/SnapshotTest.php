@@ -178,8 +178,8 @@ class SnapshotTest extends FunctionalTest
         // A1 (draft, modified)
         //   block1 (draft, modified)
         //       gallery1 (draft, new)
-        //          image1 (draft, new) *
-        //          image2 (draft, new) *
+        //          image1 (draft, new, added) *
+        //          image2 (draft, new, added) *
         //   block2 (draft, new)
         // A2
         //   block1 (draft, new)
@@ -206,13 +206,13 @@ class SnapshotTest extends FunctionalTest
         // A1 (draft, modified)
         //   block1 (draft, modified)
         //       gallery1 (draft, new)
-        //          image1 (draft, new)
-        //          image2 (draft, new)
+        //          image1 (draft, new, added)
+        //          image2 (draft, new, added)
         //   block2 (draft, new)
         // A2
         //   block1 (draft, new)
         //       gallery1a (draft, new) *
-        //          image1 (draft, new) *
+        //          image1 (draft, new, added) *
 
         $this->assertTrue($a2->hasOwnedModifications());
 
@@ -233,13 +233,13 @@ class SnapshotTest extends FunctionalTest
         // A1 (draft, modified)
         //   block1 (draft, modified)
         //       gallery1 (draft, new)
-        //          image1 (draft, modified) *
-        //          image2 (draft, new)
+        //          image1 (draft, modified, added) *
+        //          image2 (draft, new, added)
         //   block2 (draft, new)
         // A2
         //   block1 (draft, new)
         //       gallery1a (draft, new)
-        //          image1 (draft, modified) *
+        //          image1 (draft, modified, added) *
         $this->assertTrue($a2->hasOwnedModifications());
 
         $activity = $a2->getActivityFeed();
@@ -274,10 +274,32 @@ class SnapshotTest extends FunctionalTest
         // Publish, and clear the slate
         $a1->publishRecursive();
 
+        // A1 (published) *
+        //   block1 (published) *
+        //       gallery1 (published) *
+        //          image1 (published) *
+        //          image2 (published) *
+        //   block2 (published) *
+        // A2
+        //   block1 (draft, new)
+        //       gallery1a (draft, new)
+        //          image1 (added) *
+
         $this->assertFalse($a1->hasOwnedModifications());
         $this->assertTrue($a2->hasOwnedModifications());
 
         $a2->publishRecursive();
+
+        // A1 (published)
+        //   block1 (published)
+        //       gallery1 (published)
+        //          image1 (published)
+        //          image2 (published)
+        //   block2 (published)
+        // A2
+        //   block1 (published) *
+        //       gallery1a (published) *
+        //          image1 (published) *
 
         $this->assertFalse($a1->hasOwnedModifications());
         $this->assertFalse($a2->hasOwnedModifications());
@@ -291,8 +313,17 @@ class SnapshotTest extends FunctionalTest
         /* @var DataObject|Versioned|SnapshotPublishable $a1 */
         /* @var DataObject|Versioned|SnapshotPublishable $gallery1 */
         list ($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+
         $gallery1->Title = 'Gallery 1 is changed';
         $gallery1->write();
+
+        // A1 (published)
+        //   block1 (published)
+        //       gallery1 (draft, modified) *
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
 
         $this->assertTrue($a1->hasOwnedModifications());
 
@@ -304,6 +335,13 @@ class SnapshotTest extends FunctionalTest
 
         $gallery1->doRevertToLive();
 
+        // A1 (published)
+        //   block1 (published)
+        //       gallery1 (reverted to live) *
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
         $this->assertEmpty($a1->getActivityFeed());
     }
 
@@ -317,14 +355,39 @@ class SnapshotTest extends FunctionalTest
 
         $gallery1->Title = 'Gallery 1 changed';
         $gallery1->write();
-        // Intermediate ownership
+
+        // A1 (published)
+        //   block1 (published)
+        //       gallery1 (draft, modified) *
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+
         $this->assertTrue($a1Block1->hasOwnedModifications());
 
         $a1->Title = 'A1 changed';
         $a1->write();
 
+        // A1 (draft, modified) *
+        //   block1 (published)
+        //       gallery1 (draft, modified)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+
+
         // Publish the intermediary block
         $a1Block1->publishRecursive();
+
+        // A1 (draft, modified)
+        //   block1 (published)
+        //       gallery1 (published) *
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
 
         // Block no longer has modified state
         $this->assertFalse($a1Block1->hasOwnedModifications());
@@ -334,11 +397,27 @@ class SnapshotTest extends FunctionalTest
         $this->assertTrue($a1->hasOwnedModifications());
 
         $a1->publishRecursive();
+
+        // A1 (published) *
+        //   block1 (published)
+        //       gallery1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+
         $this->assertFalse($a1->hasOwnedModifications());
 
-        $a1Block1->Title = "Don't blink. A1 block might change again.";
+        $a1Block1->Title = "A1 is changed again";
         $a1Block1->write();
 
+        // A1 (draft, modified) *
+        //   block1 (published)
+        //       gallery1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
         $this->assertTrue($a1->hasOwnedModifications());
     }
 
@@ -357,6 +436,14 @@ class SnapshotTest extends FunctionalTest
         $a1Block1->Title = 'Block 1 changed';
         $a1Block1->write();
 
+        // A1 (published)
+        //   block1 (draft, modified) *
+        //       gallery1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+
         $this->assertTrue($a1->hasOwnedModifications());
         $this->assertFalse($a2->hasOwnedModifications());
 
@@ -364,7 +451,15 @@ class SnapshotTest extends FunctionalTest
         $a1Block1->write();
         $blockMoved = $a1Block1;
 
-        // Change of ownership. Both trees now show modification.
+        // A1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+        //   block1-moved-from-A1 (draft, modified) *
+        //       gallery1 (published)
+
+        // Change of ownership. A1 no longer has modifications, but A2 does.
         $this->assertFalse($a1->hasOwnedModifications());
         $this->assertTrue($a2->hasOwnedModifications());
 
@@ -372,17 +467,29 @@ class SnapshotTest extends FunctionalTest
         $activity = $a1->getActivityFeed();
         $this->assertEmpty($activity);
 
-        // A2 has a modified block
+        // A2 has a modified block.
+        // One modification for the local change, and one for the
+        // change of ownership (foreign key)
         $activity = $a2->getActivityFeed();
         $this->assertActivityContains($activity, [
             [$blockMoved, ActivityEntry::MODIFIED],
             [$blockMoved, ActivityEntry::MODIFIED],
         ]);
 
+        // This should do nothing. A1 has nothing publishable anymore.
         $a1->publishRecursive();
+
+        // A1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+        //   block1-moved-from-A1 (draft, modified)
+        //       gallery1 (published)
+
         $this->assertEmpty($a1->getActivityFeed());
 
-        // A2 still has a modified block
+        // A2 still has the two modification entries listed above
         $activity = $a2->getActivityFeed();
         $this->assertActivityContains($activity, [
             [$blockMoved, ActivityEntry::MODIFIED],
@@ -390,6 +497,15 @@ class SnapshotTest extends FunctionalTest
         ]);
 
         $a2->publishRecursive();
+
+        // A1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+        //   block1-moved-from-A1 (published) *
+        //       gallery1 (published)
+
         $this->assertEmpty($a2->getActivityFeed());
         $this->assertFalse($a2->hasOwnedModifications());
 
@@ -403,6 +519,16 @@ class SnapshotTest extends FunctionalTest
         $item->write();
 
         $gallery1->Images()->add($item);
+
+        // A1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+        //   block1-moved-from-A1 (draft, modified) *
+        //       gallery1 (draft, modified) *
+        //          image (draft, new, added) *
+
 
         $this->assertTrue($a2->hasOwnedModifications());
         $this->assertFalse($a1->hasOwnedModifications());
@@ -421,6 +547,15 @@ class SnapshotTest extends FunctionalTest
         $blockMoved->ParentID = $a1->ID;
         $blockMoved->write();
 
+        // A1 (published)
+        //   block1-moved-back-to-A1 (draft, modified) *
+        //       gallery1 (draft, modified) *
+        //          image (draft, new, added) *
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+
         $this->assertTrue($a1->hasOwnedModifications());
         $this->assertFalse($a2->hasOwnedModifications());
 
@@ -428,6 +563,9 @@ class SnapshotTest extends FunctionalTest
 
         $activity = $a1->getActivityFeed();
         $this->assertCount(4, $activity);
+
+        // Moved block has a modification for the local change,
+        // and also one for the ownership change (foreign key)
         $this->assertActivityContains($activity, [
             [$blockMoved, ActivityEntry::MODIFIED],
             [$gallery1, ActivityEntry::MODIFIED],
@@ -438,6 +576,15 @@ class SnapshotTest extends FunctionalTest
         $a2->publishRecursive();
         $a1->publishRecursive();
 
+        // A1 (published)
+        //   block1-moved-back-to-A1 (published) *
+        //       gallery1 (published) *
+        //          image (published) *
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+
         $this->assertFalse($a1->hasOwnedModifications());
         $this->assertFalse($a2->hasOwnedModifications());
         $this->assertEmpty($a1->getActivityFeed());
@@ -445,11 +592,20 @@ class SnapshotTest extends FunctionalTest
 
         // Move a many_many
         $gallery1->Images()->remove($item);
-
         $gallery2->Images()->add($item);
 
         $item->URL = '/new/url';
         $item->write();
+
+        // A1 (published)
+        //   block1-moved-back-to-A1 (published)
+        //       gallery1 (published)
+        //          image1 (removed) --------------->
+        //   block2 (published)                     |
+        // A2 (published)                           |
+        //   block1 (published)                     |
+        //       gallery1a (published)              |
+        //          image1 (added, modified) <------|
 
         $activity = $a1->getActivityFeed();
         $this->assertCount(1, $activity);
@@ -480,6 +636,14 @@ class SnapshotTest extends FunctionalTest
 
         $a1Block1->delete();
 
+        // A1 (published)
+        //   block1 (deleted) *
+        //       gallery1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+
         $activity = $a1->getActivityFeed();
         $this->assertCount(1, $activity);
         $this->assertActivityContains($activity, [
@@ -492,6 +656,14 @@ class SnapshotTest extends FunctionalTest
         $gallery2->Title = 'Changey McChangerson';
         $gallery2->write();
 
+        // A1 (published)
+        //   block1 (deleted)
+        //       gallery1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (draft, modified) *
+        //       gallery1a (draft, modified) *
+
         $activity = $a2->getActivityFeed();
         $this->assertCount(2, $activity);
         $this->assertActivityContains($activity, [
@@ -500,6 +672,13 @@ class SnapshotTest extends FunctionalTest
         ]);
 
         $a2Block1->delete();
+        // A1 (published)
+        //   block1 (deleted)
+        //       gallery1 (published)
+        //   block2 (published)
+        // A2 (published)
+        //   block1 (deleted) *
+        //       gallery1a (draft, modified)
 
         $activity = $a2->getActivityFeed();
         $this->assertCount(3, $activity);
@@ -508,7 +687,6 @@ class SnapshotTest extends FunctionalTest
             [$gallery2, ActivityEntry::MODIFIED],
             [$a2Block1, ActivityEntry::DELETED],
         ]);
-
     }
 
     /**

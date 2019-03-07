@@ -21,17 +21,17 @@ use SilverStripe\Versioned\Versioned;
  */
 class SnapshotPublishable extends RecursivePublishable
 {
+    private static $__cache = [
+        'requires' => [],
+        'mmlinking' => [],
+    ];
+
     /**
      * Global state to tell all write hooks that a snapshot is in progress.
      * Prevents recursion and duplicity.
      * @var Snapshot
      */
     protected $activeSnapshot = null;
-
-    /**
-     * @var array
-     */
-    protected $ownershipChanges = [];
 
     /**
      * @param $class
@@ -119,11 +119,11 @@ class SnapshotPublishable extends RecursivePublishable
                     'SnapshotID' => $snapShotIDs,
                 ])
                 ->where(
-                    // Only get the items that were the subject of a user's action
+                // Only get the items that were the subject of a user's action
                     "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
                 )
                 ->sort([
-                    "\"$snapshotTable\".\"Created\"" =>  "ASC",
+                    "\"$snapshotTable\".\"Created\"" => "ASC",
                     "\"$snapshotTable\".\"ID\"" => "ASC"
                 ]);
 
@@ -151,9 +151,6 @@ class SnapshotPublishable extends RecursivePublishable
         return $list;
     }
 
-
-
-
     /**
      * @return boolean
      */
@@ -176,11 +173,149 @@ class SnapshotPublishable extends RecursivePublishable
             ['ObjectHash != ? ' => $hash]
         ])
             ->setGroupBy('ObjectHash')
-            ->setOrderBy('Created DESC');
+            ->setOrderBy('Created DESC')
+            ->setLimit(1);
 
         $result = $query->execute();
 
-        return $result->numRecords() > 0;
+        return $result->numRecords() === 1;
+    }
+
+    /**
+     * @return void
+     */
+    public function onAfterWrite()
+    {
+        if (!$this->requiresSnapshot()) {
+            return;
+        }
+
+        $this->doSnapshot();
+
+        $changes = $this->getChangedOwnership();
+        if (!empty($changes)) {
+            $this->reconcileOwnershipChanges($changes);
+        }
+
+    }
+
+    public function onAfterDelete()
+    {
+        if ($this->requiresSnapshot()) {
+            $this->doSnapshot();
+        }
+    }
+
+    public function createSnapshotItem()
+    {
+        /* @var Versioned|DataObject $version */
+        $version = Versioned::get_latest_version($this->owner->baseClass(), $this->owner->ID);
+        return SnapshotItem::create([
+            'ObjectClass' => get_class($this->owner),
+            'ObjectID' => $this->owner->ID,
+            'WasDraft' => $version->WasDraft,
+            'WasDeleted' => $version->WasDeleted || $version->isOnLiveOnly(),
+            'Version' => $version->Version,
+            'LinkedObjectClass' => null,
+            'LinkedObjectID' => 0
+        ]);
+    }
+
+    public function onAfterPublish()
+    {
+        if ($this->activeSnapshot) {
+            $item = $this->owner->createSnapshotItem();
+            $item->WasPublished = true;
+            $this->activeSnapshot->Items()->add($item);
+        }
+    }
+
+    public function onBeforeRevertToLive()
+    {
+        if ($this->requiresSnapshot()) {
+            $this->openSnapshot();
+            $this->doSnapshot();
+        }
+    }
+
+    /**
+     * Tidy up all the irrelevant snapshot records now that the changes have been reverted.
+     */
+    public function onAfterRevertToLive()
+    {
+        $snapshots = $this->getSnapshots($this->owner->Version)
+            ->filter([
+                'OriginHash' => static::hashObject($this->owner),
+            ]);
+
+        $snapshots->removeAll();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isManyManyLinkingObject()
+    {
+        return !empty($this->owner->getManyManyLinking());
+    }
+
+    /**
+     * @return \Generator
+     * @throws \Exception
+     */
+    public function getManyManyOwnership()
+    {
+        /* @var DataObject|SnapshotPublishable $owner */
+        $owner = $this->owner;
+        $linking = $owner->getManyManyLinking();
+        foreach ($linking as $parentClass => $specs) {
+            foreach ($specs as $spec) {
+                list ($parentName, $childName) = $spec;
+                $parent = $owner->getComponent($parentName);
+                $child = $owner->getComponent($childName);
+                if ($parent->exists() && $child->exists()) {
+                    yield [$parentClass, $parentName, $parent, $child];
+                }
+            }
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public function getManyManyLinking()
+    {
+        /* @var DataObject|SnapshotPublishable $owner */
+        $owner = $this->owner;
+        if (!isset(self::$__cache['mmlinking'][get_class($owner)])) {
+            $config = [];
+            $ownerClass = get_class($owner);
+
+            // Has to have two has_ones
+            $hasOnes = $owner->hasOne();
+            if (sizeof($hasOnes) < 2) {
+                return $config;
+            }
+
+            foreach ($hasOnes as $name => $class) {
+                /* @var DataObject $sng */
+                $sng = Injector::inst()->get($class);
+                foreach ($sng->manyMany() as $component => $spec) {
+                    if (!is_array($spec)) {
+                        continue;
+                    }
+                    if ($spec['through'] !== $ownerClass) {
+                        continue;
+                    }
+                    if (!isset($config[$class])) {
+                        $config[$class][] = [$spec['from'], $spec['to']];
+                    }
+                }
+            }
+            self::$__cache['mmlinking'][get_class($owner)] = $config;
+        }
+
+        return self::$__cache['mmlinking'][get_class($owner)];
     }
 
     /**
@@ -189,13 +324,23 @@ class SnapshotPublishable extends RecursivePublishable
     protected function requiresSnapshot()
     {
         $owner = $this->owner;
-        $owners = $owner->findOwners();
 
-        return $owners->exists() || $owner->isManyManyLinkingObject();
+        // Explicitly blacklist these two, since they get so many writes in this context,
+        // and calculating snapshot eligibility is expensive.
+        if ($owner instanceof Snapshot || $owner instanceof SnapshotItem) {
+            return false;
+        }
+
+        if ($owner->isManyManyLinkingObject()) {
+            return true;
+        }
+
+        return $owner->findOwners()->exists();
     }
 
     /**
-     * @return Snapshot|null
+     * @return void
+     * @throws \Exception
      */
     protected function doSnapshot()
     {
@@ -227,7 +372,7 @@ class SnapshotPublishable extends RecursivePublishable
             $this->addToSnapshot($owner);
         }
 
-        return $this->closeSnapshot();
+        $this->closeSnapshot();
     }
 
     /**
@@ -254,8 +399,8 @@ class SnapshotPublishable extends RecursivePublishable
 
     /**
      * @param DataObject $obj
-     * @param null $linkedFromObj
-     * @param null $linkedToObj
+     * @param DataObject|null $linkedFromObj
+     * @param DataObject|null $linkedToObj
      */
     protected function addToSnapshot(DataObject $obj, $linkedFromObj = null, $linkedToObj = null)
     {
@@ -284,124 +429,24 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @return Snapshot
+     * @return void
      */
     protected function closeSnapshot()
     {
-        $snapshot = $this->activeSnapshot;
         $this->activeSnapshot = null;
-
-        return $snapshot;
-    }
-
-    public function onBeforeWrite()
-    {
-        if($this->requiresSnapshot()) {
-            $this->ownershipChanges = $this->getChangedOwnership();
-        }
-    }
-
-    public function onAfterWrite()
-    {
-        if ($this->activeSnapshot || !$this->requiresSnapshot()) {
-            return;
-        }
-
-        $this->doSnapshot();
-
-        // If ownership has changed, relocate the activity to the new owner.
-        // There is no point to showing the old owner as "modified" since there
-        // is nothing the user can do about it. Recursive publishing the old owner
-        // will not affect this record, as it is no longer in its ownership graph.
-        foreach ($this->ownershipChanges as $spec) {
-            /* @var DataObject|SnapshotPublishable|Versioned $previousOwner */
-            $previousOwner = $spec['previous'];
-            $previousOwners = array_merge([$previousOwner], $previousOwner->findOwners()->toArray());
-
-            /* @var DataObject|SnapshotPublishable|Versioned $currentOwner */
-            $currentOwner = $spec['current'];
-            $currentOwners = array_merge([$currentOwner], $currentOwner->findOwners()->toArray());
-
-            $previousHashes = array_map([static::class, 'hashObject'], $previousOwners);
-            $snapshotsToMigrate = $previousOwner->getSnapshotsSinceLastPublish();
-
-            // Todo: bulk update, optimise
-            foreach ($snapshotsToMigrate as $snapshot) {
-                $itemsToDelete = $snapshot->Items()->filter([
-                    'ObjectHash' => $previousHashes
-                ]);
-                $itemsToDelete->removeAll();
-
-                /* @var DataObject|SnapshotPublishable $owner */
-                foreach($currentOwners as $owner) {
-                    $item = $owner->createSnapshotItem();
-                    $item->SnapshotID = $snapshot->ID;
-                    $item->write();
-                }
-            }
-        }
-        $this->ownershipChanges = [];
-    }
-
-    public function onAfterDelete()
-    {
-        if (!$this->activeSnapshot && $this->requiresSnapshot()) {
-            $this->doSnapshot();
-        }
-    }
-
-    public function createSnapshotItem()
-    {
-        /* @var Versioned|DataObject $version */
-        $version = Versioned::get_latest_version($this->owner->baseClass(), $this->owner->ID);
-        return SnapshotItem::create([
-            'ObjectClass' => get_class($this->owner),
-            'ObjectID' => $this->owner->ID,
-            'WasDraft' => $version->WasDraft,
-            'WasDeleted' => $version->WasDeleted || $version->isOnLiveOnly(),
-            'Version' => $version->Version,
-            'LinkedObjectClass' => null,
-            'LinkedObjectID' => 0
-        ]);
-    }
-
-    public function onAfterPublish()
-    {
-        if ($this->activeSnapshot) {
-            $item = $this->owner->createSnapshotItem();
-            $item->WasPublished = true;
-            $this->activeSnapshot->Items()->add($item);
-        }
-    }
-
-    public function onBeforeRevertToLive()
-    {
-        if (!$this->activeSnapshot && $this->requiresSnapshot()) {
-            $this->openSnapshot();
-            $this->doSnapshot();
-        }
     }
 
     /**
-     * Tidy up all the irrelevant snapshot records now that the changes have been reverted.
+     * @return array
      */
-    public function onAfterRevertToLive()
+    protected function getChangedOwnership()
     {
-        $snapshots = $this->getSnapshots($this->owner->Version)
-            ->filter([
-                'OriginHash' => static::hashObject($this->owner),
-            ]);
-
-        $snapshots->removeAll();
-    }
-
-    public function getChangedOwnership()
-    {
-        $hasOne = $this->owner->hasOne();
+        $owner = $this->owner;
+        $hasOne = $owner->hasOne();
         $fields = array_map(function ($field) {
             return $field . 'ID';
         }, array_keys($hasOne));
-        $changed = $this->owner->getChangedFields($fields);
+        $changed = $owner->getChangedFields($fields);
         $map = array_combine($fields, array_values($hasOne));
         $result = [];
         foreach ($fields as $field) {
@@ -427,69 +472,42 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @return array
+     * If ownership has changed, relocate the activity to the new owner.
+     * There is no point to showing the old owner as "modified" since there
+     * is nothing the user can do about it. Recursive publishing the old owner
+     * will not affect this record, as it is no longer in its ownership graph.
+     *
+     * @param array $changes
      */
-    public function getManyManyLinking()
+    protected function reconcileOwnershipChanges($changes)
     {
-        /* @var DataObject|SnapshotPublishable $owner */
-        $owner = $this->owner;
-        $cached = $owner->config()->get('many_many_linking');
-        if ($cached) {
-            return $cached;
-        }
+        foreach ($changes as $spec) {
+            /* @var DataObject|SnapshotPublishable|Versioned $previousOwner */
+            $previousOwner = $spec['previous'];
+            $previousOwners = array_merge([$previousOwner], $previousOwner->findOwners()->toArray());
 
-        $config = [];
-        $ownerClass = get_class($owner);
+            /* @var DataObject|SnapshotPublishable|Versioned $currentOwner */
+            $currentOwner = $spec['current'];
+            $currentOwners = array_merge([$currentOwner], $currentOwner->findOwners()->toArray());
 
-        // Has to have two has_ones
-        $hasOnes = $owner->hasOne();
-        if (sizeof($hasOnes) < 2) {
-            return $config;
-        }
+            $previousHashes = array_map([static::class, 'hashObject'], $previousOwners);
+            $snapshotsToMigrate = $previousOwner->getSnapshotsSinceLastPublish();
 
-        foreach ($hasOnes as $name => $class) {
-            /* @var DataObject $sng */
-            $sng = Injector::inst()->get($class);
-            foreach ($sng->manyMany() as $component => $spec) {
-                if (!is_array($spec)) {
-                    continue;
-                }
-                if ($spec['through'] !== $ownerClass) {
-                    continue;
-                }
-                if (!isset($config[$class])) {
-                    $config[$class][] = [$spec['from'], $spec['to']];
-                }
-            }
-        }
-        // persistent cache with flushable?
-        Config::modify()->set($ownerClass, 'many_many_linking', $config);
+            // Todo: bulk update, optimise
+            foreach ($snapshotsToMigrate as $snapshot) {
+                $itemsToDelete = $snapshot->Items()->filter([
+                    'ObjectHash' => $previousHashes
+                ]);
+                $itemsToDelete->removeAll();
 
-        return $config;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isManyManyLinkingObject()
-    {
-        return !empty($this->owner->getManyManyLinking());
-    }
-
-    public function getManyManyOwnership()
-    {
-        /* @var DataObject|SnapshotPublishable $owner */
-        $owner = $this->owner;
-        $linking = $owner->getManyManyLinking();
-        foreach ($linking as $parentClass => $specs) {
-            foreach ($specs as $spec) {
-                list ($parentName, $childName) = $spec;
-                $parent = $owner->getComponent($parentName);
-                $child = $owner->getComponent($childName);
-                if ($parent->exists() && $child->exists()) {
-                    yield [$parentClass, $parentName, $parent, $child];
+                /* @var DataObject|SnapshotPublishable $owner */
+                foreach ($currentOwners as $owner) {
+                    $item = $owner->createSnapshotItem();
+                    $item->SnapshotID = $snapshot->ID;
+                    $item->write();
                 }
             }
         }
     }
+
 }
