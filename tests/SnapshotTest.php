@@ -621,6 +621,72 @@ class SnapshotTest extends FunctionalTest
         ]);
     }
 
+    public function testPartialActivityMigration()
+    {
+        /* @var DataObject|Versioned|SnapshotPublishable $a1 */
+        /* @var DataObject|Versioned|SnapshotPublishable $a2 */
+        /* @var DataObject|Versioned|SnapshotPublishable $a1Block1 */
+        /* @var DataObject|Versioned|SnapshotPublishable $a1Block2 */
+        list ($a1, $a2, $a1Block1, $a1Block2) = $this->buildState();
+
+        // Test that we can transplant a node and relevant activity will be migrated
+        // but unrelated activity will be preserved.
+        $a1Block1->Title = 'Take one for the team';
+        $a1Block1->write();
+
+        $a1Block2->Title = 'You got this';
+        $a1Block2->write();
+
+        $gallery = new Gallery(['Title' => 'A new gallery for block 2', 'BlockID' => $a1Block2->ID]);
+        $gallery->write();
+
+        // A1 (published)
+        //   block1 (draft, modified) *
+        //       gallery1 (published)
+        //   block2 (draft, modified) *
+        //       gallery2 (draft, new) *
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+
+        $activity = $a1->getActivityFeed();
+        $this->assertCount(3, $activity);
+        $this->assertActivityContains($activity, [
+            [$a1Block1, ActivityEntry::MODIFIED],
+            [$a1Block2, ActivityEntry::MODIFIED],
+            [$gallery, ActivityEntry::CREATED],
+        ]);
+
+        // Move one modified block, but leave the other.
+        $a1Block2->ParentID = $a2->ID;
+        $a1Block2->write();
+
+        // A1 (published)
+        //   block1 (draft, modified) *
+        //       gallery1 (published)
+        // A2 (published)
+        //   block1 (published)
+        //       gallery1a (published)
+        //   block2-moved-from-A1 (draft, modified) *
+        //       gallery2 (draft, new) *
+
+        // Now A1 only shows activity for the local change on block 1
+        $activity = $a1->getActivityFeed();
+        $this->assertCount(1, $activity);
+        $this->assertActivityContains($activity, [
+            [$a1Block1, ActivityEntry::MODIFIED],
+        ]);
+
+        // And the other activity is now on A2
+        $activity = $a2->getActivityFeed();
+        $this->assertCount(3, $activity);
+        $this->assertActivityContains($activity, [
+            [$a1Block2, ActivityEntry::MODIFIED],
+            [$gallery, ActivityEntry::CREATED],
+            [$a1Block2, ActivityEntry::MODIFIED], // <--- the migration
+        ]);
+    }
+
     public function testDeletions()
     {
         /* @var DataObject|Versioned|SnapshotPublishable $a1 */

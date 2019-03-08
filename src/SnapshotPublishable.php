@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots;
 
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
@@ -66,37 +65,53 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @param int $sinceVersion
      * @return DataList
      */
-    public function getSnapshots($sinceVersion)
+    public function getSnapshots()
     {
         $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
-        $where = [
-            ['ObjectHash = ?' => static::hashObject($this->owner)],
-            ['Version >= ?' => $sinceVersion],
-        ];
-
         $result = Snapshot::get()
             ->innerJoin($itemTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
-            ->where($where)
             ->sort('Created DESC');
 
         return $result;
     }
 
     /**
+     * @param int $sinceVersion
      * @return DataList
      */
-    public function getSnapshotsSinceLastPublish()
+    public function getSnapshotsSinceVersion($sinceVersion)
+    {
+        $where = [
+            ['ObjectHash = ?' => static::hashObject($this->owner)],
+            ['Version >= ?' => $sinceVersion],
+        ];
+
+        $result = $this->owner->getSnapshots()
+            ->where($where);
+
+        return $result;
+    }
+
+    /**
+     * @param bool $includeSelf
+     * @return DataList
+     */
+    public function getSnapshotsSinceLastPublish($includeSelf = false)
     {
         $class = get_class($this->owner);
         $id = $this->owner->ID;
         $publishedVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
+        $snapshots = $this->owner->getSnapshotsSinceVersion($publishedVersion);
 
-        return $this->owner->getSnapshots($publishedVersion)
+        if ($includeSelf) {
+            return $snapshots;
+        }
+
+        return $snapshots
             ->exclude([
                 'OriginHash' => static::hashObject($this->owner),
             ]);
@@ -119,7 +134,7 @@ class SnapshotPublishable extends RecursivePublishable
                     'SnapshotID' => $snapShotIDs,
                 ])
                 ->where(
-                // Only get the items that were the subject of a user's action
+                    // Only get the items that were the subject of a user's action
                     "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
                 )
                 ->sort([
@@ -196,7 +211,6 @@ class SnapshotPublishable extends RecursivePublishable
         if (!empty($changes)) {
             $this->reconcileOwnershipChanges($changes);
         }
-
     }
 
     public function onAfterDelete()
@@ -243,7 +257,7 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function onAfterRevertToLive()
     {
-        $snapshots = $this->getSnapshots($this->owner->Version)
+        $snapshots = $this->getSnapshotsSinceVersion($this->owner->Version)
             ->filter([
                 'OriginHash' => static::hashObject($this->owner),
             ]);
@@ -452,8 +466,7 @@ class SnapshotPublishable extends RecursivePublishable
         foreach ($fields as $field) {
             if (isset($changed[$field])) {
                 $spec = $changed[$field];
-                if (
-                    !is_numeric($spec['before'])
+                if (!is_numeric($spec['before'])
                     || !is_numeric($spec['after'])
                     || $spec['before'] == $spec['after']
                 ) {
@@ -491,23 +504,41 @@ class SnapshotPublishable extends RecursivePublishable
             $currentOwners = array_merge([$currentOwner], $currentOwner->findOwners()->toArray());
 
             $previousHashes = array_map([static::class, 'hashObject'], $previousOwners);
-            $snapshotsToMigrate = $previousOwner->getSnapshotsSinceLastPublish();
+
+            // Get the earliest snapshot where the previous owner was published.
+            $cutoff = $previousOwner->getSnapshotsSinceLastPublish()
+                ->sort('ID ASC')
+                ->first();
+            if (!$cutoff) {
+                return;
+            }
+
+            // Get all the snapshots of the moved node since the cutoff.
+            $snapshotsToMigrate = $this->owner->getSnapshotsSinceLastPublish(true)
+                ->filter([
+                    'ID:GreaterThanOrEqual' => $cutoff->ID,
+                ]);
 
             // Todo: bulk update, optimise
             foreach ($snapshotsToMigrate as $snapshot) {
-                $itemsToDelete = $snapshot->Items()->filter([
-                    'ObjectHash' => $previousHashes
-                ]);
-                $itemsToDelete->removeAll();
+                $itemsToDelete = SnapshotItem::get()
+                    ->filter([
+                        'ObjectHash' => $previousHashes,
+                        'SnapshotID' => $snapshot->ID,
+                    ]);
+                if ($itemsToDelete->exists()) {
+                    // Rip out the old owners
+                    $itemsToDelete->removeAll();
 
-                /* @var DataObject|SnapshotPublishable $owner */
-                foreach ($currentOwners as $owner) {
-                    $item = $owner->createSnapshotItem();
-                    $item->SnapshotID = $snapshot->ID;
-                    $item->write();
+                    // Replace them with the new owners
+                    /* @var DataObject|SnapshotPublishable $owner */
+                    foreach ($currentOwners as $owner) {
+                        $item = $owner->createSnapshotItem();
+                        $item->SnapshotID = $snapshot->ID;
+                        $item->write();
+                    }
                 }
             }
         }
     }
-
 }
