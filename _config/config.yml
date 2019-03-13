@@ -7,3 +7,6 @@ SilverStripe\Core\Injector\Injector:
 SilverStripe\Versioned\ChangeSetItem:
   extensions:
     - SilverStripe\Snapshots\SnapshotChangeSetItem
+SilverStripe\ORM\DataObject:
+  extensions:
+    - SilverStripe\Snapshots\SnapshotExtension

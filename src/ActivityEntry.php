@@ -24,6 +24,7 @@ class ActivityEntry extends ArrayData
                 'Subject' => $item->LinkedToObject(),
                 'Action' => $item->WasDeleted ? self::REMOVED : self::ADDED,
                 'Owner' => $item->LinkedFromObject(),
+                'Date' => $item->obj('Created')->Nice(),
             ]);
         }
 
@@ -42,6 +43,7 @@ class ActivityEntry extends ArrayData
             'Subject' => $item->getItem(),
             'Action' => $flag,
             'Owner' => null,
+            'Date' => $item->obj('Created')->Nice(),
         ]);
     }
 }
