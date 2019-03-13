@@ -5,6 +5,7 @@ namespace SilverStripe\Snapshots;
 
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
+use SilverStripe\ORM\Connect\Query;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
@@ -62,6 +63,13 @@ class SnapshotPublishable extends RecursivePublishable
         $this->closeSnapshot();
 
         return $result;
+    }
+
+    public function rollbackRelations($version)
+    {
+        $this->openSnapshot();
+        parent::rollbackRelations($version);
+        $this->closeSnapshot();
     }
 
     /**
@@ -171,29 +179,60 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function hasOwnedModifications()
     {
-        $hash = static::hashObject($this->owner);
         $snapShotIDs = $this->getSnapshotsSinceLastPublish()->column('ID');
         if (empty($snapShotIDs)) {
             return false;
         }
-        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
-        $query = new SQLSelect(
-            ['MaxID' => "MAX($itemTable.ID)"],
-            $itemTable
-        );
-        $query->setWhere([
-            ['SnapshotID IN (' . DB::placeholders($snapShotIDs) . ')' => $snapShotIDs],
-            ['WasPublished = ?' => 0],
-            ['WasDeleted = ?' => 0],
-            ['ObjectHash != ? ' => $hash]
-        ])
-            ->setGroupBy('ObjectHash')
-            ->setOrderBy('Created DESC')
-            ->setLimit(1);
 
-        $result = $query->execute();
+        return $this->publishableItemsQuery($snapShotIDs)
+                ->setLimit(1)
+                ->execute()
+                ->numRecords() === 1;
+    }
 
-        return $result->numRecords() === 1;
+    /**
+     * @return int
+     */
+    public function getPublishableItemsCount()
+    {
+        $snapShotIDs = $this->getSnapshotsSinceLastPublish()->column('ID');
+        if (empty($snapShotIDs)) {
+            return 0;
+        }
+        return $this->publishableItemsQuery($snapShotIDs)->execute()->numRecords();
+    }
+
+    /**
+     * @return ArrayList
+     */
+    public function getPublishableObjects()
+    {
+        $snapShotIDs = $this->getSnapshotsSinceLastPublish()->column('ID');
+        if (empty($snapShotIDs)) {
+            return ArrayList::create();
+        }
+
+        $query = $this->publishableItemsQuery($snapShotIDs);
+        $query->addSelect(['ObjectClass', 'ObjectID']);
+        $items = $query->execute();
+        $map = [];
+        while ($row = $items->nextRecord()) {
+            $class = $row['ObjectClass'];
+            $id = $row['ObjectID'];
+            /* @var DataObject|SnapshotPublishable $obj */
+            $obj = DataObject::get_by_id($class, $id);
+            if ($obj->isManyManyLinkingObject()) {
+                $ownership = $obj->getManyManyOwnership();
+                foreach ($ownership as $spec) {
+                    list ($parentClass, $parentName, $parent, $child) = $spec;
+                    $map[static::hashObject($child)] = $child;
+                }
+            } else {
+                $map[static::hashObject($obj)] = $obj;
+            }
+        }
+
+        return ArrayList::create(array_values($map));
     }
 
     /**
@@ -282,16 +321,19 @@ class SnapshotPublishable extends RecursivePublishable
         /* @var DataObject|SnapshotPublishable $owner */
         $owner = $this->owner;
         $linking = $owner->getManyManyLinking();
+        $r = [];
         foreach ($linking as $parentClass => $specs) {
             foreach ($specs as $spec) {
                 list ($parentName, $childName) = $spec;
                 $parent = $owner->getComponent($parentName);
                 $child = $owner->getComponent($childName);
                 if ($parent->exists() && $child->exists()) {
-                    yield [$parentClass, $parentName, $parent, $child];
+                    $r[] = [$parentClass, $parentName, $parent, $child];
                 }
             }
         }
+
+        return $r;
     }
 
     /**
@@ -301,6 +343,7 @@ class SnapshotPublishable extends RecursivePublishable
     {
         /* @var DataObject|SnapshotPublishable $owner */
         $owner = $this->owner;
+        // todo: move this to proper caching
         if (!isset(self::$__cache['mmlinking'][get_class($owner)])) {
             $config = [];
             $ownerClass = get_class($owner);
@@ -330,6 +373,38 @@ class SnapshotPublishable extends RecursivePublishable
         }
 
         return self::$__cache['mmlinking'][get_class($owner)];
+    }
+
+    /**
+     * @param array $snapShotIDs
+     * @return SQLSelect
+     */
+    protected function publishableItemsQuery($snapShotIDs)
+    {
+        $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
+        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
+        $snapShotIDs = $this->owner->getSnapshotsSinceLastPublish()->column('ID');
+        $hash = static::hashObject($this->owner);
+
+        $query = new SQLSelect(
+            ['MaxID' => "MAX($itemTable.ID)"],
+            $itemTable
+        );
+        $query->addInnerJoin(
+            $snapshotTable,
+            "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\""
+        );
+        $query->setWhere([
+            ['SnapshotID IN (' . DB::placeholders($snapShotIDs) . ')' => $snapShotIDs],
+            ['WasPublished = ?' => 0],
+            ['WasDeleted = ?' => 0],
+            ['ObjectHash != ? ' => $hash],
+            'ObjectHash = OriginHash',
+        ])
+            ->setGroupBy('ObjectHash')
+            ->setOrderBy("\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\"");
+
+        return $query;
     }
 
     /**

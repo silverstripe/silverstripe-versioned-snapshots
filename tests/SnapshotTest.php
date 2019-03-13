@@ -4,6 +4,7 @@
 namespace SilverStripe\Snapshots\Tests;
 
 use SilverStripe\Dev\FunctionalTest;
+use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\ActivityEntry;
 use SilverStripe\Snapshots\SnapshotPublishable;
@@ -95,12 +96,21 @@ class SnapshotTest extends FunctionalTest
         //  one of those was then modified.
         $activity = $a1->getActivityFeed();
         $this->assertCount(3, $activity);
+        $this->assertCount(2, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
                 [$a1Block1, ActivityEntry::MODIFIED],
+            ]
+        );
+
+        $this->assertPublishableObjectsContains(
+            $a1->getPublishableObjects(),
+            [
+                $a1Block1,
+                $a1Block2,
             ]
         );
 
@@ -125,6 +135,7 @@ class SnapshotTest extends FunctionalTest
         //  one gallery created.
         $activity = $a1->getActivityFeed();
         $this->assertCount(4, $activity);
+        $this->assertCount(3, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
@@ -132,6 +143,15 @@ class SnapshotTest extends FunctionalTest
                 [$a1Block2, ActivityEntry::CREATED],
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
+            ]
+        );
+
+        $this->assertPublishableObjectsContains(
+            $a1->getPublishableObjects(),
+            [
+                $a1Block1,
+                $a1Block2,
+                $gallery1,
             ]
         );
 
@@ -155,6 +175,7 @@ class SnapshotTest extends FunctionalTest
         //  one gallery was modified
         $activity = $a1->getActivityFeed();
         $this->assertCount(5, $activity);
+        $this->assertCount(3, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
@@ -163,6 +184,15 @@ class SnapshotTest extends FunctionalTest
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
+            ]
+        );
+
+        $this->assertPublishableObjectsContains(
+            $a1->getPublishableObjects(),
+            [
+                $a1Block1,
+                $a1Block2,
+                $gallery1,
             ]
         );
 
@@ -185,6 +215,8 @@ class SnapshotTest extends FunctionalTest
         //   block1 (draft, new)
 
         $activity = $a1->getActivityFeed();
+        $this->assertCount(7, $activity);
+        $this->assertCount(5, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
@@ -195,6 +227,17 @@ class SnapshotTest extends FunctionalTest
                 [$gallery1, ActivityEntry::MODIFIED],
                 [$galleryItem1, ActivityEntry::ADDED, $gallery1],
                 [$galleryItem2, ActivityEntry::ADDED, $gallery1],
+            ]
+        );
+
+        $this->assertPublishableObjectsContains(
+            $a1->getPublishableObjects(),
+            [
+                $a1Block1,
+                $a1Block2,
+                $gallery1,
+                $galleryItem1,
+                $galleryItem2,
             ]
         );
 
@@ -218,12 +261,22 @@ class SnapshotTest extends FunctionalTest
 
         $activity = $a2->getActivityFeed();
         $this->assertCount(3, $activity);
+        $this->assertCount(3, $a2->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a2Block1, ActivityEntry::CREATED],
                 [$gallery1a, ActivityEntry::CREATED],
                 [$galleryItem1, ActivityEntry::ADDED, $gallery1a],
+            ]
+        );
+
+        $this->assertPublishableObjectsContains(
+            $a2->getPublishableObjects(),
+            [
+                $a2Block1,
+                $gallery1a,
+                $galleryItem1,
             ]
         );
 
@@ -244,6 +297,7 @@ class SnapshotTest extends FunctionalTest
 
         $activity = $a2->getActivityFeed();
         $this->assertCount(4, $activity);
+        $this->assertCount(3, $a2->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
@@ -254,10 +308,20 @@ class SnapshotTest extends FunctionalTest
             ]
         );
 
+        $this->assertPublishableObjectsContains(
+            $a2->getPublishableObjects(),
+            [
+                $a2Block1,
+                $gallery1a,
+                $galleryItem1,
+            ]
+        );
+
         $this->assertTrue($a1->hasOwnedModifications());
 
         $activity = $a1->getActivityFeed();
         $this->assertCount(8, $activity);
+        $this->assertCount(5, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
@@ -271,6 +335,17 @@ class SnapshotTest extends FunctionalTest
                 [$galleryItem1, ActivityEntry::MODIFIED],
             ]
         );
+        $this->assertPublishableObjectsContains(
+            $a1->getPublishableObjects(),
+            [
+                $a1Block1,
+                $a1Block2,
+                $gallery1,
+                $galleryItem1,
+                $galleryItem2,
+            ]
+        );
+
         // Publish, and clear the slate
         $a1->publishRecursive();
 
@@ -306,6 +381,9 @@ class SnapshotTest extends FunctionalTest
 
         $this->assertEmpty($a1->getActivityFeed());
         $this->assertEmpty($a2->getActivityFeed());
+
+        $this->assertEmpty($a1->getPublishableObjects());
+        $this->assertEmpty($a2->getPublishableObjects());
     }
 
     public function testRevertChanges()
@@ -756,11 +834,10 @@ class SnapshotTest extends FunctionalTest
     }
 
     /**
-     * @param $activity
+     * @param ArrayList $activity
      * @param array $objs
-     * @return bool
      */
-    protected function assertActivityContains($activity, $objs = [])
+    protected function assertActivityContains(ArrayList $activity, $objs = [])
     {
         $this->assertCount(sizeof($objs), $activity);
         foreach ($activity as $i => $entry) {
@@ -783,6 +860,25 @@ class SnapshotTest extends FunctionalTest
                     SnapshotPublishable::hashObject($entry->Owner)
                 );
             }
+        }
+    }
+
+    /**
+     * @param ArrayList $items
+     * @param array $objs
+     */
+    protected function assertPublishableObjectsContains(ArrayList $items, $objs = [])
+    {
+        $this->assertCount(sizeof($objs), $items);
+        foreach ($items as $i => $dataObject) {
+            $obj= $objs[$i];
+            $expectedHash = $obj->isInDB()
+                ? SnapshotPublishable::hashObject($obj)
+                : SnapshotPublishable::hash($obj->ClassName, $obj->OldID);
+            $this->assertEquals(
+                $expectedHash,
+                SnapshotPublishable::hashObject($dataObject)
+            );
         }
     }
 
@@ -832,6 +928,21 @@ class SnapshotTest extends FunctionalTest
                 $entry->Subject->ClassName,
                 $entry->Subject->ID,
                 $entry->Subject->getTitle()
+            );
+        }
+
+        return implode("\n", $list);
+    }
+
+    protected function debugPublishable($items)
+    {
+        $list = [];
+        foreach ($items as $item) {
+            $list[] = sprintf(
+                '%s #%s (%s)',
+                $item->ClassName,
+                $item->ID,
+                $item->getTitle()
             );
         }
 
