@@ -39,18 +39,6 @@ class SnapshotExtension extends DataExtension
             );
             $fields->addFieldToTab('Root.Activity', $list);
             $fields->fieldByName('Root.Activity')->setTitle('Activity (' . $activity->count() . ')');
-
-//            $tab = Tab::create(
-//                'Activity',
-//                'Activity (' . $activity->count() . ')',
-//                [
-//                    LiteralField::create(
-//                        'activitylist',
-//                        '<ul>' . $items . '</ul>'
-//                    ),
-//                ]
-//            );
-//            $fields->fieldByName('Root')->push($tab);
         }
     }
 }

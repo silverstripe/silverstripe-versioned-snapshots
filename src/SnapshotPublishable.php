@@ -179,6 +179,10 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function hasOwnedModifications()
     {
+        if (!$this->owner->hasExtension(Versioned::class)) {
+            return false;
+        }
+
         $snapShotIDs = $this->getSnapshotsSinceLastPublish()->column('ID');
         if (empty($snapShotIDs)) {
             return false;
