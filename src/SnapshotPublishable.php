@@ -3,6 +3,7 @@
 
 namespace SilverStripe\Snapshots;
 
+use SebastianBergmann\Version;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\Connect\Query;
@@ -49,7 +50,7 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public static function hashObject(DataObject $obj)
     {
-        return static::hash(get_class($obj), $obj->ID);
+        return static::hash($obj->baseClass(), $obj->ID);
     }
 
 
@@ -110,7 +111,7 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getSnapshotsSinceLastPublish($includeSelf = false)
     {
-        $class = get_class($this->owner);
+        $class = $this->owner->baseClass();
         $id = $this->owner->ID;
         $publishedVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
         $snapshots = $this->owner->getSnapshotsSinceVersion($publishedVersion);
@@ -265,14 +266,14 @@ class SnapshotPublishable extends RecursivePublishable
 
     public function createSnapshotItem()
     {
-        /* @var Versioned|DataObject $version */
-        $version = Versioned::get_latest_version($this->owner->baseClass(), $this->owner->ID);
+        /* @var DataObject|Versioned|SnapshotPublishable $owner */
+        $owner = $this->owner;
         return SnapshotItem::create([
-            'ObjectClass' => get_class($this->owner),
-            'ObjectID' => $this->owner->ID,
-            'WasDraft' => $version->WasDraft,
-            'WasDeleted' => $version->WasDeleted || $version->isOnLiveOnly(),
-            'Version' => $version->Version,
+            'ObjectClass' => $owner->baseClass(),
+            'ObjectID' => $owner->ID,
+            'WasDraft' => $owner->isModifiedOnDraft(),
+            'WasDeleted' => $owner->isOnLiveOnly() || $owner->isArchived(),
+            'Version' => $owner->Version,
             'LinkedObjectClass' => null,
             'LinkedObjectID' => 0
         ]);
@@ -348,9 +349,9 @@ class SnapshotPublishable extends RecursivePublishable
         /* @var DataObject|SnapshotPublishable $owner */
         $owner = $this->owner;
         // todo: move this to proper caching
-        if (!isset(self::$__cache['mmlinking'][get_class($owner)])) {
+        if (!isset(self::$__cache['mmlinking'][$owner->baseClass()])) {
             $config = [];
-            $ownerClass = get_class($owner);
+            $ownerClass = $owner->baseClass();
 
             // Has to have two has_ones
             $hasOnes = $owner->hasOne();
@@ -373,10 +374,10 @@ class SnapshotPublishable extends RecursivePublishable
                     }
                 }
             }
-            self::$__cache['mmlinking'][get_class($owner)] = $config;
+            self::$__cache['mmlinking'][$owner->baseClass()] = $config;
         }
 
-        return self::$__cache['mmlinking'][get_class($owner)];
+        return self::$__cache['mmlinking'][$owner->baseClass()];
     }
 
     /**
@@ -478,7 +479,7 @@ class SnapshotPublishable extends RecursivePublishable
             $origin = $this->owner;
         }
         $snapshot = Snapshot::create([
-            'OriginClass' => get_class($origin),
+            'OriginClass' => $origin->baseClass(),
             'OriginID' => $origin->ID,
             'AuthorID' => Security::getCurrentUser()
                 ? Security::getCurrentUser()->ID
@@ -510,11 +511,11 @@ class SnapshotPublishable extends RecursivePublishable
         /* @var SnapshotPublishable|DataObject $obj */
         $item = $obj->createSnapshotItem();
         if ($linkedFromObj) {
-            $item->LinkedFromObjectClass = get_class($linkedFromObj);
+            $item->LinkedFromObjectClass = $linkedFromObj->baseClass();
             $item->LinkedFromObjectID = $linkedFromObj->ID;
         }
         if ($linkedToObj) {
-            $item->LinkedToObjectClass = get_class($linkedToObj);
+            $item->LinkedToObjectClass = $linkedFromObj->baseClass();
             $item->LinkedToObjectID = $linkedToObj->ID;
         }
 
