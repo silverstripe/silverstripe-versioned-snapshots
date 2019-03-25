@@ -10,3 +10,10 @@ SilverStripe\Versioned\ChangeSetItem:
 SilverStripe\ORM\DataObject:
   extensions:
     - SilverStripe\Snapshots\SnapshotExtension
+---
+Only:
+  moduleexists: 'silverstripe/cms'
+---
+SilverStripe\CMS\Model\SiteTree:
+  extensions:
+    - SilverStripe\Snapshots\SnapshotSiteTree
