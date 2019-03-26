@@ -29,14 +29,12 @@ class ActivityEntry extends ArrayData
         }
 
         $flag = null;
-        if ($item->Version == 1) {
+        if ($item->WasDeleted) {
+            $flag = self::DELETED;
+        } else if ($item->Version == 1) {
             $flag = self::CREATED;
         } else {
-            if ($item->WasDeleted) {
-                $flag = self::DELETED;
-            } else {
-                $flag = self::MODIFIED;
-            }
+            $flag = self::MODIFIED;
         }
 
         return new static([

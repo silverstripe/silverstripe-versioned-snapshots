@@ -6,6 +6,7 @@ namespace SilverStripe\Snapshots\Tests;
 use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Snapshots\ActivityEntry;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
@@ -15,6 +16,7 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImageJoin;
 use SilverStripe\Versioned\ChangeSetItem;
 use SilverStripe\Versioned\Versioned;
+use DateTime;
 
 class SnapshotTest extends FunctionalTest
 {
@@ -833,6 +835,126 @@ class SnapshotTest extends FunctionalTest
         ]);
     }
 
+    public function testRollbacks()
+    {
+        $stamp0 = $this->sleep(1);
+
+        /* @var DataObject|Versioned|SnapshotPublishable $a1 */
+        /* @var DataObject|Versioned|SnapshotPublishable $a2 */
+        /* @var DataObject|Versioned|SnapshotPublishable $a1Block1 */
+        /* @var DataObject|Versioned|SnapshotPublishable $a1Block2 */
+        /* @var DataObject|Versioned|SnapshotPublishable $a2Block1 */
+        /* @var DataObject|Versioned|SnapshotPublishable $gallery2 */
+        list ($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+
+        $this->assertCount(2, $a1->Blocks());
+        $this->assertCount(1, $a2->Blocks());
+
+        $this->assertCount(1, $a1Block1->Galleries());
+        $this->assertCount(1, $a2Block1->Galleries());
+
+        $stamp1 = $this->sleep(1);
+
+        $a1Block1->Title = 'A1 Block 1 changed';
+        $a1Block1->write();
+
+        $stamp2 = $this->sleep(1);
+
+        $a1Block2->Title = 'A1 Block 2 changed';
+        $a1Block2->write();
+
+        $stamp3 = $this->sleep(1);
+
+        $a1Block1->Title = 'A1 Block 1 changed again';
+        $a1Block1->write();
+
+        $stamp4 = $this->sleep(1);
+
+        $gallery1->Title = 'new-gallery title';
+        $gallery1->write();
+
+        $stamp5 = $this->sleep(1);
+
+        $a2Block2 = new Block([
+            'Title' => 'Block 2 on A2',
+            'ParentID' => $a2->ID,
+        ]);
+
+        $a2Block2->write();
+
+        $stamp6 = $this->sleep(1);
+
+        $a2Block1->Title = 'A2 Block 1 changed';
+        $a2Block1->write();
+
+        $stamp7 = $this->sleep(1);
+        $a2->Title = 'The new A2';
+        $a2->write();
+
+        // Sanity check the activity
+        $this->assertCount(4, $a1->getActivityFeed());
+        $this->assertCount(2, $a2->getActivityFeed());
+
+        // Get A1 from its first title change
+        $this->assertEquals('A1 Block 1 changed again', $a1Block1->Title);
+        $oldA1Block1 = $a1Block1->getAtSnapshot($stamp3);
+        $this->assertEquals('A1 Block 1 changed', $oldA1Block1->Title);
+
+        // Check related objects
+        $a1Blocks = $a1->Blocks()->sort('Created ASC, ID ASC');
+        $this->assertEquals('new-gallery title', $a1Blocks->first()->Galleries()->first()->Title);
+
+        $oldA1 = $a1->getAtSnapshot($stamp1);
+        $oldA1Blocks = $oldA1->Blocks()->sort('Created ASC, ID ASC');
+        $this->assertCount(2, $oldA1Blocks);
+        $this->assertCount(1, $oldA1Blocks->first()->Galleries());
+        $this->assertEquals('Gallery 1 on Block 1 on A1', $oldA1Blocks->first()->Galleries()->first()->Title);
+
+        $oldA1 = $a1->getAtSnapshot($stamp2);
+        $oldA1Blocks = $oldA1->Blocks()->sort('Created ASC, ID ASC');
+        $this->assertCount(2, $oldA1Blocks);
+        $this->assertEquals('A1 Block 1 changed', $oldA1Blocks->first()->Title);
+        $this->assertEquals('Block 2 on A1', $oldA1Blocks->last()->Title);
+        $this->assertCount(1, $oldA1Blocks->first()->Galleries());
+        $this->assertEquals('Gallery 1 on Block 1 on A1', $oldA1Blocks->first()->Galleries()->first()->Title);
+
+        $oldA1 = $a1->getAtSnapshot($stamp3);
+        $oldA1Blocks = $oldA1->Blocks()->sort('Created ASC, ID ASC');
+        $this->assertCount(2, $oldA1Blocks);
+        $this->assertEquals('A1 Block 1 changed', $oldA1Blocks->first()->Title);
+        $this->assertEquals('A1 Block 2 changed', $oldA1Blocks->last()->Title);
+        $this->assertCount(1, $oldA1Blocks->first()->Galleries());
+        $this->assertEquals('Gallery 1 on Block 1 on A1', $oldA1Blocks->first()->Galleries()->first()->Title);
+
+        $oldA1 = $a1->getAtSnapshot($stamp4);
+        $oldA1Blocks = $oldA1->Blocks()->sort('Created ASC, ID ASC');
+        $this->assertCount(2, $oldA1Blocks);
+        $this->assertEquals('A1 Block 1 changed again', $oldA1Blocks->first()->Title);
+        $this->assertEquals('A1 Block 2 changed', $oldA1Blocks->last()->Title);
+        $this->assertCount(1, $oldA1Blocks->first()->Galleries());
+        $this->assertEquals('Gallery 1 on Block 1 on A1', $oldA1Blocks->first()->Galleries()->first()->Title);
+
+        $oldA1 = $a1->getAtSnapshot($stamp5);
+        $oldA1Blocks = $oldA1->Blocks()->sort('Created ASC, ID ASC');
+        $this->assertCount(2, $oldA1Blocks);
+        $this->assertEquals('A1 Block 1 changed again', $oldA1Blocks->first()->Title);
+        $this->assertEquals('A1 Block 2 changed', $oldA1Blocks->last()->Title);
+        $this->assertCount(1, $oldA1Blocks->first()->Galleries());
+        $this->assertEquals('new-gallery title', $oldA1Blocks->first()->Galleries()->first()->Title);
+
+        // Get A2 before its title was changed
+        $this->assertEquals('The new A2', $a2->Title);
+        $oldA2 = $a2->getAtSnapshot($stamp6);
+        $this->assertEquals('A2 Block Page', $oldA2->Title);
+
+        // Get A2 before its second block was added
+        $this->assertCount(2, $a2->Blocks());
+        $oldA2 = $a2->getAtSnapshot($stamp5);
+        $this->assertCount(1, $oldA2->Blocks());
+
+
+    }
+
     /**
      * @param ArrayList $activity
      * @param array $objs
@@ -881,6 +1003,24 @@ class SnapshotTest extends FunctionalTest
             );
         }
     }
+
+    /**
+     * Virtual "sleep" that doesn't actually slow execution, only advances DBDateTime::now()
+     *
+     * @param int $minutes
+     * @return string
+     */
+    protected function sleep($minutes)
+    {
+        $now = DBDatetime::now();
+        $date = DateTime::createFromFormat('Y-m-d H:i:s', $now->getValue());
+        $date->modify("+{$minutes} minutes");
+        $stamp = $date->format('Y-m-d H:i:s');
+        DBDatetime::set_mock_now($stamp);
+
+        return $stamp;
+    }
+
 
     protected function buildState($publish = true)
     {

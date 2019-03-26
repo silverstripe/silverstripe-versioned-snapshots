@@ -3,17 +3,17 @@
 
 namespace SilverStripe\Snapshots;
 
-use SebastianBergmann\Version;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
-use SilverStripe\ORM\Connect\Query;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DataQuery;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\RecursivePublishable;
 use BadMethodCallException;
+use InvalidArgumentException;
 use SilverStripe\Versioned\Versioned;
 
 /**
@@ -23,7 +23,6 @@ use SilverStripe\Versioned\Versioned;
 class SnapshotPublishable extends RecursivePublishable
 {
     private static $__cache = [
-        'requires' => [],
         'mmlinking' => [],
     ];
 
@@ -53,6 +52,47 @@ class SnapshotPublishable extends RecursivePublishable
         return static::hash($obj->baseClass(), $obj->ID);
     }
 
+    /**
+     * @param $class
+     * @param $id
+     * @param $timestamp
+     * @return DataObject
+     */
+    public static function get_at_snapshot($class, $id, $timestamp)
+    {
+        $baseClass = DataObject::getSchema()->baseDataClass($class);
+        $upperSnapshot = static::getSnapshots()
+            ->filter([
+                'ObjectHash' => static::hash($class, $id),
+                'Created:LessThan' => $timestamp,
+            ])
+            ->sort('Created DESC, ID DESC')
+            ->first();
+
+        $lowerSnapshot = static::getSnapshots()
+            ->filter([
+                'ObjectHash' => static::hash($class, $id),
+                'WasPublished' => true,
+            ])
+            ->sort('Created ASC, ID ASC')
+            ->first();
+
+        if (!$upperSnapshot || !$lowerSnapshot) {
+            throw new InvalidArgumentException(sprintf(
+                'Invalid snapshot timestamp %s',
+                $timestamp
+            ));
+        }
+
+        $list = DataList::create($baseClass)
+            ->setDataQueryParam([
+                'Snapshot' => true,
+                'Snapshot.upper' => $upperSnapshot->ID,
+                'Snapshot.lower' => $lowerSnapshot->ID,
+            ]);
+
+        return $list->byID($id);
+    }
 
     /**
      * @return bool
@@ -76,7 +116,7 @@ class SnapshotPublishable extends RecursivePublishable
     /**
      * @return DataList
      */
-    public function getSnapshots()
+    public static function getSnapshots()
     {
         $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
@@ -241,6 +281,15 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
+     * @param $timestamp
+     * @return DataObject
+     */
+    public function getAtSnapshot($timestamp)
+    {
+        return static::get_at_snapshot($this->owner->baseClass(), $this->owner->ID, $timestamp);
+    }
+
+    /**
      * @return void
      */
     public function onAfterWrite()
@@ -388,7 +437,6 @@ class SnapshotPublishable extends RecursivePublishable
     {
         $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
-        $snapShotIDs = $this->owner->getSnapshotsSinceLastPublish()->column('ID');
         $hash = static::hashObject($this->owner);
 
         $query = new SQLSelect(
@@ -425,11 +473,7 @@ class SnapshotPublishable extends RecursivePublishable
             return false;
         }
 
-        if ($owner->isManyManyLinkingObject()) {
-            return true;
-        }
-
-        return $owner->findOwners()->exists();
+        return $this->owner->hasExtension(Versioned::class);
     }
 
     /**
@@ -515,7 +559,7 @@ class SnapshotPublishable extends RecursivePublishable
             $item->LinkedFromObjectID = $linkedFromObj->ID;
         }
         if ($linkedToObj) {
-            $item->LinkedToObjectClass = $linkedFromObj->baseClass();
+            $item->LinkedToObjectClass = $linkedToObj->baseClass();
             $item->LinkedToObjectID = $linkedToObj->ID;
         }
 
