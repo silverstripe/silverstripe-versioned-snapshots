@@ -218,7 +218,7 @@ class SnapshotPublishable extends RecursivePublishable
     /**
      * @return boolean
      */
-    public function hasOwnedModifications()
+        public function hasOwnedModifications()
     {
         if (!$this->owner->hasExtension(Versioned::class)) {
             return false;
@@ -514,6 +514,23 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
+     * @param $origin
+     * @return Snapshot
+     */
+    protected function createSnapshot($origin = null)
+    {
+        $snapshot = Snapshot::create([
+            'OriginClass' => $origin->baseClass(),
+            'OriginID' => $origin->ID,
+            'AuthorID' => Security::getCurrentUser()
+                ? Security::getCurrentUser()->ID
+                : 0
+        ]);
+
+        return $snapshot;
+    }
+
+    /**
      * @param null $origin
      * @return Snapshot
      */
@@ -522,13 +539,7 @@ class SnapshotPublishable extends RecursivePublishable
         if (!$origin) {
             $origin = $this->owner;
         }
-        $snapshot = Snapshot::create([
-            'OriginClass' => $origin->baseClass(),
-            'OriginID' => $origin->ID,
-            'AuthorID' => Security::getCurrentUser()
-                ? Security::getCurrentUser()->ID
-                : 0
-        ]);
+        $snapshot = $this->createSnapshot($origin);
         $snapshot->write();
         $this->activeSnapshot = $snapshot;
 
