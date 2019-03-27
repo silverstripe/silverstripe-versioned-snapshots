@@ -5,7 +5,6 @@ namespace SilverStripe\Snapshots;
 
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\Forms\HeaderField;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataExtension;
 
@@ -19,10 +18,6 @@ class SnapshotExtension extends DataExtension
         /* @var SnapshotPublishable|SiteTree $owner*/
         $owner = $this->owner;
         if ($owner->hasOwnedModifications()) {
-            $fields->unshift(
-                HeaderField::create('modifications', 'This page has owned modifications')
-                    ->setAttribute('style', 'color: orange;')
-            );
             $activity = $owner->getActivityFeed();
             $items = array_reduce($activity->toArray(), function ($acc, $curr) {
                 return $acc . sprintf(
