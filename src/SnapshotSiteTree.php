@@ -7,6 +7,7 @@ namespace SilverStripe\Snapshots;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\FormAction;
+use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataExtension;
 
 class SnapshotSiteTree extends DataExtension
@@ -56,7 +57,7 @@ class SnapshotSiteTree extends DataExtension
                             'Delete your draft and revert to the currently published page'
                         ))
                         ->addExtraClass('btn-secondary')
-                    );
+                );
             }
         }
         $publish = $actions->fieldByName('MajorActions.action_publish');
@@ -69,4 +70,34 @@ class SnapshotSiteTree extends DataExtension
             $publish->removeExtraClass('btn-outline-primary font-icon-tick');
         }
     }
+
+    public function updateCMSFields(FieldList $fields)
+    {
+        if (!$this->owner->hasExtension(SnapshotPublishable::class)) {
+            return;
+        }
+        /* @var SnapshotPublishable|SiteTree $owner*/
+        $owner = $this->owner;
+
+        $snapshots = $owner->getRelevantSnapshots();
+        if ($snapshots->exists()) {
+            $items = array_reduce($snapshots->toArray(), function ($acc, $curr) {
+                $class = str_replace('\\', '__', $this->owner->baseClass());
+                return $acc . sprintf(
+                        '<li style="margin:15px;">%s (%s) [<a target="_blank" href="%s">preview</a>] [<a href="%s">rollback</a>]</li>',
+                        $curr->obj('Created')->Ago(),
+                        $curr->obj('Created'),
+                        $this->owner->Link() . '?archiveDate=' . $curr->LastEdited,
+                        '/admin/snapshot/rollback/' . $class . '/' . $this->owner->ID . '/' . urlencode($curr->Created)
+                    );
+            }, '');
+            $list = LiteralField::create(
+                'snapshotlist',
+                '<ul>' . $items . '</ul>'
+            );
+            $fields->addFieldToTab('Root.Snapshots', $list);
+
+        }
+    }
+
 }
