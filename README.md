@@ -13,6 +13,10 @@
 ## Overview
 
 Enables snapshots for enhanced history and modification status for deeply nested ownership structures.
+It's solving an [important UX issue](https://github.com/silverstripe/silverstripe-versioned/issues/195) with versioning,
+which is particularly visible in [content blocks](https://github.com/dnadesign/silverstripe-elemental) implementations.
+
+WARNING: This module is experimental, and not considered stable. 
 
 ## Installation
 
