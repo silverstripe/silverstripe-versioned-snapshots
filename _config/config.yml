@@ -1,6 +1,0 @@
----
-Name: snapshot-extensions
----
-SilverStripe\Core\Injector\Injector:
-  SilverStripe\Versioned\RecursivePublishable:
-    class: SilverStripe\Snapshots\SnapshotPublishable
