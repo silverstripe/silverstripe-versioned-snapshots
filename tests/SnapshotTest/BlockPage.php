@@ -23,5 +23,5 @@ class BlockPage extends DataObject implements TestOnly
         Versioned::class,
     ];
 
-    private static $table_name = 'VersionedRelationsTest_BlockPage';
+    private static $table_name = 'SnapshotTest_BlockPage';
 }

@@ -7,13 +7,11 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\DataQuery;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\RecursivePublishable;
 use BadMethodCallException;
-use InvalidArgumentException;
 use SilverStripe\Versioned\Versioned;
 
 /**
@@ -22,9 +20,6 @@ use SilverStripe\Versioned\Versioned;
  */
 class SnapshotPublishable extends RecursivePublishable
 {
-    private static $__cache = [
-        'mmlinking' => [],
-    ];
 
     /**
      * Global state to tell all write hooks that a snapshot is in progress.
@@ -55,40 +50,28 @@ class SnapshotPublishable extends RecursivePublishable
     /**
      * @param $class
      * @param $id
-     * @param $timestamp
+     * @param string|int $snapshot A snapshot ID or a Y-m-d h:i:s date formatted string
      * @return DataObject
      */
-    public static function get_at_snapshot($class, $id, $timestamp)
+    public static function get_at_snapshot($class, $id, $snapshot)
     {
         $baseClass = DataObject::getSchema()->baseDataClass($class);
-        $upperSnapshot = static::getSnapshots()
-            ->filter([
-                'ObjectHash' => static::hash($class, $id),
-                'Created:LessThan' => $timestamp,
-            ])
-            ->sort('Created DESC, ID DESC')
-            ->first();
-
-        $lowerSnapshot = static::getSnapshots()
-            ->filter([
-                'ObjectHash' => static::hash($class, $id),
-                'WasPublished' => true,
-            ])
-            ->sort('Created ASC, ID ASC')
-            ->first();
-
-        if (!$upperSnapshot || !$lowerSnapshot) {
-            throw new InvalidArgumentException(sprintf(
-                'Invalid snapshot timestamp %s',
-                $timestamp
-            ));
+        $snapshotDate = null;
+        if (is_numeric($snapshot)) {
+            $record = DataObject::get_by_id(Snapshot::class, $snapshot);
+            if (!$record) {
+                throw new InvalidSnapshotException($snapshot);
+            }
+            $snapshotDate = $record->Created;
+        } else {
+            $snapshotDate = $snapshot;
         }
 
         $list = DataList::create($baseClass)
             ->setDataQueryParam([
-                'Snapshot' => true,
-                'Snapshot.upper' => $upperSnapshot->ID,
-                'Snapshot.lower' => $lowerSnapshot->ID,
+              'Versioned.mode' => 'archive',
+              'Versioned.date' => $snapshotDate,
+              'Versioned.stage' => Versioned::DRAFT,
             ]);
 
         return $list->byID($id);
@@ -129,17 +112,31 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
+     * @return DataList
+     */
+    public function getRelevantSnapshots()
+    {
+        $where = [
+            ['ObjectHash = ?' => static::hashObject($this->owner)],
+        ];
+
+        $result = $this->owner->getSnapshots()
+            ->where($where);
+
+        return $result;
+    }
+
+    /**
      * @param int $sinceVersion
      * @return DataList
      */
     public function getSnapshotsSinceVersion($sinceVersion)
     {
         $where = [
-            ['ObjectHash = ?' => static::hashObject($this->owner)],
             ['Version >= ?' => $sinceVersion],
         ];
 
-        $result = $this->owner->getSnapshots()
+        $result = $this->owner->getRelevantSnapshots()
             ->where($where);
 
         return $result;
@@ -218,7 +215,7 @@ class SnapshotPublishable extends RecursivePublishable
     /**
      * @return boolean
      */
-        public function hasOwnedModifications()
+    public function hasOwnedModifications()
     {
         if (!$this->owner->hasExtension(Versioned::class)) {
             return false;
@@ -281,12 +278,12 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @param $timestamp
+     * @param int|string $snapshot A snapshot ID or  date formatted string
      * @return DataObject
      */
-    public function getAtSnapshot($timestamp)
+    public function getAtSnapshot($snapshot)
     {
-        return static::get_at_snapshot($this->owner->baseClass(), $this->owner->ID, $timestamp);
+        return static::get_at_snapshot($this->owner->baseClass(), $this->owner->ID, $snapshot);
     }
 
     /**
@@ -397,37 +394,46 @@ class SnapshotPublishable extends RecursivePublishable
     {
         /* @var DataObject|SnapshotPublishable $owner */
         $owner = $this->owner;
-        // todo: move this to proper caching
-        if (!isset(self::$__cache['mmlinking'][$owner->baseClass()])) {
-            $config = [];
-            $ownerClass = $owner->baseClass();
+        $config = [];
+        $ownerClass = $owner->baseClass();
 
-            // Has to have two has_ones
-            $hasOnes = $owner->hasOne();
-            if (sizeof($hasOnes) < 2) {
-                return $config;
-            }
-
-            foreach ($hasOnes as $name => $class) {
-                /* @var DataObject $sng */
-                $sng = Injector::inst()->get($class);
-                foreach ($sng->manyMany() as $component => $spec) {
-                    if (!is_array($spec)) {
-                        continue;
-                    }
-                    if ($spec['through'] !== $ownerClass) {
-                        continue;
-                    }
-                    if (!isset($config[$class])) {
-                        $config[$class][] = [$spec['from'], $spec['to']];
-                    }
-                }
-            }
-            self::$__cache['mmlinking'][$owner->baseClass()] = $config;
+        // Has to have two has_ones
+        $hasOnes = $owner->hasOne();
+        if (sizeof($hasOnes) < 2) {
+            return $config;
         }
 
-        return self::$__cache['mmlinking'][$owner->baseClass()];
+        foreach ($hasOnes as $name => $class) {
+            /* @var DataObject $sng */
+            $sng = Injector::inst()->get($class);
+            foreach ($sng->manyMany() as $component => $spec) {
+                if (!is_array($spec)) {
+                    continue;
+                }
+                if ($spec['through'] !== $ownerClass) {
+                    continue;
+                }
+                if (!isset($config[$class])) {
+                    $config[$class][] = [$spec['from'], $spec['to']];
+                }
+            }
+        }
+
     }
+
+    public function rollbackOwned($snapshot)
+    {
+        $owner = $this->owner;
+        // Rollback recursively
+        foreach ($owner->findOwned(false) as $object) {
+            if ($object->hasExtension(SnapshotVersioned::class)) {
+                $object->doRollbackToSnapshot($snapshot);
+            } else {
+                $object->rollbackOwned($snapshot);
+            }
+        }
+    }
+
 
     /**
      * @param array $snapShotIDs

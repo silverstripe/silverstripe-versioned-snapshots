@@ -31,5 +31,5 @@ class Gallery extends DataObject implements TestOnly
 
     private static $owns = [ 'Images' ];
 
-    private static $table_name = 'VersionedRelationsTest_Gallery';
+    private static $table_name = 'SnapshotTest_Gallery';
 }

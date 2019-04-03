@@ -1,7 +1,7 @@
 ---
 Name: snapshot-extensions
 After:
-  - silverstripe/versioned  `
+  - silverstripe/versioned
 ---
 SilverStripe\Core\Injector\Injector:
   SilverStripe\Versioned\RecursivePublishable:

@@ -21,5 +21,5 @@ class GalleryImage extends DataObject implements TestOnly
         Versioned::class,
     ];
 
-    private static $table_name = 'VersionedRelationsTest_GalleryImage';
+    private static $table_name = 'SnapshotTest_GalleryImage';
 }

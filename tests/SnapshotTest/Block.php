@@ -27,5 +27,5 @@ class Block extends DataObject implements TestOnly
 
     private static $owns = [ 'Galleries' ];
 
-    private static $table_name = 'VersionedRelationsTest_Block';
+    private static $table_name = 'SnapshotTest_Block';
 }

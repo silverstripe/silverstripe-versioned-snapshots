@@ -18,5 +18,5 @@ class GalleryImageJoin extends DataObject implements TestOnly
         Versioned::class,
     ];
 
-    private static $table_name = 'VersionedRelationsTest_GalleryImageJoin';
+    private static $table_name = 'SnapshotTest_GalleryImageJoin';
 }
