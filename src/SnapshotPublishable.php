@@ -16,7 +16,7 @@ use SilverStripe\Versioned\Versioned;
 
 /**
  * Class SnapshotPublishable
- * @property DataObject|SnapshotPublishable $owner
+ * @property DataObject|SnapshotPublishable|Versioned $owner
  */
 class SnapshotPublishable extends RecursivePublishable
 {
@@ -479,7 +479,11 @@ class SnapshotPublishable extends RecursivePublishable
             return false;
         }
 
-        return $this->owner->hasExtension(Versioned::class);
+        if (!$owner->hasExtension(Versioned::class)) {
+            return false;
+        }
+
+        return !$owner->getNextWriteWithoutVersion();
     }
 
     /**
