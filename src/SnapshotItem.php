@@ -30,6 +30,10 @@ class SnapshotItem extends DataObject
     private static $indexes = [
         'Version' => true,
         'ObjectHash' => true,
+        'Object' => [
+            'type' => 'unique',
+            'columns' => ['ObjectHash', 'Version', 'SnapshotID']
+        ]
     ];
 
     private static $table_name = 'VersionedSnapshotItem';

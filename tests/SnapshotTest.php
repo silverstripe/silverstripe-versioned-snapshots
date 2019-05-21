@@ -98,13 +98,14 @@ class SnapshotTest extends FunctionalTest
         //  two new blocks created
         //  one of those was then modified.
         $activity = $a1->getActivityFeed();
-        $this->assertCount(3, $activity);
-        $this->assertCount(2, $a1->getPublishableObjects());
+        $this->assertCount(4, $activity);
+        $this->assertCount(3, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
             ]
         );
@@ -114,6 +115,7 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1
             ]
         );
 
@@ -137,13 +139,14 @@ class SnapshotTest extends FunctionalTest
         //  one block was modified
         //  one gallery created.
         $activity = $a1->getActivityFeed();
-        $this->assertCount(4, $activity);
-        $this->assertCount(3, $a1->getPublishableObjects());
+        $this->assertCount(5, $activity);
+        $this->assertCount(4, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
             ]
@@ -154,6 +157,7 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1,
                 $gallery1,
             ]
         );
@@ -177,13 +181,14 @@ class SnapshotTest extends FunctionalTest
         //  one gallery created
         //  one gallery was modified
         $activity = $a1->getActivityFeed();
-        $this->assertCount(5, $activity);
-        $this->assertCount(3, $a1->getPublishableObjects());
+        $this->assertCount(6, $activity);
+        $this->assertCount(4, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
@@ -195,9 +200,15 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1,
                 $gallery1,
             ]
         );
+
+        // TODO: fix many_many:
+        //  - image does not find its owners
+        //  - join does not find its owners
+        //  - gallery does not find its owners
 
         // Testing many_many
         /* @var DataObject|SnapshotPublishable $galleryItem1 */
@@ -218,13 +229,14 @@ class SnapshotTest extends FunctionalTest
         //   block1 (draft, new)
 
         $activity = $a1->getActivityFeed();
-        $this->assertCount(7, $activity);
+        $this->assertCount(8, $activity);
         $this->assertCount(5, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
@@ -894,7 +906,7 @@ class SnapshotTest extends FunctionalTest
 
         // Sanity check the activity
         $this->assertCount(4, $a1->getActivityFeed());
-        $this->assertCount(2, $a2->getActivityFeed());
+        $this->assertCount(3, $a2->getActivityFeed());
 
         // Get A1 from its first title change
         $this->assertEquals('A1 Block 1 changed again', $a1Block1->Title);

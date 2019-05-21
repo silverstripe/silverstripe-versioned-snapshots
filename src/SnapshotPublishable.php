@@ -106,7 +106,7 @@ class SnapshotPublishable extends RecursivePublishable
 
         $result = Snapshot::get()
             ->innerJoin($itemTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
-            ->sort('Created DESC');
+            ->sort('"Created" DESC');
 
         return $result;
     }
@@ -117,7 +117,7 @@ class SnapshotPublishable extends RecursivePublishable
     public function getRelevantSnapshots()
     {
         $where = [
-            ['ObjectHash = ?' => static::hashObject($this->owner)],
+            ['"ObjectHash" = ?' => static::hashObject($this->owner)],
         ];
 
         $result = $this->owner->getSnapshots()
@@ -132,8 +132,32 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getSnapshotsSinceVersion($sinceVersion)
     {
+        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
+
         $where = [
-            ['Version >= ?' => $sinceVersion],
+            // last published version
+            ['"Version" >= ?' => $sinceVersion],
+
+            // is not a snapshot of the last publishing
+            [
+                sprintf('"SnapshotID" >
+                  COALESCE((
+                      SELECT
+                        MAX("SnapshotID")
+                      FROM
+                        "%s"
+                      WHERE
+                        "ObjectHash" = ?
+                      AND
+                        "Version" = ?
+                      AND
+                        "WasPublished" = 1
+                  ), 0)', $itemTable) =>
+                  [
+                      static::hashObject($this->owner),
+                      $sinceVersion
+                  ]
+            ],
         ];
 
         $result = $this->owner->getRelevantSnapshots()
@@ -157,10 +181,7 @@ class SnapshotPublishable extends RecursivePublishable
             return $snapshots;
         }
 
-        return $snapshots
-            ->exclude([
-                'OriginHash' => static::hashObject($this->owner),
-            ]);
+        return $snapshots;
     }
 
     /**
@@ -446,7 +467,7 @@ class SnapshotPublishable extends RecursivePublishable
         $hash = static::hashObject($this->owner);
 
         $query = new SQLSelect(
-            ['MaxID' => "MAX($itemTable.ID)"],
+            ['MaxID' => "MAX(\"$itemTable\".\"ID\")"],
             $itemTable
         );
         $query->addInnerJoin(
@@ -454,13 +475,12 @@ class SnapshotPublishable extends RecursivePublishable
             "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\""
         );
         $query->setWhere([
-            ['SnapshotID IN (' . DB::placeholders($snapShotIDs) . ')' => $snapShotIDs],
-            ['WasPublished = ?' => 0],
-            ['WasDeleted = ?' => 0],
-            ['ObjectHash != ? ' => $hash],
-            'ObjectHash = OriginHash',
+            ['"SnapshotID" IN (' . DB::placeholders($snapShotIDs) . ')' => $snapShotIDs],
+            ['"WasPublished" = ?' => 0],
+            ['"WasDeleted" = ?' => 0],
+            '"ObjectHash" = "OriginHash"',
         ])
-            ->setGroupBy('ObjectHash')
+            ->setGroupBy('"ObjectHash"')
             ->setOrderBy("\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\"");
 
         return $query;
@@ -652,7 +672,7 @@ class SnapshotPublishable extends RecursivePublishable
 
             // Get the earliest snapshot where the previous owner was published.
             $cutoff = $previousOwner->getSnapshotsSinceLastPublish()
-                ->sort('ID ASC')
+                ->sort('"ID" ASC')
                 ->first();
             if (!$cutoff) {
                 return;
