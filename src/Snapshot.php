@@ -9,6 +9,8 @@ use SilverStripe\Security\Permission;
 
 class Snapshot extends DataObject
 {
+    use SnapshotHasher;
+
     private static $db = [
         'OriginHash' => 'Varchar(64)',
     ];
@@ -61,6 +63,6 @@ class Snapshot extends DataObject
     public function onBeforeWrite()
     {
         parent::onBeforeWrite();
-        $this->OriginHash = static::hash($this->OriginClass, $this->OriginID);
+        $this->OriginHash = static::hashForSnapshot($this->OriginClass, $this->OriginID);
     }
 }

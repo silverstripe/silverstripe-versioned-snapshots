@@ -1070,17 +1070,17 @@ class SnapshotTest extends FunctionalTest
             /* @var DataObject|SnapshotPublishable $obj */
             list ($obj, $action, $owner) = $objs[$i];
             $expectedHash = $obj->isInDB()
-                ? SnapshotPublishable::hashObject($obj)
-                : SnapshotPublishable::hash($obj->ClassName, $obj->OldID);
+                ? SnapshotPublishable::hashObjectForSnapshot($obj)
+                : SnapshotPublishable::hashForSnapshot($obj->ClassName, $obj->OldID);
             $this->assertEquals(
                 $expectedHash,
-                SnapshotPublishable::hashObject($entry->Subject)
+                SnapshotPublishable::hashObjectForSnapshot($entry->Subject)
             );
             $this->assertEquals($action, $entry->Action);
             if ($owner) {
                 $this->assertEquals(
-                    SnapshotPublishable::hashObject($owner),
-                    SnapshotPublishable::hashObject($entry->Owner)
+                    SnapshotPublishable::hashObjectForSnapshot($owner),
+                    SnapshotPublishable::hashObjectForSnapshot($entry->Owner)
                 );
             }
         }
@@ -1096,11 +1096,11 @@ class SnapshotTest extends FunctionalTest
         foreach ($items as $i => $dataObject) {
             $obj= $objs[$i];
             $expectedHash = $obj->isInDB()
-                ? SnapshotPublishable::hashObject($obj)
-                : SnapshotPublishable::hash($obj->ClassName, $obj->OldID);
+                ? SnapshotPublishable::hashObjectForSnapshot($obj)
+                : SnapshotPublishable::hashForSnapshot($obj->ClassName, $obj->OldID);
             $this->assertEquals(
                 $expectedHash,
-                SnapshotPublishable::hashObject($dataObject)
+                SnapshotPublishable::hashObjectForSnapshot($dataObject)
             );
         }
     }
