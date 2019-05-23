@@ -35,7 +35,7 @@ class SnapshotTest extends FunctionalTest
         ChangeSetItem::class,
     ];
 
-    public function testSnapshotFundamentals()
+    public function testFundamentals()
     {
         // Model:
         // BlockPage
@@ -230,7 +230,7 @@ class SnapshotTest extends FunctionalTest
 
         $activity = $a1->getActivityFeed();
         $this->assertCount(8, $activity);
-        $this->assertCount(5, $a1->getPublishableObjects());
+        $this->assertCount(6, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
@@ -250,6 +250,7 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1,
                 $gallery1,
                 $galleryItem1,
                 $galleryItem2,
@@ -335,13 +336,14 @@ class SnapshotTest extends FunctionalTest
         $this->assertTrue($a1->hasOwnedModifications());
 
         $activity = $a1->getActivityFeed();
-        $this->assertCount(8, $activity);
-        $this->assertCount(5, $a1->getPublishableObjects());
+        $this->assertCount(9, $activity);
+        $this->assertCount(6, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
@@ -355,6 +357,7 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1,
                 $gallery1,
                 $galleryItem1,
                 $galleryItem2,
@@ -1188,5 +1191,40 @@ class SnapshotTest extends FunctionalTest
         }
 
         return implode("\n", $list);
+    }
+
+    public function testMany()
+    {
+        /* @var DataObject|SnapshotPublishable $a1 */
+        $p = new BlockPage(['Title' => 'The Page']);
+        $p->write();
+
+        /* @var DataObject|SnapshotPublishable $a1Block1 */
+        $b = new Block(['Title' => 'The Block on The Page', 'ParentID' => $p->ID]);
+        $b->write();
+
+        /* @var DataObject|SnapshotPublishable|Versioned $gallery1 */
+        $g = new Gallery(['Title' => 'The Gallery on The Block on The Page', 'BlockID' => $b->ID]);
+        $g->write();
+
+        $p->publishRecursive();
+
+        $this->assertFalse($p->hasOwnedModifications());
+        $this->assertCount(0, $p->getActivityFeed());
+        $this->assertCount(0, $p->getPublishableObjects());
+
+        $i = new GalleryImage(['URL' => '/gallery/image/1']);
+
+        $g->Images()->add($i);
+
+        $activity = $p->getActivityFeed();
+
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$i, ActivityEntry::ADDED, $g]
+            ]
+        );
+        $this->assertCount(1, $p->getActivityFeed());
     }
 }

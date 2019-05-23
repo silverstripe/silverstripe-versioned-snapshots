@@ -421,6 +421,7 @@ class SnapshotPublishable extends RecursivePublishable
             }
         }
 
+        return $config;
     }
 
     public function rollbackOwned($snapshot)
