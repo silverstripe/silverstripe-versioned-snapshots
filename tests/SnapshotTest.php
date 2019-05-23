@@ -35,7 +35,7 @@ class SnapshotTest extends FunctionalTest
         ChangeSetItem::class,
     ];
 
-    public function testSnapshotFundamentals()
+    public function testFundamentals()
     {
         // Model:
         // BlockPage
@@ -98,13 +98,14 @@ class SnapshotTest extends FunctionalTest
         //  two new blocks created
         //  one of those was then modified.
         $activity = $a1->getActivityFeed();
-        $this->assertCount(3, $activity);
-        $this->assertCount(2, $a1->getPublishableObjects());
+        $this->assertCount(4, $activity);
+        $this->assertCount(3, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
             ]
         );
@@ -114,6 +115,7 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1
             ]
         );
 
@@ -137,13 +139,14 @@ class SnapshotTest extends FunctionalTest
         //  one block was modified
         //  one gallery created.
         $activity = $a1->getActivityFeed();
-        $this->assertCount(4, $activity);
-        $this->assertCount(3, $a1->getPublishableObjects());
+        $this->assertCount(5, $activity);
+        $this->assertCount(4, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
             ]
@@ -154,6 +157,7 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1,
                 $gallery1,
             ]
         );
@@ -177,13 +181,14 @@ class SnapshotTest extends FunctionalTest
         //  one gallery created
         //  one gallery was modified
         $activity = $a1->getActivityFeed();
-        $this->assertCount(5, $activity);
-        $this->assertCount(3, $a1->getPublishableObjects());
+        $this->assertCount(6, $activity);
+        $this->assertCount(4, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
@@ -195,6 +200,7 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1,
                 $gallery1,
             ]
         );
@@ -218,13 +224,14 @@ class SnapshotTest extends FunctionalTest
         //   block1 (draft, new)
 
         $activity = $a1->getActivityFeed();
-        $this->assertCount(7, $activity);
-        $this->assertCount(5, $a1->getPublishableObjects());
+        $this->assertCount(8, $activity);
+        $this->assertCount(6, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
@@ -238,6 +245,7 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1,
                 $gallery1,
                 $galleryItem1,
                 $galleryItem2,
@@ -323,13 +331,14 @@ class SnapshotTest extends FunctionalTest
         $this->assertTrue($a1->hasOwnedModifications());
 
         $activity = $a1->getActivityFeed();
-        $this->assertCount(8, $activity);
-        $this->assertCount(5, $a1->getPublishableObjects());
+        $this->assertCount(9, $activity);
+        $this->assertCount(6, $a1->getPublishableObjects());
         $this->assertActivityContains(
             $activity,
             [
                 [$a1Block1, ActivityEntry::CREATED],
                 [$a1Block2, ActivityEntry::CREATED],
+                [$a1, ActivityEntry::MODIFIED],
                 [$a1Block1, ActivityEntry::MODIFIED],
                 [$gallery1, ActivityEntry::CREATED],
                 [$gallery1, ActivityEntry::MODIFIED],
@@ -343,6 +352,7 @@ class SnapshotTest extends FunctionalTest
             [
                 $a1Block1,
                 $a1Block2,
+                $a1,
                 $gallery1,
                 $galleryItem1,
                 $galleryItem2,
@@ -894,7 +904,7 @@ class SnapshotTest extends FunctionalTest
 
         // Sanity check the activity
         $this->assertCount(4, $a1->getActivityFeed());
-        $this->assertCount(2, $a2->getActivityFeed());
+        $this->assertCount(3, $a2->getActivityFeed());
 
         // Get A1 from its first title change
         $this->assertEquals('A1 Block 1 changed again', $a1Block1->Title);
@@ -952,8 +962,6 @@ class SnapshotTest extends FunctionalTest
         $this->assertCount(2, $a2->Blocks());
         $oldA2 = $a2->getAtSnapshot($stamp4);
         $this->assertCount(1, $oldA2->Blocks());
-
-
     }
 
     public function testRollbackSnapshot()
@@ -1044,6 +1052,81 @@ class SnapshotTest extends FunctionalTest
         $this->assertCount(2, $a2->Blocks());
     }
 
+    public function testWonkyOwner()
+    {
+        $page = new BlockPage(['Title' => 'The Page']);
+        $page->write();
+        $page->publishRecursive();
+
+        $block = new Block(['Title' => 'The Block', 'ParentID' => 0]);
+        $block->write();
+
+        $block->ParentID = $page->ID;
+        $block->write();
+
+        $activity = $page->getActivityFeed();
+        $this->assertCount(1, $activity);
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$block, ActivityEntry::MODIFIED]
+            ]
+        );
+    }
+
+    public function testChangeToUnpublishedOwner()
+    {
+        $page = new BlockPage(['Title' => 'The Page']);
+        $page->write();
+
+        $block = new Block(['Title' => 'The Block']);
+        $block->write();
+
+        $block->ParentID = $page->ID;
+        $block->write();
+
+        $activity = $page->getActivityFeed();
+
+        $this->assertCount(2, $activity);
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$page, ActivityEntry::CREATED],
+                [$block, ActivityEntry::MODIFIED]
+            ]
+        );
+    }
+
+    public function testMany()
+    {
+        $p = new BlockPage(['Title' => 'The Page']);
+        $p->write();
+
+        $b = new Block(['Title' => 'The Block on The Page', 'ParentID' => $p->ID]);
+        $b->write();
+
+        $g = new Gallery(['Title' => 'The Gallery on The Block on The Page', 'BlockID' => $b->ID]);
+        $g->write();
+
+        $p->publishRecursive();
+
+        $this->assertFalse($p->hasOwnedModifications());
+        $this->assertCount(0, $p->getActivityFeed());
+        $this->assertCount(0, $p->getPublishableObjects());
+
+        $i = new GalleryImage(['URL' => '/gallery/image/1']);
+        $g->Images()->add($i);
+
+        $activity = $p->getActivityFeed();
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$i, ActivityEntry::ADDED, $g]
+            ]
+        );
+        $this->assertCount(1, $p->getActivityFeed());
+    }
+
     /**
      * @param ArrayList $activity
      * @param array $objs
@@ -1058,17 +1141,17 @@ class SnapshotTest extends FunctionalTest
             /* @var DataObject|SnapshotPublishable $obj */
             list ($obj, $action, $owner) = $objs[$i];
             $expectedHash = $obj->isInDB()
-                ? SnapshotPublishable::hashObject($obj)
-                : SnapshotPublishable::hash($obj->ClassName, $obj->OldID);
+                ? SnapshotPublishable::hashObjectForSnapshot($obj)
+                : SnapshotPublishable::hashForSnapshot($obj->ClassName, $obj->OldID);
             $this->assertEquals(
                 $expectedHash,
-                SnapshotPublishable::hashObject($entry->Subject)
+                SnapshotPublishable::hashObjectForSnapshot($entry->Subject)
             );
             $this->assertEquals($action, $entry->Action);
             if ($owner) {
                 $this->assertEquals(
-                    SnapshotPublishable::hashObject($owner),
-                    SnapshotPublishable::hashObject($entry->Owner)
+                    SnapshotPublishable::hashObjectForSnapshot($owner),
+                    SnapshotPublishable::hashObjectForSnapshot($entry->Owner)
                 );
             }
         }
@@ -1084,11 +1167,11 @@ class SnapshotTest extends FunctionalTest
         foreach ($items as $i => $dataObject) {
             $obj= $objs[$i];
             $expectedHash = $obj->isInDB()
-                ? SnapshotPublishable::hashObject($obj)
-                : SnapshotPublishable::hash($obj->ClassName, $obj->OldID);
+                ? SnapshotPublishable::hashObjectForSnapshot($obj)
+                : SnapshotPublishable::hashForSnapshot($obj->ClassName, $obj->OldID);
             $this->assertEquals(
                 $expectedHash,
-                SnapshotPublishable::hashObject($dataObject)
+                SnapshotPublishable::hashObjectForSnapshot($dataObject)
             );
         }
     }

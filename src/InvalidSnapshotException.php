@@ -1,8 +1,6 @@
 <?php
 
-
 namespace SilverStripe\Snapshots;
-
 
 use RuntimeException;
 use Throwable;

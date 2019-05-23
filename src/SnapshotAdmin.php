@@ -1,8 +1,6 @@
 <?php
 
-
 namespace SilverStripe\Snapshots;
-
 
 use SilverStripe\Admin\LeftAndMain;
 use SilverStripe\Control\HTTPRequest;
@@ -48,5 +46,4 @@ class SnapshotAdmin extends LeftAndMain
 
         return $this->redirectBack();
     }
-
 }

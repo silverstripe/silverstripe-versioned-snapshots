@@ -1,8 +1,6 @@
 <?php
 
-
 namespace SilverStripe\Snapshots;
-
 
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataQuery;
@@ -14,7 +12,6 @@ use SilverStripe\Versioned\Versioned;
  */
 class SnapshotVersioned extends Versioned
 {
-
     public function doRollbackToSnapshot($snapshot)
     {
         /* @var SnapshotVersioned|SnapshotPublishable|DataObject $rolledBack */
@@ -26,5 +23,4 @@ class SnapshotVersioned extends Versioned
 
         return $rolledBack->getAtVersion(Versioned::DRAFT);
     }
-
 }

@@ -12,6 +12,8 @@ use SilverStripe\Versioned\Versioned;
 
 class SnapshotItem extends DataObject
 {
+    use SnapshotHasher;
+
     private static $db = [
         'Version' => 'Int',
         'WasPublished' => 'Boolean',
@@ -30,6 +32,10 @@ class SnapshotItem extends DataObject
     private static $indexes = [
         'Version' => true,
         'ObjectHash' => true,
+        'Object' => [
+            'type' => 'unique',
+            'columns' => ['ObjectHash', 'Version', 'SnapshotID']
+        ]
     ];
 
     private static $table_name = 'VersionedSnapshotItem';
@@ -89,7 +95,7 @@ class SnapshotItem extends DataObject
     public function onBeforeWrite()
     {
         parent::onBeforeWrite();
-        $this->ObjectHash = md5($this->ObjectClass . $this->ObjectID);
+        $this->ObjectHash = static::hashForSnapshot($this->ObjectClass, $this->ObjectID);
     }
 
     /**

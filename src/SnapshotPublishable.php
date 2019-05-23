@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots;
 
 use SilverStripe\Core\Injector\Injector;
@@ -20,6 +19,7 @@ use SilverStripe\Versioned\Versioned;
  */
 class SnapshotPublishable extends RecursivePublishable
 {
+    use SnapshotHasher;
 
     /**
      * Global state to tell all write hooks that a snapshot is in progress.
@@ -27,25 +27,6 @@ class SnapshotPublishable extends RecursivePublishable
      * @var Snapshot
      */
     protected $activeSnapshot = null;
-
-    /**
-     * @param $class
-     * @param $id
-     * @return string
-     */
-    public static function hash($class, $id)
-    {
-        return md5($class . $id);
-    }
-
-    /**
-     * @param DataObject $obj
-     * @return string
-     */
-    public static function hashObject(DataObject $obj)
-    {
-        return static::hash($obj->baseClass(), $obj->ID);
-    }
 
     /**
      * @param $class
@@ -106,7 +87,7 @@ class SnapshotPublishable extends RecursivePublishable
 
         $result = Snapshot::get()
             ->innerJoin($itemTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
-            ->sort('Created DESC');
+            ->sort('"Created" DESC');
 
         return $result;
     }
@@ -117,7 +98,7 @@ class SnapshotPublishable extends RecursivePublishable
     public function getRelevantSnapshots()
     {
         $where = [
-            ['ObjectHash = ?' => static::hashObject($this->owner)],
+            ['"ObjectHash" = ?' => static::hashObjectForSnapshot($this->owner)],
         ];
 
         $result = $this->owner->getSnapshots()
@@ -132,8 +113,33 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getSnapshotsSinceVersion($sinceVersion)
     {
+        $sinceVersion = (int) $sinceVersion;
+        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
+
         $where = [
-            ['Version >= ?' => $sinceVersion],
+            // last published version
+            ['"Version" >= ?' => $sinceVersion],
+
+            // is not a snapshot of the last publishing
+            [
+                sprintf('"SnapshotID" >
+                  COALESCE((
+                      SELECT
+                        MAX("SnapshotID")
+                      FROM
+                        "%s"
+                      WHERE
+                        "ObjectHash" = ?
+                      AND
+                        "Version" = ?
+                      AND
+                        "WasPublished" = 1
+                  ), 0)', $itemTable) =>
+                  [
+                      static::hashObjectForSnapshot($this->owner),
+                      $sinceVersion
+                  ]
+            ],
         ];
 
         $result = $this->owner->getRelevantSnapshots()
@@ -157,10 +163,7 @@ class SnapshotPublishable extends RecursivePublishable
             return $snapshots;
         }
 
-        return $snapshots
-            ->exclude([
-                'OriginHash' => static::hashObject($this->owner),
-            ]);
+        return $snapshots;
     }
 
     /**
@@ -267,10 +270,10 @@ class SnapshotPublishable extends RecursivePublishable
                 $ownership = $obj->getManyManyOwnership();
                 foreach ($ownership as $spec) {
                     list ($parentClass, $parentName, $parent, $child) = $spec;
-                    $map[static::hashObject($child)] = $child;
+                    $map[static::hashObjectForSnapshot($child)] = $child;
                 }
             } else {
-                $map[static::hashObject($obj)] = $obj;
+                $map[static::hashObjectForSnapshot($obj)] = $obj;
             }
         }
 
@@ -349,7 +352,7 @@ class SnapshotPublishable extends RecursivePublishable
     {
         $snapshots = $this->getSnapshotsSinceVersion($this->owner->Version)
             ->filter([
-                'OriginHash' => static::hashObject($this->owner),
+                'OriginHash' => static::hashObjectForSnapshot($this->owner),
             ]);
 
         $snapshots->removeAll();
@@ -419,6 +422,7 @@ class SnapshotPublishable extends RecursivePublishable
             }
         }
 
+        return $config;
     }
 
     public function rollbackOwned($snapshot)
@@ -443,10 +447,10 @@ class SnapshotPublishable extends RecursivePublishable
     {
         $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
-        $hash = static::hashObject($this->owner);
+        $hash = static::hashObjectForSnapshot($this->owner);
 
         $query = new SQLSelect(
-            ['MaxID' => "MAX($itemTable.ID)"],
+            ['MaxID' => "MAX(\"$itemTable\".\"ID\")"],
             $itemTable
         );
         $query->addInnerJoin(
@@ -454,13 +458,12 @@ class SnapshotPublishable extends RecursivePublishable
             "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\""
         );
         $query->setWhere([
-            ['SnapshotID IN (' . DB::placeholders($snapShotIDs) . ')' => $snapShotIDs],
-            ['WasPublished = ?' => 0],
-            ['WasDeleted = ?' => 0],
-            ['ObjectHash != ? ' => $hash],
-            'ObjectHash = OriginHash',
+            ['"SnapshotID" IN (' . DB::placeholders($snapShotIDs) . ')' => $snapShotIDs],
+            ['"WasPublished" = ?' => 0],
+            ['"WasDeleted" = ?' => 0],
+            '"ObjectHash" = "OriginHash"',
         ])
-            ->setGroupBy('ObjectHash')
+            ->setGroupBy('"ObjectHash"')
             ->setOrderBy("\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\"");
 
         return $query;
@@ -611,17 +614,24 @@ class SnapshotPublishable extends RecursivePublishable
         foreach ($fields as $field) {
             if (isset($changed[$field])) {
                 $spec = $changed[$field];
-                if (!is_numeric($spec['before'])
-                    || !is_numeric($spec['after'])
-                    || $spec['before'] == $spec['after']
-                ) {
+
+                if (is_null($spec['before']) || is_null($spec['after']) || $spec['before'] == $spec['after']) {
                     continue;
                 }
 
                 $class = $map[$field];
+
+                if (!$previous = DataObject::get_by_id($class, $spec['before'])) {
+                    continue;
+                }
+
+                if (!$current = DataObject::get_by_id($class, $spec['after'])) {
+                    continue;
+                }
+
                 $result[] = [
-                    'previous' => DataObject::get_by_id($class, $spec['before']),
-                    'current' => DataObject::get_by_id($class, $spec['after']),
+                    'previous' => $previous,
+                    'current' => $current,
                 ];
             }
         }
@@ -648,11 +658,11 @@ class SnapshotPublishable extends RecursivePublishable
             $currentOwner = $spec['current'];
             $currentOwners = array_merge([$currentOwner], $currentOwner->findOwners()->toArray());
 
-            $previousHashes = array_map([static::class, 'hashObject'], $previousOwners);
+            $previousHashes = array_map([static::class, 'hashObjectForSnapshot'], $previousOwners);
 
             // Get the earliest snapshot where the previous owner was published.
             $cutoff = $previousOwner->getSnapshotsSinceLastPublish()
-                ->sort('ID ASC')
+                ->sort('"ID" ASC')
                 ->first();
             if (!$cutoff) {
                 return;

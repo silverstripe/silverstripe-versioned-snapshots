@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots;
 
 use SilverStripe\CMS\Model\SiteTree;
@@ -21,12 +20,12 @@ class SnapshotExtension extends DataExtension
             $activity = $owner->getActivityFeed();
             $items = array_reduce($activity->toArray(), function ($acc, $curr) {
                 return $acc . sprintf(
-                        '<li style="margin:15px;">[%s] %s "%s" was %s</li>',
-                        $curr->Date,
-                        $curr->Subject->singular_name(),
-                        $curr->Subject->getTitle(),
-                        $curr->Action
-                    );
+                    '<li style="margin:15px;">[%s] %s "%s" was %s</li>',
+                    $curr->Date,
+                    $curr->Subject->singular_name(),
+                    $curr->Subject->getTitle(),
+                    $curr->Action
+                );
             }, '');
             $list = LiteralField::create(
                 'activitylist',
@@ -35,6 +34,5 @@ class SnapshotExtension extends DataExtension
             $fields->addFieldToTab('Root.Activity', $list);
             $fields->fieldByName('Root.Activity')->setTitle('Activity (' . $activity->count() . ')');
         }
-
     }
 }
