@@ -7,7 +7,8 @@ use SilverStripe\ORM\DataObject;
 /**
  * Implements hashing functionality for versioned snapshots
  */
-trait SnapshotHasher {
+trait SnapshotHasher
+{
     /**
      * Generates a hash for versioned snapshots
      *

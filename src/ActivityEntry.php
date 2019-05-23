@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots;
 
 use SilverStripe\View\ArrayData;
@@ -31,7 +30,7 @@ class ActivityEntry extends ArrayData
         $flag = null;
         if ($item->WasDeleted) {
             $flag = self::DELETED;
-        } else if ($item->Version == 1) {
+        } elseif ($item->Version == 1) {
             $flag = self::CREATED;
         } else {
             $flag = self::MODIFIED;
