@@ -205,11 +205,6 @@ class SnapshotTest extends FunctionalTest
             ]
         );
 
-        // TODO: fix many_many:
-        //  - image does not find its owners
-        //  - join does not find its owners
-        //  - gallery does not find its owners
-
         // Testing many_many
         /* @var DataObject|SnapshotPublishable $galleryItem1 */
         $galleryItem1 = new GalleryImage(['URL' => '/gallery/image/1']);
@@ -967,8 +962,6 @@ class SnapshotTest extends FunctionalTest
         $this->assertCount(2, $a2->Blocks());
         $oldA2 = $a2->getAtSnapshot($stamp4);
         $this->assertCount(1, $oldA2->Blocks());
-
-
     }
 
     public function testRollbackSnapshot()
@@ -1057,6 +1050,81 @@ class SnapshotTest extends FunctionalTest
         $a2->publishRecursive();
         $a2 = $a2->getAtVersion(Versioned::LIVE);
         $this->assertCount(2, $a2->Blocks());
+    }
+
+    public function testWonkyOwner()
+    {
+        $page = new BlockPage(['Title' => 'The Page']);
+        $page->write();
+        $page->publishRecursive();
+
+        $block = new Block(['Title' => 'The Block', 'ParentID' => 0]);
+        $block->write();
+
+        $block->ParentID = $page->ID;
+        $block->write();
+
+        $activity = $page->getActivityFeed();
+        $this->assertCount(1, $activity);
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$block, ActivityEntry::MODIFIED]
+            ]
+        );
+    }
+
+    public function testChangeToUnpublishedOwner()
+    {
+        $page = new BlockPage(['Title' => 'The Page']);
+        $page->write();
+
+        $block = new Block(['Title' => 'The Block']);
+        $block->write();
+
+        $block->ParentID = $page->ID;
+        $block->write();
+
+        $activity = $page->getActivityFeed();
+
+        $this->assertCount(2, $activity);
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$page, ActivityEntry::CREATED],
+                [$block, ActivityEntry::MODIFIED]
+            ]
+        );
+    }
+
+    public function testMany()
+    {
+        $p = new BlockPage(['Title' => 'The Page']);
+        $p->write();
+
+        $b = new Block(['Title' => 'The Block on The Page', 'ParentID' => $p->ID]);
+        $b->write();
+
+        $g = new Gallery(['Title' => 'The Gallery on The Block on The Page', 'BlockID' => $b->ID]);
+        $g->write();
+
+        $p->publishRecursive();
+
+        $this->assertFalse($p->hasOwnedModifications());
+        $this->assertCount(0, $p->getActivityFeed());
+        $this->assertCount(0, $p->getPublishableObjects());
+
+        $i = new GalleryImage(['URL' => '/gallery/image/1']);
+        $g->Images()->add($i);
+
+        $activity = $p->getActivityFeed();
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$i, ActivityEntry::ADDED, $g]
+            ]
+        );
+        $this->assertCount(1, $p->getActivityFeed());
     }
 
     /**
@@ -1191,40 +1259,5 @@ class SnapshotTest extends FunctionalTest
         }
 
         return implode("\n", $list);
-    }
-
-    public function testMany()
-    {
-        /* @var DataObject|SnapshotPublishable $a1 */
-        $p = new BlockPage(['Title' => 'The Page']);
-        $p->write();
-
-        /* @var DataObject|SnapshotPublishable $a1Block1 */
-        $b = new Block(['Title' => 'The Block on The Page', 'ParentID' => $p->ID]);
-        $b->write();
-
-        /* @var DataObject|SnapshotPublishable|Versioned $gallery1 */
-        $g = new Gallery(['Title' => 'The Gallery on The Block on The Page', 'BlockID' => $b->ID]);
-        $g->write();
-
-        $p->publishRecursive();
-
-        $this->assertFalse($p->hasOwnedModifications());
-        $this->assertCount(0, $p->getActivityFeed());
-        $this->assertCount(0, $p->getPublishableObjects());
-
-        $i = new GalleryImage(['URL' => '/gallery/image/1']);
-
-        $g->Images()->add($i);
-
-        $activity = $p->getActivityFeed();
-
-        $this->assertActivityContains(
-            $activity,
-            [
-                [$i, ActivityEntry::ADDED, $g]
-            ]
-        );
-        $this->assertCount(1, $p->getActivityFeed());
     }
 }

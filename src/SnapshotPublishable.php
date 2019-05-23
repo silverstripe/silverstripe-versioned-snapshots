@@ -113,6 +113,7 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getSnapshotsSinceVersion($sinceVersion)
     {
+        $sinceVersion = (int) $sinceVersion;
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
         $where = [
@@ -613,17 +614,24 @@ class SnapshotPublishable extends RecursivePublishable
         foreach ($fields as $field) {
             if (isset($changed[$field])) {
                 $spec = $changed[$field];
-                if (!is_numeric($spec['before'])
-                    || !is_numeric($spec['after'])
-                    || $spec['before'] == $spec['after']
-                ) {
+
+                if (is_null($spec['before']) || is_null($spec['after']) || $spec['before'] == $spec['after']) {
                     continue;
                 }
 
                 $class = $map[$field];
+
+                if (!$previous = DataObject::get_by_id($class, $spec['before'])) {
+                    continue;
+                }
+
+                if (!$current = DataObject::get_by_id($class, $spec['after'])) {
+                    continue;
+                }
+
                 $result[] = [
-                    'previous' => DataObject::get_by_id($class, $spec['before']),
-                    'current' => DataObject::get_by_id($class, $spec['after']),
+                    'previous' => $previous,
+                    'current' => $current,
                 ];
             }
         }
