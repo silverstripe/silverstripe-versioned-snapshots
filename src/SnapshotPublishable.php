@@ -6,6 +6,7 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DataQuery;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Security\Security;
@@ -97,12 +98,27 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getRelevantSnapshots()
     {
+        $hash = static::hashObject($this->owner);
         $where = [
             ['"ObjectHash" = ?' => static::hashObjectForSnapshot($this->owner)],
         ];
 
         $result = $this->owner->getSnapshots()
             ->where($where);
+        $result = $result->alterDataQuery(function (DataQuery $query) use ($hash) {
+            $query->selectField(
+                sprintf(
+                    "\"OriginHash\" = '%s'",
+                    DB::get_conn()->escapeString($hash)
+                ),
+                'IsFullVersion'
+            );
+            $query->selectField(
+                '(SELECT OriginVersion FROM SnapshotItem WHERE SnapshotID'
+            );
+
+            return $query;
+        });
 
         return $result;
     }
@@ -213,6 +229,52 @@ class SnapshotPublishable extends RecursivePublishable
         }
 
         return $list;
+    }
+
+    public function getSnapshotHistory()
+    {
+        $snapshotsQuery = $this->owner->getRelevantSnapshots();
+        $snapshotTable = DataObject::getSchema()->baseDataTable(Snapshot::class);
+        $versionTable = DataObject::getSchema()->baseDataTable($this->owner) . '_Versions';
+        $snapshotsQuery = $snapshotsQuery->dataQuery()->getFinalisedQuery();
+        $snapshotsQuery->setSelect([
+            'ID' => "\"$snapshotTable\".\"ID\"",
+//            'Created' => "\"$snapshotTable\".\"Created\"",
+//            'ClassName' => "\"$snapshotTable\".\"ClassName\"",
+//            'WasPublished' => '0',
+//            'AuthorID',
+//            'PublisherID' => '0',
+//            'Version' => '0',
+//            '__Type' => "'SNAPSHOT'",
+        ]);
+        $snapshotsQuery->setOrderBy(null);
+
+        if (!$this->owner->hasExtension(Versioned::class)) {
+            return $snapshotsQuery;
+        }
+
+        $versionsQuery = new SQLSelect(
+            [
+                'ID' => "\"$versionTable\".\"RecordID\"",
+//                'Created',
+//                'ClassName',
+//                'WasPublished',
+//                'AuthorID',
+//                'PublisherID',
+//                'Version',
+//                '__Type' => "'VERSION'",
+            ],
+            $versionTable,
+            [
+               ['ClassName = ?' => $this->owner->ClassName],
+               ['RecordID = ?' => $this->owner->ID]
+            ]
+        );
+
+        return UnionList::create(
+            $snapshotsQuery,
+            $versionsQuery
+        );
     }
 
     /**
