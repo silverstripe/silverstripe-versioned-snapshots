@@ -83,6 +83,18 @@ class Snapshot extends DataObject
         return 'none';
     }
 
+    public function getActivityType()
+    {
+        $item = $this->getOriginItem();
+        if ($item) {
+            $activity = ActivityEntry::createFromSnapshotItem($item);
+
+            return $activity->Action;
+        }
+
+        return '';
+    }
+
     public function canCreate($member = null, $context = [])
     {
         return Permission::checkMember($member, 'CMS_ACCESS_CMSMain');

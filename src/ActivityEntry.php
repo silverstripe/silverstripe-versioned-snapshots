@@ -16,6 +16,8 @@ class ActivityEntry extends ArrayData
 
     const REMOVED = 'REMOVED';
 
+    const PUBLISHED = 'PUBLISHED';
+
     public static function createFromSnapshotItem(SnapshotItem $item)
     {
         if ($item->LinkedToObject()->exists()) {
@@ -30,6 +32,8 @@ class ActivityEntry extends ArrayData
         $flag = null;
         if ($item->WasDeleted) {
             $flag = self::DELETED;
+        } elseif ($item->WasPublished) {
+            $flag = self::PUBLISHED;
         } elseif ($item->Version == 1) {
             $flag = self::CREATED;
         } else {
