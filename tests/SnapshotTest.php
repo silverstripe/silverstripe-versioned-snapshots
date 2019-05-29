@@ -21,7 +21,6 @@ use DateTime;
 
 class SnapshotTest extends FunctionalTest
 {
-
     protected $usesDatabase = true;
 
     protected $usesTransactions = false;
@@ -1127,6 +1126,278 @@ class SnapshotTest extends FunctionalTest
         $this->assertCount(1, $p->getActivityFeed());
     }
 
+    public function testPlainActivityFeed()
+    {
+        $page = new BlockPage();
+        $page->Title = 'The Page -- version 1';
+        $page->write();
+
+        $page->Title = 'The Page -- version 2';
+        $page->write();
+
+        $page->Title = 'The Page -- version 3';
+        $page->write();
+
+        $activity = $page->getActivityFeed();
+        $this->assertCount(3, $activity);
+        $this->assertCount(1, $page->getPublishableObjects());
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$page, ActivityEntry::CREATED],
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::MODIFIED],
+            ]
+        );
+
+        $versionedActivity = $page->getActivityFeed(1);
+        $this->assertCount(3, $versionedActivity);
+        $this->assertActivityContains(
+            $versionedActivity,
+            [
+                [$page, ActivityEntry::CREATED],
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::MODIFIED],
+            ]
+        );
+
+        $page->publishRecursive();
+
+        $activity = $page->getActivityFeed();
+        $this->assertCount(0, $activity);
+        $this->assertCount(0, $page->getPublishableObjects());
+
+        $versionedActivity = $page->getActivityFeed(1);
+        $this->assertCount(4, $versionedActivity);
+        $this->assertActivityContains(
+            $versionedActivity,
+            [
+                [$page, ActivityEntry::CREATED],
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::PUBLISHED],
+            ]
+        );
+
+        $page->Title = 'The Page -- version 5';
+        $page->write();
+
+        $page->Title = 'The Page -- version 6';
+        $page->write();
+
+        $activity = $page->getActivityFeed();
+        $this->assertCount(2, $activity);
+        $this->assertCount(1, $page->getPublishableObjects());
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::MODIFIED],
+            ]
+        );
+
+        $versionedActivity = $page->getActivityFeed(1);
+        $this->assertCount(6, $versionedActivity);
+        $this->assertActivityContains(
+            $versionedActivity,
+            [
+                [$page, ActivityEntry::CREATED],
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::PUBLISHED],
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::MODIFIED]
+            ]
+        );
+
+        $versionedActivity = $page->getActivityFeed(3, 5);
+        $this->assertCount(3, $versionedActivity);
+        $this->assertActivityContains(
+            $versionedActivity,
+            [
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::PUBLISHED],
+                [$page, ActivityEntry::MODIFIED],
+            ]
+        );
+
+        $page->publishRecursive();
+
+        $versionedActivity = $page->getActivityFeed(3);
+        $this->assertCount(5, $versionedActivity);
+        $this->assertActivityContains(
+            $versionedActivity,
+            [
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::PUBLISHED],
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::MODIFIED],
+                [$page, ActivityEntry::PUBLISHED],
+            ]
+        );
+    }
+
+    public function testNestedActivityFeed()
+    {
+        $p = new BlockPage(['Title' => 'Page -- v01']);
+        $p->write();
+
+        $b = new Block(['Title' => 'Block -- v01', 'ParentID' => $p->ID]);
+        $b->write();
+
+        $g = new Gallery(['Title' => 'Gallery -- v01', 'BlockID' => $b->ID]);
+        $g->write();
+
+        $p->publishRecursive();
+
+        $this->assertFalse($p->hasOwnedModifications());
+        $this->assertCount(0, $p->getActivityFeed());
+        $this->assertCount(0, $p->getPublishableObjects());
+
+        $i = new GalleryImage(['URL' => '/gallery/image/1']);
+        $g->Images()->add($i);
+
+        $activity = $p->getActivityFeed();
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$i, ActivityEntry::ADDED, $g]
+            ]
+        );
+
+        $b->Title = 'Block -- v02';
+        $b->write();
+
+        $p->publishRecursive();
+
+        $i->URL = '/gallery/image/2';
+        $i->write();
+
+        $activity = $p->getActivityFeed();
+        $this->assertActivityContains(
+            $activity,
+            [
+                [$i, ActivityEntry::MODIFIED]
+            ]
+        );
+
+        $p->publishRecursive();
+
+        $a = $p->getActivityFeed(2);
+        $this->assertActivityContains($a, [
+            [$i, ActivityEntry::ADDED, $g],
+            [$b, ActivityEntry::MODIFIED],
+            [$p, ActivityEntry::PUBLISHED],
+            [$i, ActivityEntry::MODIFIED],
+            [$p, ActivityEntry::PUBLISHED],
+        ]);
+
+        $a = $p->getActivityFeed(2, 4);
+        $this->assertActivityContains($a, [
+            [$i, ActivityEntry::ADDED, $g],
+            [$b, ActivityEntry::MODIFIED],
+            [$p, ActivityEntry::PUBLISHED],
+            [$i, ActivityEntry::MODIFIED],
+            [$p, ActivityEntry::PUBLISHED],
+        ]);
+
+        $a = $p->getActivityFeed(2, 3);
+        $this->assertActivityContains($a, [
+            [$i, ActivityEntry::ADDED, $g],
+            [$b, ActivityEntry::MODIFIED],
+            [$p, ActivityEntry::PUBLISHED],
+            [$i, ActivityEntry::MODIFIED]
+        ]);
+    }
+
+    protected function benchIt($subjects, $item_iterations = null, $db_iterations = null, $unpub_iterations = null)
+    {
+        echo 'Building database...'.PHP_EOL;
+        ob_flush();flush();
+
+        $p = new BlockPage(['Title' => 'Page -- v01']);
+        $p->write();
+
+        $b = new Block(['Title' => 'Block -- v01', 'ParentID' => $p->ID]);
+        $b->write();
+
+        $g = new Gallery(['Title' => 'Gallery -- v01', 'BlockID' => $b->ID]);
+        $g->write();
+
+        $g->Images()->add(
+            $i = new GalleryImage(['URL' => '/gallery/image/1'])
+        );
+
+        for ($j=0; $j<($db_iterations ?: 20); ++$j) {
+            $p->Title = 'Page -- version '.$j;
+            $p->write();
+
+            $b->Title = 'Block -- version '.$j;
+            $b->write();
+
+            $g->Title = 'Gallery -- version '.$j;
+            $g->write();
+
+            $i->URL = '/gallery/image/'.$j;
+            $i->write();
+
+            $p->publishRecursive();
+
+            echo '.';
+            if ($j % 120 === 0 && $j > 0) {
+                echo PHP_EOL;
+            }
+            ob_flush();flush();
+        }
+        echo PHP_EOL.PHP_EOL.'Database is built!'.PHP_EOL;
+        echo PHP_EOL.PHP_EOL.'Building unpublished stuff!'.PHP_EOL;
+        ob_flush();flush();
+
+        for ($j=0; $j<($unpub_iterations ?: 30); ++$j) {
+            $p->Title = 'Page -- update '.$j;
+            $p->write();
+
+            $b->Title = 'Block -- update '.$j;
+            $b->write();
+
+            $g->Title = 'Gallery -- update '.$j;
+            $g->write();
+
+            $i->URL = '/gallery/image/_'.$j;
+            $i->write();
+
+            echo '.';
+            if ($j % 120 === 0 && $j > 0) {
+                echo PHP_EOL;
+            }
+            ob_flush();flush();
+        }
+
+        echo PHP_EOL.PHP_EOL.$this->debugActivity($p->getActivityFeed()).PHP_EOL.PHP_EOL.PHP_EOL.PHP_EOL;
+        ob_flush();flush();
+
+        $results = [];
+
+        foreach ($subjects as $key => $closure) {
+            echo "Measuring \"$key\" ... ";
+            ob_flush();flush();
+
+            $beg = microtime(true);
+            for ($j=0; $j<($item_iterations ?: 100); ++$j) {
+                $closure($p, $b, $g, $i);
+            }
+            $end = microtime(true);
+            $results[$key] = $end-$beg;
+
+            echo 'done!'.PHP_EOL;
+            ob_flush();flush();
+        }
+
+        print_r($results);
+        echo PHP_EOL.PHP_EOL.PHP_EOL;
+        ob_flush();flush();
+    }
+
     /**
      * @param ArrayList $activity
      * @param array $objs
@@ -1149,6 +1420,8 @@ class SnapshotTest extends FunctionalTest
             );
             $this->assertEquals($action, $entry->Action);
             if ($owner) {
+                $this->assertNotNull($entry->Owner);
+
                 $this->assertEquals(
                     SnapshotPublishable::hashObjectForSnapshot($owner),
                     SnapshotPublishable::hashObjectForSnapshot($entry->Owner)
