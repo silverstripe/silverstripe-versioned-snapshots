@@ -20,7 +20,7 @@ class ActivityEntry extends ArrayData
 
     public static function createFromSnapshotItem(SnapshotItem $item)
     {
-        if ($item->LinkedToObject()->exists()) {
+        if ($item->LinkedToObjectID > 0 && $item->LinkedToObject()->exists()) {
             return new static([
                 'Subject' => $item->LinkedToObject(),
                 'Action' => $item->WasDeleted ? self::REMOVED : self::ADDED,

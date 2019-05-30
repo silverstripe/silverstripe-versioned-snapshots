@@ -86,8 +86,7 @@ class SnapshotPublishable extends RecursivePublishable
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
         $result = Snapshot::get()
-            ->innerJoin($itemTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
-            ->sort('"Created" DESC');
+            ->innerJoin($itemTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"");
 
         return $result;
     }
@@ -97,17 +96,10 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getRelevantSnapshots()
     {
-        $hash = static::hashObjectForSnapshot($this->owner);
-        $where = [
-            ['"ObjectHash" = ?' => $hash],
-        ];
-
-        $result = $this->owner->getSnapshots()
-            ->where($where);
-
-        $this->owner->invokeWithExtensions('updateRelevantSnapshots', $result);
-
-        return $result;
+        return $this->owner->getSnapshots()
+            ->where([
+                ['"ObjectHash" = ?' => static::hashObjectForSnapshot($this->owner)]
+            ]);
     }
 
     /**
@@ -137,11 +129,12 @@ class SnapshotPublishable extends RecursivePublishable
                         "Version" = ?
                       AND
                         "WasPublished" = 1
-                  ), 0)', $itemTable) =>
-                  [
-                      static::hashObjectForSnapshot($this->owner),
-                      $sinceVersion
-                  ]
+                  ), 0)',
+                  $itemTable
+                ) => [
+                    static::hashObjectForSnapshot($this->owner),
+                    $sinceVersion
+                ]
             ],
         ];
 
@@ -155,18 +148,98 @@ class SnapshotPublishable extends RecursivePublishable
      * @param bool $includeSelf
      * @return DataList
      */
-    public function getSnapshotsSinceLastPublish($includeSelf = false)
+    public function getSnapshotsSinceLastPublish()
     {
         $class = $this->owner->baseClass();
         $id = $this->owner->ID;
         $publishedVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
         $snapshots = $this->owner->getSnapshotsSinceVersion($publishedVersion);
 
-        if ($includeSelf) {
-            return $snapshots;
+        return $snapshots;
+    }
+
+    /**
+     * Generate ORM filters for snapshots between 2 versions
+     * If $max is null, includes everything unpublished too
+     *
+     * @param int $min Minimal version to start looking with (inclusive)
+     * @param int|null $max Maximal version to look until (inclusive)
+     *
+     * @return array list of filters for using in ORM APIs
+     */
+     public function getSnapshotsBetweenVersionsFilters($min, $max = null)
+     {
+        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
+
+        $hash = static::hashObjectForSnapshot($this->owner);
+
+        $minShot = [
+            'query' => sprintf(
+                'SELECT MIN("SnapshotID") FROM "%s" WHERE "ObjectHash" = ? and "Version" = ?',
+                $itemTable
+            ),
+            'params' => [$hash, $min]
+        ];
+
+        $maxShot = [
+            'query' => sprintf(
+                'SELECT MAX("SnapshotID") FROM "%s" WHERE "ObjectHash" = ? and "Version" = ?',
+                $itemTable
+            ),
+            'params' => [$hash, $max]
+        ];
+
+        $params = [];
+
+        if (is_null($max)) {
+            $condition = sprintf('"SnapshotID" >= (%s)', $minShot['query']);
+            $params = array_merge($params, $minShot['params']);
+        } else {
+            $condition = sprintf('"SnapshotID" BETWEEN (%s) and (%s)', $minShot['query'], $maxShot['query']);
+            $params = array_merge($params, $minShot['params'], $maxShot['params']);
         }
 
-        return $snapshots;
+        $query = sprintf(
+            '
+            SELECT
+              "SnapshotID"
+            FROM
+              "%s"
+            WHERE
+              (%s)
+            AND
+              "ObjectHash" = ?
+            AND
+              NOT ("Version" = ? AND "WasPublished" = 1)
+            ',
+            $itemTable,
+            $condition
+        );
+
+        $params[] = $hash;
+        $params[] = $min;
+
+        return [
+            sprintf('"SnapshotID" in (%s)', $query) => $params
+        ];
+    }
+
+    public function getActivityBetweenVersions($min, $max = null)
+    {
+        $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
+        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
+
+        $items = SnapshotItem::get()
+            ->innerJoin($snapshotTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
+            ->where(array_merge([
+                // Only get the items that were the subject of a user's action
+                "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
+            ], $this->getSnapshotsBetweenVersionsFilters($min, $max)))
+            ->sort([
+                "\"$itemTable\".\"SnapshotID\"" => "ASC"
+            ]);
+
+        return $items;
     }
 
     /**
@@ -201,15 +274,28 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @return ArrayList
+     * Returns a list of ActivityEntry ordered by creation datetime
+     *
+     * @param int|null $minVersion version to start with (or last published if null)
+     * @param int|null $maxVersion version to end with (or till the end, including everything unpublished)
+     *
+     * @return ArrayList list of ActivityEntry
      */
-    public function getActivityFeed()
+    public function getActivityFeed($minVersion = null, $maxVersion = null)
     {
-        $list = ArrayList::create();
-        $items = $this->owner->getActivity();
-        if (!$items->exists()) {
-            return $list;
+        if (is_null($minVersion)) {
+            $class = $this->owner->baseClass();
+            $id = $this->owner->ID;
+            $minVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
+
+            if (is_null($minVersion)) {
+                $minVersion = 1;
+            }
         }
+
+        $items = $this->getActivityBetweenVersions($minVersion, $maxVersion);
+
+        $list = ArrayList::create();
 
         foreach ($items as $item) {
             $list->push(ActivityEntry::createFromSnapshotItem($item));
@@ -227,15 +313,18 @@ class SnapshotPublishable extends RecursivePublishable
             return false;
         }
 
-        $snapShotIDs = $this->getSnapshotsSinceLastPublish()->column('ID');
-        if (empty($snapShotIDs)) {
-            return false;
+        $class = $this->owner->baseClass();
+        $id = $this->owner->ID;
+        $minVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
+
+        if (is_null($minVersion)) {
+            $minVersion = 1;
         }
 
-        return $this->publishableItemsQuery($snapShotIDs)
-                ->setLimit(1)
-                ->execute()
-                ->numRecords() === 1;
+        return count(SnapshotItem::get()
+            ->where($this->getSnapshotsBetweenVersionsFilters($minVersion, null))
+            ->limit(1)
+            ->column('SnapshotID')) > 0;
     }
 
     /**
@@ -672,7 +761,7 @@ class SnapshotPublishable extends RecursivePublishable
             }
 
             // Get all the snapshots of the moved node since the cutoff.
-            $snapshotsToMigrate = $this->owner->getSnapshotsSinceLastPublish(true)
+            $snapshotsToMigrate = $this->owner->getSnapshotsSinceLastPublish()
                 ->filter([
                     'ID:GreaterThanOrEqual' => $cutoff->ID,
                 ]);
