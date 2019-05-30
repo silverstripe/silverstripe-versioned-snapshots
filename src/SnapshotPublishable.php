@@ -145,7 +145,6 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @param bool $includeSelf
      * @return DataList
      */
     public function getSnapshotsSinceLastPublish()
@@ -172,55 +171,43 @@ class SnapshotPublishable extends RecursivePublishable
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
         $hash = static::hashObjectForSnapshot($this->owner);
-
-        $minShot = [
-            'query' => sprintf(
-                'SELECT MIN("SnapshotID") FROM "%s" WHERE "ObjectHash" = ? and "Version" = ?',
-                $itemTable
-            ),
-            'params' => [$hash, $min]
-        ];
-
-        $maxShot = [
-            'query' => sprintf(
-                'SELECT MAX("SnapshotID") FROM "%s" WHERE "ObjectHash" = ? and "Version" = ?',
-                $itemTable
-            ),
-            'params' => [$hash, $max]
-        ];
-
-        $params = [];
-
-        if (is_null($max)) {
-            $condition = sprintf('"SnapshotID" >= (%s)', $minShot['query']);
-            $params = array_merge($params, $minShot['params']);
-        } else {
-            $condition = sprintf('"SnapshotID" BETWEEN (%s) and (%s)', $minShot['query'], $maxShot['query']);
-            $params = array_merge($params, $minShot['params'], $maxShot['params']);
-        }
-
-        $query = sprintf(
-            '
-            SELECT
-              "SnapshotID"
-            FROM
-              "%s"
-            WHERE
-              (%s)
-            AND
-              "ObjectHash" = ?
-            AND
-              NOT ("Version" = ? AND "WasPublished" = 1)
-            ',
+        $minShot = SQLSelect::create(
+            'MIN("SnapshotID")',
             $itemTable,
-            $condition
+            [
+                'ObjectHash = ?' => $hash,
+                'Version = ?' => $min,
+            ]
         );
+        $minShotSQL = $minShot->sql($minParams);
 
-        $params[] = $hash;
-        $params[] = $min;
+         $maxShot = SQLSelect::create(
+             'MAX("SnapshotID")',
+             $itemTable,
+             [
+                 'ObjectHash = ?' => $hash,
+                 'Version = ?' => $max,
+             ]
+         );
+         $maxShotSQL = $maxShot->sql($maxParams);
+
+         $condition = $max === null
+             ? sprintf('"SnapshotID" >= (%s)', $minShotSQL)
+             : sprintf('"SnapshotID" BETWEEN (%s) and (%s)', $minShotSQL, $maxShotSQL);
+
+         $query = SQLSelect::create(
+             "SnapshotID",
+             $itemTable,
+             [
+                 $condition => $max === null ? $minParams : array_merge($minParams, $maxParams),
+                 'ObjectHash' => $hash,
+                 'NOT ("Version" = ? AND "WasPublished" = 1)' => $min,
+             ]
+         );
+         $sql = $query->sql($params);
 
         return [
-            sprintf('"SnapshotID" in (%s)', $query) => $params
+            sprintf('"SnapshotID" IN (%s)', $sql) => $params
         ];
     }
 
@@ -321,10 +308,11 @@ class SnapshotPublishable extends RecursivePublishable
             $minVersion = 1;
         }
 
-        return count(SnapshotItem::get()
-            ->where($this->getSnapshotsBetweenVersionsFilters($minVersion, null))
-            ->limit(1)
-            ->column('SnapshotID')) > 0;
+        $result = SnapshotItem::get()
+            ->where($this->getSnapshotsBetweenVersionsFilters($minVersion, null));
+
+        return $result->exists();
+
     }
 
     /**
