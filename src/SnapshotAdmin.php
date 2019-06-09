@@ -18,6 +18,8 @@ class SnapshotAdmin extends LeftAndMain
 
     private static $url_priority = 10;
 
+    private static $ignore_menuitem = true;
+
     private static $required_permission_codes = 'CMS_ACCESS_CMSMain';
 
     private static $url_handlers = [
