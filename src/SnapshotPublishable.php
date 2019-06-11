@@ -117,8 +117,9 @@ class SnapshotPublishable extends RecursivePublishable
 
             // is not a snapshot of the last publishing
             [
-                sprintf('"SnapshotID" >
-                  COALESCE((
+                sprintf(
+                    '"SnapshotID" >
+                    COALESCE((
                       SELECT
                         MAX("SnapshotID")
                       FROM
@@ -129,8 +130,8 @@ class SnapshotPublishable extends RecursivePublishable
                         "Version" = ?
                       AND
                         "WasPublished" = 1
-                  ), 0)',
-                  $itemTable
+                    ), 0)',
+                    $itemTable
                 ) => [
                     static::hashObjectForSnapshot($this->owner),
                     $sinceVersion
@@ -166,45 +167,45 @@ class SnapshotPublishable extends RecursivePublishable
      *
      * @return array list of filters for using in ORM APIs
      */
-     public function getSnapshotsBetweenVersionsFilters($min, $max = null)
-     {
+    public function getSnapshotsBetweenVersionsFilters($min, $max = null)
+    {
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
         $hash = static::hashObjectForSnapshot($this->owner);
         $minShot = SQLSelect::create(
             'MIN("SnapshotID")',
-            $itemTable,
+            "\"$itemTable\"",
             [
-                'ObjectHash = ?' => $hash,
-                'Version = ?' => $min,
+                '"ObjectHash" = ?' => $hash,
+                '"Version" = ?' => $min,
             ]
         );
         $minShotSQL = $minShot->sql($minParams);
 
-         $maxShot = SQLSelect::create(
-             'MAX("SnapshotID")',
-             $itemTable,
-             [
-                 'ObjectHash = ?' => $hash,
-                 'Version = ?' => $max,
-             ]
-         );
-         $maxShotSQL = $maxShot->sql($maxParams);
+        $maxShot = SQLSelect::create(
+            'MAX("SnapshotID")',
+            "\"$itemTable\"",
+            [
+                '"ObjectHash" = ?' => $hash,
+                '"Version" = ?' => $max,
+            ]
+        );
+        $maxShotSQL = $maxShot->sql($maxParams);
 
-         $condition = $max === null
-             ? sprintf('"SnapshotID" >= (%s)', $minShotSQL)
-             : sprintf('"SnapshotID" BETWEEN (%s) and (%s)', $minShotSQL, $maxShotSQL);
+        $condition = $max === null
+            ? sprintf('"SnapshotID" >= (%s)', $minShotSQL)
+            : sprintf('"SnapshotID" BETWEEN (%s) and (%s)', $minShotSQL, $maxShotSQL);
 
-         $query = SQLSelect::create(
-             "SnapshotID",
-             $itemTable,
-             [
-                 $condition => $max === null ? $minParams : array_merge($minParams, $maxParams),
-                 'ObjectHash' => $hash,
-                 'NOT ("Version" = ? AND "WasPublished" = 1)' => $min,
-             ]
-         );
-         $sql = $query->sql($params);
+        $query = SQLSelect::create(
+            "\"SnapshotID\"",
+            "\"$itemTable\"",
+            [
+                $condition => $max === null ? $minParams : array_merge($minParams, $maxParams),
+                '"ObjectHash"' => $hash,
+                'NOT ("Version" = ? AND "WasPublished" = 1)' => $min,
+            ]
+        );
+        $sql = $query->sql($params);
 
         return [
             sprintf('"SnapshotID" IN (%s)', $sql) => $params
@@ -312,7 +313,6 @@ class SnapshotPublishable extends RecursivePublishable
             ->where($this->getSnapshotsBetweenVersionsFilters($minVersion, null));
 
         return $result->exists();
-
     }
 
     /**
@@ -338,10 +338,13 @@ class SnapshotPublishable extends RecursivePublishable
         }
 
         $query = $this->publishableItemsQuery($snapShotIDs);
-        $query->addSelect(['ObjectClass', 'ObjectID']);
+        $query->addSelect($groupByFields = ['"ObjectClass"', '"ObjectID"']);
+        $query->addGroupBy($groupByFields);
+
         $items = $query->execute();
         $map = [];
-        while ($row = $items->nextRecord()) {
+
+        foreach ($items as $row) {
             $class = $row['ObjectClass'];
             $id = $row['ObjectID'];
             /* @var DataObject|SnapshotPublishable $obj */
@@ -531,7 +534,7 @@ class SnapshotPublishable extends RecursivePublishable
 
         $query = new SQLSelect(
             ['MaxID' => "MAX(\"$itemTable\".\"ID\")"],
-            $itemTable
+            "\"$itemTable\""
         );
         $query->addInnerJoin(
             $snapshotTable,
@@ -543,7 +546,7 @@ class SnapshotPublishable extends RecursivePublishable
             ['"WasDeleted" = ?' => 0],
             '"ObjectHash" = "OriginHash"',
         ])
-            ->setGroupBy('"ObjectHash"')
+            ->setGroupBy(['"ObjectHash"', "\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\""])
             ->setOrderBy("\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\"");
 
         return $query;
