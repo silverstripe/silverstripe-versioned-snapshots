@@ -1,0 +1,23 @@
+---
+Name: snapshot-extensions
+After:
+  - silverstripe/versioned
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Versioned\RecursivePublishable:
+    class: SilverStripe\Snapshots\SnapshotPublishable
+  SilverStripe\Versioned\Versioned:
+    class: SilverStripe\Snapshots\SnapshotVersioned
+SilverStripe\Versioned\ChangeSetItem:
+  extensions:
+    - SilverStripe\Snapshots\SnapshotChangeSetItem
+SilverStripe\ORM\DataObject:
+  extensions:
+    - SilverStripe\Snapshots\SnapshotExtension
+---
+Only:
+  moduleexists: 'silverstripe/cms'
+---
+SilverStripe\CMS\Model\SiteTree:
+  extensions:
+    - SilverStripe\Snapshots\SnapshotSiteTree
