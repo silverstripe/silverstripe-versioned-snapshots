@@ -7,16 +7,23 @@ env:
 matrix:
   fast_finish: true
   include:
-    - php: 5.6
-      env: DB=PGSQL PHPUNIT_TEST=1 PHPCS_TEST=1
-    - php: 7.0
+    - php: &min-version '7.1'
       env: DB=MYSQL PHPUNIT_TEST=1
-    - php: 7.1
-      env: DB=MYSQL PDO=1 PHPUNIT_COVERAGE_TEST=1
-    - php: 7.2
+
+    - php: '7.2'
       env: DB=MYSQL PHPUNIT_TEST=1
-    - php: 7.3
+
+    - php: '7.3'
       env: DB=MYSQL PHPUNIT_TEST=1
+
+    - php: *min-version
+      env: DB=MYSQL PHPUNIT_COVERAGE_TEST=1 PHPCS_TEST=1
+
+    - php: *min-version
+      env: DB=PGSQL PHPUNIT_TEST=1
+
+    - php: *min-version
+      env: DB=MYSQL PDO=1 PHPUNIT_TEST=1
 
 before_script:
 # Init PHP
@@ -27,15 +34,13 @@ before_script:
 
 # Install composer
   - composer validate
+  - composer require silverstripe/recipe-core:4.4.x-dev silverstripe/recipe-cms:4.4.x-dev silverstripe/versioned:1.4.x-dev --prefer-dist --no-update
+  - if [[ $DB == PGSQL ]]; then composer require silverstripe/postgresql:2.1.x-dev --prefer-dist --no-update; fi
   - composer install --prefer-dist
-  - composer require silverstripe/recipe-core:4.4.x-dev silverstripe/versioned:1.4.x-dev --prefer-dist --no-update
-  - composer update
-  - if [[ $DB == PGSQL ]]; then composer require silverstripe/postgresql:2.1.x-dev --prefer-dist; fi
 
 script:
-  - if [[ $PHPUNIT_TEST ]]; then vendor/bin/phpunit tests/php; fi
+  - if [[ $PHPUNIT_TEST ]]; then vendor/bin/phpunit; fi
   - if [[ $PHPCS_TEST ]]; then composer run-script lint; fi
-  - if [[ $PHPCS_TEST ]]; then composer validate; fi
   - if [[ $PHPUNIT_COVERAGE_TEST ]]; then phpdbg -qrr vendor/bin/phpunit --coverage-clover=coverage.xml; fi
 
 after_success:

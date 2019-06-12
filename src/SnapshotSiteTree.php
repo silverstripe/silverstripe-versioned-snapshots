@@ -67,5 +67,4 @@ class SnapshotSiteTree extends DataExtension
             $publish->removeExtraClass('btn-outline-primary font-icon-tick');
         }
     }
-
 }
