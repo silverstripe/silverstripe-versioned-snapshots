@@ -96,10 +96,14 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getRelevantSnapshots()
     {
-        return $this->owner->getSnapshots()
+        $snapshots = $this->owner->getSnapshots()
             ->where([
                 ['"ObjectHash" = ?' => static::hashObjectForSnapshot($this->owner)]
             ]);
+
+        $this->owner->extend('updateRelevantSnapshots', $snapshots);
+
+        return $snapshots;
     }
 
     /**
