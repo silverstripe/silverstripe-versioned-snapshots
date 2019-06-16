@@ -72,12 +72,11 @@ class Snapshot extends DataObject
         $item = $this->getOriginItem();
         if ($item) {
             $activity = ActivityEntry::createFromSnapshotItem($item);
-            return sprintf(
-                '%s "%s" [%s]',
+            return ucfirst(sprintf(
+                '%s "%s"',
                 $activity->Subject->singular_name(),
-                $activity->Subject->getTitle(),
-                $activity->Action
-            );
+                $activity->Subject->getTitle()
+            ));
         }
 
         return 'none';
