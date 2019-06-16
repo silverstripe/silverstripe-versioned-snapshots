@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Snapshots;
 
+use BadMethodCallException;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
@@ -10,7 +11,6 @@ use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\RecursivePublishable;
-use BadMethodCallException;
 use SilverStripe\Versioned\Versioned;
 
 /**
