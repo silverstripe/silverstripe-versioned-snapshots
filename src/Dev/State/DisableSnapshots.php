@@ -6,6 +6,13 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Dev\State\TestState;
 use SilverStripe\Snapshots\SnapshotPublishable;
 
+/**
+ * Disable snapshots in tests by default. Snapshots will analyze a relationship tree for objects when they are saved but
+ * fixtures will not necessarily scaffold all required tables for this when the test state is scaffolded.
+ *
+ * Tests that rely on snapshot functionality should explicitly opt-in to snapshots by calling
+ * `SnapshotPublishable::resume`.
+ */
 class DisableSnapshots implements TestState
 {
 

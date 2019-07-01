@@ -552,11 +552,19 @@ class SnapshotPublishable extends RecursivePublishable
         }
     }
 
+    /**
+     * Pause snapshotting - disabling tracking version changes across a versioned owner relationship tree. This should
+     * only be done in cases where you are manually creating a snapshot (or you are _really_ sure that you don't want a
+     * change to be tracked own "owner"s of a record.
+     */
     public static function pause()
     {
         self::$active = false;
     }
 
+    /**
+     * Resume snapshotting after previously calling `SnapshotPublishable::pause`.
+     */
     public static function resume()
     {
         self::$active = true;
