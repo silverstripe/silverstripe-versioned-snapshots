@@ -404,15 +404,27 @@ class SnapshotPublishable extends RecursivePublishable
     {
         /* @var DataObject|Versioned|SnapshotPublishable $owner */
         $owner = $this->owner;
-        return SnapshotItem::create([
+
+        $record = [
             'ObjectClass' => $owner->baseClass(),
             'ObjectID' => $owner->ID,
-            'WasDraft' => $owner->isModifiedOnDraft(),
-            'WasDeleted' => $owner->isOnLiveOnly() || $owner->isArchived(),
-            'Version' => $owner->Version,
             'LinkedObjectClass' => null,
             'LinkedObjectID' => 0
-        ]);
+        ];
+
+        // Track versioning changes on the record if the owner is versioned
+        if ($owner->hasExtension(Versioned::class)) {
+            $record += [
+                'WasDraft' => $owner->isModifiedOnDraft(),
+                'WasDeleted' => $owner->isOnLiveOnly() || $owner->isArchived(),
+                'Version' => $owner->Version,
+            ];
+        } else {
+            // Track publish state for non-versioned owners, they're always in a published state.
+            $record['WasPublished'] = true;
+        }
+
+        return SnapshotItem::create($record);
     }
 
     public function onAfterPublish()
