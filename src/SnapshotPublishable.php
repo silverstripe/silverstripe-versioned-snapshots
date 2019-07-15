@@ -29,6 +29,13 @@ class SnapshotPublishable extends RecursivePublishable
     protected $activeSnapshot = null;
 
     /**
+     * Indicates if snapshotting is currently active. Control this state with the ::pause and ::resume methods
+     *
+     * @var bool
+     */
+    protected static $active = true;
+
+    /**
      * @param $class
      * @param $id
      * @param string|int $snapshot A snapshot ID or a Y-m-d h:i:s date formatted string
@@ -63,6 +70,10 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function publishRecursive()
     {
+        if (!self::$active) {
+            return parent::publishRecursive();
+        }
+
         $this->openSnapshot();
         $result = parent::publishRecursive();
         $this->closeSnapshot();
@@ -72,6 +83,10 @@ class SnapshotPublishable extends RecursivePublishable
 
     public function rollbackRelations($version)
     {
+        if (!self::$active) {
+            return parent::rollbackRelations($version);
+        }
+
         $this->openSnapshot();
         parent::rollbackRelations($version);
         $this->closeSnapshot();
@@ -537,6 +552,23 @@ class SnapshotPublishable extends RecursivePublishable
         }
     }
 
+    /**
+     * Pause snapshotting - disabling tracking version changes across a versioned owner relationship tree. This should
+     * only be done in cases where you are manually creating a snapshot (or you are _really_ sure that you don't want a
+     * change to be tracked own "owner"s of a record.
+     */
+    public static function pause()
+    {
+        self::$active = false;
+    }
+
+    /**
+     * Resume snapshotting after previously calling `SnapshotPublishable::pause`.
+     */
+    public static function resume()
+    {
+        self::$active = true;
+    }
 
     /**
      * @param array $snapShotIDs
@@ -573,6 +605,11 @@ class SnapshotPublishable extends RecursivePublishable
      */
     protected function requiresSnapshot()
     {
+        // Check if snapshotting is currently "paused"
+        if (!self::$active) {
+            return false;
+        }
+
         $owner = $this->owner;
 
         // Explicitly blacklist these two, since they get so many writes in this context,
