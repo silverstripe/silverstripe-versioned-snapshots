@@ -99,11 +99,13 @@ class SnapshotItem extends DataObject
     }
 
     /**
+     * @param int|null $version
      * @return DataObject
      */
-    public function getItem()
+    public function getItem(?int $version = null)
     {
-        return Versioned::get_version($this->ObjectClass, $this->ObjectID, $this->Version);
+        $version = $version ?? $this->Version;
+        return Versioned::get_version($this->ObjectClass, $this->ObjectID, $version);
     }
 
     public function getItemTitle()

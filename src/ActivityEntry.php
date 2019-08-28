@@ -40,8 +40,16 @@ class ActivityEntry extends ArrayData
             $flag = self::MODIFIED;
         }
 
+        // The item is used to show the user a title etc for the item
+        // Since the deleted version doesn't have that we want the prior version
+        if ($item->WasDeleted && $item->Version > 1) {
+            $itemObj = $item->getItem($item->Version - 1);
+        } else {
+            $itemObj = $item->getItem();
+        }
+
         return new static([
-            'Subject' => $item->getItem(),
+            'Subject' => $itemObj,
             'Action' => $flag,
             'Owner' => null,
             'Date' => $item->obj('Created')->Nice(),
