@@ -512,7 +512,6 @@ class SnapshotPublishable extends RecursivePublishable
         /* @var DataObject|SnapshotPublishable $owner */
         $owner = $this->owner;
         $config = [];
-        $ownerClass = $owner->baseClass();
 
         // Has to have two has_ones
         $hasOnes = $owner->hasOne();
@@ -527,7 +526,7 @@ class SnapshotPublishable extends RecursivePublishable
                 if (!is_array($spec)) {
                     continue;
                 }
-                if ($spec['through'] !== $ownerClass) {
+                if (!($owner instanceof $spec['through'])) {
                     continue;
                 }
                 if (!isset($config[$class])) {
