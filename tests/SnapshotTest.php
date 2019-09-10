@@ -14,6 +14,7 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Gallery;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImage;
+use SilverStripe\Snapshots\Tests\SnapshotTest\BaseJoin;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImageJoin;
 use SilverStripe\Versioned\ChangeSetItem;
 use SilverStripe\Versioned\Versioned;
@@ -30,6 +31,7 @@ class SnapshotTest extends FunctionalTest
         Block::class,
         Gallery::class,
         GalleryImage::class,
+        BaseJoin::class,
         GalleryImageJoin::class,
         ChangeSetItem::class,
     ];
