@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Snapshots;
 
+use SilverStripe\Versioned\Versioned;
 use SilverStripe\View\ArrayData;
 
 class ActivityEntry extends ArrayData
@@ -40,8 +41,25 @@ class ActivityEntry extends ArrayData
             $flag = self::MODIFIED;
         }
 
+        $itemObj = $item->getItem();
+
+        // If the items been deleted then we want to get the last version of it
+        if ($itemObj === null) {
+            // This gets all versions except for the deleted version so we just get the latest one
+            $previousVersion = Versioned::get_all_versions($item->ObjectClass, $item->ObjectID)
+                ->sort('Version', 'DESC')
+                ->first();
+            if ($previousVersion->exists()) {
+                $itemObj = $item->getItem($previousVersion->Version);
+            // This is to deal with the case in which there is no previous version
+            // it's better to give a faulty snapshot point than break the app
+            } else if ($item->Version > 1) {
+                $itemObj = $item->getItem($item->Version - 1);
+            }
+        }
+
         return new static([
-            'Subject' => $item->getItem(),
+            'Subject' => $itemObj,
             'Action' => $flag,
             'Owner' => null,
             'Date' => $item->obj('Created')->Nice(),
