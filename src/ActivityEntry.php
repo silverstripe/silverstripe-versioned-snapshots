@@ -53,7 +53,7 @@ class ActivityEntry extends ArrayData
                 $itemObj = $item->getItem($previousVersion->Version);
             // This is to deal with the case in which there is no previous version
             // it's better to give a faulty snapshot point than break the app
-            } else if ($item->Version > 1) {
+            } elseif ($item->Version > 1) {
                 $itemObj = $item->getItem($item->Version - 1);
             }
         }
