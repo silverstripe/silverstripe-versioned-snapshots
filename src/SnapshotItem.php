@@ -99,11 +99,13 @@ class SnapshotItem extends DataObject
     }
 
     /**
-     * @return DataObject
+     * Defaults to the tagged version for the snapshot item unless we're given a specific version
+     * This was added to deal with a case in @see ActivityEntry::createFromSnapshotItem()
      */
-    public function getItem()
+    public function getItem(?int $version = null): ?DataObject
     {
-        return Versioned::get_version($this->ObjectClass, $this->ObjectID, $this->Version);
+        $version = $version ?? $this->Version;
+        return Versioned::get_version($this->ObjectClass, $this->ObjectID, $version);
     }
 
     public function getItemTitle()

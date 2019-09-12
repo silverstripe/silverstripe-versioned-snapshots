@@ -408,7 +408,7 @@ class SnapshotPublishable extends RecursivePublishable
         }
     }
 
-    public function onAfterDelete()
+    public function onAfterVersionDelete()
     {
         if ($this->requiresSnapshot()) {
             $this->doSnapshot();
