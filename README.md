@@ -13,7 +13,7 @@ Enables snapshots for enhanced history and modification status for deeply nested
 It's solving an [important UX issue](https://github.com/silverstripe/silverstripe-versioned/issues/195) with versioning,
 which is particularly visible in [content blocks](https://github.com/dnadesign/silverstripe-elemental) implementations.
 
-This module enables the data model, you might also be interested in [silverstripe/versioned-snapshot-admin](https://github.com/silverstripe/silverstripe-versioned-snapshot-admin) to expose these snapshots through the "History" tab of the CMS.
+This module enables the data model. To take full advantage of its core offering, you should install [silverstripe/versioned-snapshot-admin](https://github.com/silverstripe/silverstripe-versioned-snapshot-admin) to expose these snapshots through the "History" tab of the CMS.
 
 WARNING: This module is experimental, and not considered stable. 
 
@@ -46,6 +46,15 @@ This module aims to make these modification states and implicit edit history mor
 
 Currently, rolling back a record that owns other content is not supported and will produce unexpected results.
 Further, comparing owned changes between two versions of a parent is not supported.
+
+## Can I use this in my current project?
+
+Yes, with few caveats:
+
+* It adds significant overhead to all `DataObject::write()` calls. (Benchmarking TBD)
+* `many_many` relationships **must use "through" objects**. (implicit many_many is not versionable)
+* Snapshot history is *not retroactive*. You will lose all your version history and start new with
+snapshot history. (A migration task would be a great contribution to this project!)
 
 ## API
 
@@ -91,10 +100,7 @@ are a few cases when snapshots are retroactively updated
 * When the ownership structure is changed, the previous owners are surgically removed
 from the graph and the new ones stitched in.
 
-## Caveats
 
-* Adds significant overhead to all `DataObject::write()` calls. (Benchmarking TBD)
-* `many_many` relationships **must use "through" objects**. 
 
 ## Versioning
 
