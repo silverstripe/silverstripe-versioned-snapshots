@@ -140,6 +140,11 @@ class Submission extends Extension
             return;
         }
 
+        // avoid recording useless save actions to prevent multiple snapshots of the same version
+        if ($form->getName() === 'EditForm' && $action === 'save' && !$page->isModifiedOnDraft()) {
+            return;
+        }
+
         // attempt to create a custom snapshot first
         $customSnapshot = $snapshot->formSubmissionSnapshot($form, $request, $page, $action, $message);
 
