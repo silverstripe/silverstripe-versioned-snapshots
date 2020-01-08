@@ -231,47 +231,23 @@ class Snapshot extends DataObject
         $this->OriginHash = static::hashForSnapshot($this->OriginClass, $this->OriginID);
     }
 
-    public function isActionTriggerActive()
+    /**
+     * @return bool
+     */
+    public function isActionTriggerActive(): bool
     {
         return $this->config()->get('trigger') === static::TRIGGER_ACTION;
     }
 
-    public function isModelTriggerActive()
+    /**
+     * @return bool
+     */
+    public function isModelTriggerActive(): bool
     {
         return $this->config()->get('trigger') === static::TRIGGER_MODEL;
     }
 
     /**
-     * Singleton access only
-     *
-     * Valid values:
-     * NULL - action will not be processed into snapshot
-     * empty string - action will be processed into snapshot but no message will be displayed
-     * string - action will be processed into snapshot, message will be displayed
-     *
-     * This function is the ideal place to put action identifier logging when trying to determine
-     * which action identifier needs to be used in your configuration
-     * example logging code (place as the first line of the function)
-     * error_log($identifier);
-     * run your action in the CMS and look for your identifier in the log
-     *
-     * @param string|null $identifier
-     * @return string|null
-     */
-    public function getActionMessage($identifier): ?string
-    {
-        $actions = $this->config()->get('actions');
-        $actions = is_array($actions) ? $actions : [];
-
-        if (!array_key_exists($identifier, $actions)) {
-            return null;
-        }
-
-        return $actions[$identifier];
-    }
-
-    /**
-     * Singleton access only
      *
      * @param DataObject $owner
      * @param DataObject|null $origin
@@ -305,7 +281,7 @@ class Snapshot extends DataObject
                     : sprintf(
                         '%s %s',
                         $message,
-                        $origin->config()->get('singular_name')
+                        $origin->singular_name()
                     );
 
                 $origin = $event;
@@ -315,7 +291,7 @@ class Snapshot extends DataObject
                 // no need to add the origin to the list of objects as it's already there
                 $origin = $owner;
             }
-        } elseif ($origin->ClassName === $owner->ClassName && (int) $origin->ID === (int) $owner->ID) {
+        } elseif (static::hashSnapshotCompare($origin, $owner)) {
             // case 2: origin is same as the owner
             // no need to add the origin to the list of objects as it's already there
             $origin = $owner;
@@ -352,210 +328,5 @@ class Snapshot extends DataObject
 
         return $snapshot;
     }
-
-    /**
-     * Singleton access only
-     *
-     * Use this extension point if you want to override default Snpashot creation for generic GraphQL actions
-     *
-     * @param Page $page
-     * @param string $action
-     * @param string $message
-     * @param $recordOrList
-     * @param array $args
-     * @param $context
-     * @param ResolveInfo $info
-     * @return bool
-     */
-    public function graphQLGenericActionSnapshot(
-        Page $page,
-        string $action,
-        string $message,
-        $recordOrList,
-        array $args,
-        $context,
-        ResolveInfo $info
-    ): bool {
-        $results = $this->extend(
-            'overrideGraphQLGenericActionSnapshot',
-            $page,
-            $action,
-            $message,
-            $recordOrList,
-            $args,
-            $context,
-            $info
-        );
-
-        return in_array(true, $results);
-    }
-
-    /**
-     * Singleton access only
-     *
-     * Use this extension point if you want to override default Snpashot creation for custom GraphQL actions
-     *
-     * @param Page $page
-     * @param string $action
-     * @param string $message
-     * @param Schema $schema
-     * @param string $query
-     * @param array $context
-     * @param array $params
-     * @return bool
-     */
-    public function graphQLCustomActionSnapshot(
-        Page $page,
-        string $action,
-        string $message,
-        Schema $schema,
-        string $query,
-        array $context,
-        array $params
-    ): bool {
-        $results = $this->extend(
-            'overrideGraphQLCustomActionSnapshot',
-            $page,
-            $action,
-            $message,
-            $schema,
-            $query,
-            $context,
-            $params
-        );
-
-        return in_array(true, $results);
-    }
-
-    /**
-     * Singleton access only
-     *
-     * Use this extension point if you want to override default Snpashot creation for GridField alter actions
-     *
-     * @param Page $page
-     * @param string $action
-     * @param string $message
-     * @param GridField $gridField
-     * @param array $arguments
-     * @param array $data
-     * @return bool
-     */
-    public function gridFieldAlterActionSnapshot(
-        Page $page,
-        string $action,
-        string $message,
-        GridField $gridField,
-        array $arguments,
-        array $data
-    ): bool {
-        $results = $this->extend(
-            'overrideGridFieldAlterActionSnapshot',
-            $page,
-            $action,
-            $message,
-            $gridField,
-            $arguments,
-            $data
-        );
-
-        return in_array(true, $results);
-    }
-
-    /**
-     * Singleton access only
-     *
-     * Use this extension point if you want to override default Snapshot creation for GridField URL handler actions
-     *
-     * @param Page $page
-     * @param string $action
-     * @param string $message
-     * @param GridField $gridField
-     * @return bool
-     */
-    public function gridFieldUrlActionSnapshot(
-        Page $page,
-        string $action,
-        string $message,
-        GridField $gridField
-    ): bool {
-        $results = $this->extend(
-            'overrideGridFieldUrlActionSnapshot',
-            $page,
-            $action,
-            $message,
-            $gridField
-        );
-
-        return in_array(true, $results);
-    }
-
-    /**
-     * Singleton access only
-     *
-     * Use this extension point if you want to override default Snpashot creation for Form submision actions
-     *
-     * @param Form $form
-     * @param HTTPRequest $request
-     * @param Page $page
-     * @param string $action
-     * @param string $message
-     * @return bool
-     */
-    public function formSubmissionSnapshot(
-        Form $form,
-        HTTPRequest $request,
-        Page $page,
-        string $action,
-        string $message
-    ): bool {
-        $results = $this->extend(
-            'overrideFormSubmissionSnapshot',
-            $form,
-            $request,
-            $page,
-            $action,
-            $message
-        );
-
-        return in_array(true, $results);
-    }
-
-    /**
-     * Singleton access only
-     *
-     * Use this extension point if you want to override default Snpashot creation for CMS main actions
-     *
-     * @param Page $page
-     * @param string $action
-     * @param string $message
-     * @return bool
-     */
-    public function CMSMainActionSnapshot(
-        Page $page,
-        string $action,
-        string $message
-    ): bool {
-        $results = $this->extend(
-            'overrideCMSMainActionSnapshot',
-            $page,
-            $action,
-            $message
-        );
-
-        return in_array(true, $results);
-    }
-
-    /**
-     * sets the related snapshot items to not modified
-     *
-     * items with modifications are used to determine the owner's modification
-     * status (eg in site tree's status flags)
-     */
-    public function markNoModifications(): void
-    {
-        foreach ($this->Items() as $item) {
-            $item->Modification = false;
-            $item->write();
-        }
-    }
+    
 }

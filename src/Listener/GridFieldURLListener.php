@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\Snapshots\Listener\GridField;
+namespace SilverStripe\Snapshots\Listener;
 
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Extension;
@@ -8,6 +8,8 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\GridField\FormAction\StateStore;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\ORM\ValidationException;
+use SilverStripe\Snapshots\Dispatch\Context;
+use SilverStripe\Snapshots\Dispatch\Dispatcher;
 use SilverStripe\Snapshots\Listener\CurrentPage;
 use SilverStripe\Snapshots\Snapshot;
 
@@ -19,7 +21,7 @@ use SilverStripe\Snapshots\Snapshot;
  * @property GridField|$this $owner
  * @package SilverStripe\Snapshots\Listener\GridField
  */
-class UrlHandlerAction extends Extension
+class GridFieldURLListener extends Extension
 {
 
     use CurrentPage;
@@ -39,45 +41,11 @@ class UrlHandlerAction extends Extension
         $action,
         $result
     ): void {
-        $owner = $this->owner;
-        $snapshot = Snapshot::singleton();
-
-        if (!$snapshot->isActionTriggerActive()) {
-            return;
-        }
-
-        $message = $snapshot->getActionMessage($action);
-
-        if ($message === null) {
-            return;
-        }
-
-        $form = $owner->getForm();
-
-        if (!$form) {
-            return;
-        }
-
-        $record = $form->getRecord();
-
-        if (!$record) {
-            return;
-        }
-
-        $page = $this->getCurrentPageFromController($form);
-
-        if ($page === null) {
-            return;
-        }
-
-        // attempt to create a custom snapshot first
-        $customSnapshot = $snapshot->gridFieldUrlActionSnapshot($page, $action, $message, $owner);
-
-        if ($customSnapshot) {
-            return;
-        }
-
-        // fall back to default snapshot
-        $snapshot->createSnapshotFromAction($page, $record, $message);
+        Dispatcher::singleton()->trigger('gridFieldAction', new Context([
+            'action' => $action,
+            'result' => $result,
+            'request' => $request,
+            'gridField' => $this->owner,
+        ]));
     }
 }

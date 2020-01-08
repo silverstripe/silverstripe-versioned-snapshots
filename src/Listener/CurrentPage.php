@@ -54,7 +54,7 @@ trait CurrentPage
      * @param string|null $url
      * @return Page|null
      */
-    private function getCurrentPageFromRequestUrl(?string $url): ?Page
+    protected function getCurrentPageFromRequestUrl(?string $url): ?Page
     {
         $url = trim($url);
 
