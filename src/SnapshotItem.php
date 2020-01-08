@@ -44,6 +44,7 @@ class SnapshotItem extends DataObject
         'WasDraft' => 'Boolean',
         'WasDeleted' => 'Boolean',
         'ObjectHash' => 'Varchar(64)',
+        'Modification' => 'Boolean', // indicates the snapshot item changes data (default true)
     ];
 
     /**
@@ -66,6 +67,13 @@ class SnapshotItem extends DataObject
             'type' => 'unique',
             'columns' => ['ObjectHash', 'Version', 'SnapshotID']
         ]
+    ];
+
+    /**
+     * @var array
+     */
+    private static $defaults = [
+        'Modification' => true,
     ];
 
     /**
