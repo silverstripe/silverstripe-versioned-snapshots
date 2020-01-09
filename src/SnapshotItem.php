@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots;
 
 use SilverStripe\ORM\DataObject;
@@ -10,18 +9,47 @@ use SilverStripe\Security\Security;
 use SilverStripe\Versioned\ChangeSet;
 use SilverStripe\Versioned\Versioned;
 
+/**
+ * Class SnapshotItem
+ *
+ * @property int $Version
+ * @property int $WasPublished
+ * @property int $WasDraft
+ * @property int $WasDeleted
+ * @property string $ObjectHash
+ * @property int $SnapshotID
+ * @property int $ObjectID
+ * @property string $ObjectClass
+ * @property int $LinkedFromObjectID
+ * @property string $LinkedFromObjectClass
+ * @property int $LinkedToObjectID
+ * @property string $LinkedToObjectClass
+ * @method Snapshot Snapshot()
+ * @method DataObject Object()
+ * @method DataObject LinkedFromObject()
+ * @method DataObject LinkedToObject()
+ * @package SilverStripe\Snapshots
+ */
 class SnapshotItem extends DataObject
 {
+
     use SnapshotHasher;
 
+    /**
+     * @var array
+     */
     private static $db = [
         'Version' => 'Int',
         'WasPublished' => 'Boolean',
         'WasDraft' => 'Boolean',
         'WasDeleted' => 'Boolean',
         'ObjectHash' => 'Varchar(64)',
+        'Modification' => 'Boolean', // indicates the snapshot item changes data (default true)
     ];
 
+    /**
+     * @var array
+     */
     private static $has_one = [
         'Snapshot' => Snapshot::class,
         'Object' => DataObject::class,
@@ -29,6 +57,9 @@ class SnapshotItem extends DataObject
         'LinkedToObject' => DataObject::class,
     ];
 
+    /**
+     * @var array
+     */
     private static $indexes = [
         'Version' => true,
         'ObjectHash' => true,
@@ -38,30 +69,65 @@ class SnapshotItem extends DataObject
         ]
     ];
 
+    /**
+     * @var array
+     */
+    private static $defaults = [
+        'Modification' => true,
+    ];
+
+    /**
+     * @var string
+     */
     private static $table_name = 'VersionedSnapshotItem';
 
+    /**
+     * @var string
+     */
     private static $singular_name = 'SnapshotItem';
 
+    /**
+     * @var string
+     */
     private static $plural_name = 'SnapshotItems';
 
+    /**
+     * @var string
+     */
     private static $default_sort = 'ID ASC';
 
-
+    /**
+     * @param null $member
+     * @return bool
+     */
     public function canView($member = null)
     {
         return $this->can(__FUNCTION__, $member);
     }
 
+    /**
+     * @param null $member
+     * @return bool
+     */
     public function canEdit($member = null)
     {
         return $this->can(__FUNCTION__, $member);
     }
 
+    /**
+     * @param null $member
+     * @param array $context
+     * @return bool
+     */
     public function canCreate($member = null, $context = [])
     {
         return $this->can(__FUNCTION__, $member, $context);
     }
 
+    /**
+     * @param null $member
+     * @return bool
+     */
     public function canDelete($member = null)
     {
         return $this->can(__FUNCTION__, $member);
@@ -95,21 +161,55 @@ class SnapshotItem extends DataObject
     public function onBeforeWrite()
     {
         parent::onBeforeWrite();
+
         $this->ObjectHash = static::hashForSnapshot($this->ObjectClass, $this->ObjectID);
     }
 
     /**
      * Defaults to the tagged version for the snapshot item unless we're given a specific version
      * This was added to deal with a case in @see ActivityEntry::createFromSnapshotItem()
+     *
+     * @param int|null $version
+     * @return DataObject|null
      */
     public function getItem(?int $version = null): ?DataObject
     {
         $version = $version ?? $this->Version;
+
         return Versioned::get_version($this->ObjectClass, $this->ObjectID, $version);
     }
 
+    /**
+     * @return string
+     */
     public function getItemTitle()
     {
         return $this->getItem()->singular_name() . '    --  ' . $this->getItem()->getTitle();
+    }
+
+    /**
+     * @param DataObject|Versioned $object
+     * @return SnapshotItem
+     */
+    public function hydrateFromDataObject(DataObject $object)
+    {
+        $this->ObjectClass = $object->baseClass();
+        $this->ObjectID = (int) $object->ID;
+        $this->LinkedFromObjectClass = null;
+        $this->LinkedFromObjectID = 0;
+        $this->LinkedToObjectClass = null;
+        $this->LinkedToObjectID = 0;
+
+        // Track versioning changes on the record if the owner is versioned
+        if ($object->hasExtension(Versioned::class)) {
+            $this->WasDraft = $object->isModifiedOnDraft();
+            $this->WasDeleted = $object->isOnLiveOnly() || $object->isArchived();
+            $this->Version = $object->Version;
+        } else {
+            // Track publish state for non-versioned owners, they're always in a published state.
+            $this->WasPublished = true;
+        }
+
+        return $this;
     }
 }

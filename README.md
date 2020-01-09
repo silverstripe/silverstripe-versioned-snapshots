@@ -83,6 +83,309 @@ owned modification state (WORK IN PROGRESS, POC ONLY)
 
 ## How it works
 
+This module comes with two very different work flows.
+
+* CMS action work flow (default) - trigger is on user action, actions are opt-in with some core actions already available
+* model work flow - trigger is on after model write, actions are opt-out
+
+### CMS action work flow
+
+#### Static configuration
+
+This module comes with some CMS actions already provided. This configuration is located in `config.yml` under `snapshot-actions`.
+The format is very simple:
+
+'`identifier`': '`message`'
+
+Where `identifier` is the action identifier (this is internal name from the component which is responsible for handling the action).
+For example for page edit form we have the following rule:
+
+'`save`': '`Save page`'
+
+This means each time a user saves a page via page edit form a snapshot will be created with a context message `Save page`.
+
+This configuration can be overridden via standard configuration API means.
+
+**I want to add more actions**
+
+Create following configuration in your project `_config` folder:
+
+```
+Name: snapshot-custom-actions
+After:
+  - '#snapshot-actions'
+---
+SilverStripe\Snapshots\Snapshot:
+  actions:
+    # grid field actions (via standard action)
+    'togglelayoutwidth': 'Toggle layout width'
+```
+
+This will add a new action for the `togglelayoutwidth` action and the snapshot message for this action will be `Toggle layout width`.
+
+**I want to disable a default action**
+
+```
+Name: snapshot-custom-actions
+After:
+  - '#snapshot-actions'
+---
+SilverStripe\Snapshots\Snapshot:
+  actions:
+    # GraphQL CRUD - disable default
+    'graphql_crud_create': null
+```
+
+This will disable the action `graphql_crud_create` so no snapshot will be created when this action is executed.
+
+**I want to add a action but with no message**
+
+```
+Name: snapshot-custom-actions
+After:
+  - '#snapshot-actions'
+---
+SilverStripe\Snapshots\Snapshot:
+  actions:
+    # grid field actions (via standard action)
+    'togglelayoutwidth': ''
+```
+
+This will still create a snapshot for the action but no snapshot message will be displayed.
+
+**I want to change message of existing action**
+
+```
+Name: snapshot-custom-actions
+After:
+  - '#snapshot-actions'
+---
+SilverStripe\Snapshots\Snapshot:
+  actions:
+    # GraphQL CRUD - disable default
+    'graphql_crud_create': 'My custom message'
+```
+
+This will create snapshot for the action with your custom message.
+Setting empty string as a message will still create the snapshot but with no message.
+
+#### How to find your action identifier
+
+Common case is where you want to add a new action configuration but you don't know what your action identifier is.
+This really depends on what the component responsible for handling the action is.
+The most basic approach is to add temporary logging to start of `SilverStripe\Snapshots\Snapshot::getActionMessage()`.
+Every action which is covered by this module (regardless of the configuration) flows through this function.
+
+```
+public function getActionMessage($identifier): ?string
+{
+    error_log($identifier);
+```
+
+When the logging is in place you just go to the CMS and perform the action you are interested in.
+This should narrow the list of identifier down to a much smaller subset.
+
+#### Runtime overrides
+
+In case static configuration in not enough, runtime overrides are available. This module comes with following types of listeners:
+
+* Form submissions - actions that comes via form submissions (for example page edit form)
+* GraphQL general - actions executed via GraphQL CRUD (for example standard model mutation)
+* GraphQL custom - actions executed via GraphQL API (for example custom mutation)
+* GridField alter - actions which are implemented via `GridField_ActionProvider` (for example delete item via GridField)
+* GridField URL handler - actions which are implemented via `GridField_URLHandler`
+* Page `CMSMain` actions - this covers page actions which are now handled by form submissions
+
+Each type of listener provides an extension point which allows the override of the default module behaviour.
+
+To apply your override you need to first know which listener is handling your action.
+Sometimes you can guess based on the action category but using logging may help you determine the listener type more easily.
+
+Form submissions - `Form\Submission::processAction`
+
+GraphQL custom - `GraphQL\CustomAction::onAfterCallMiddleware`
+
+GraphQL general - `GraphQL\GenericAction::afterMutation`
+
+GridField alter - `GridField\AlterAction::afterCallActionHandler`
+
+GridField URL handler - `GridField\UrlHandlerAction::afterCallActionURLHandler`
+
+Page `CMSMain` actions - `Page\CMSMainAction::afterCallActionHandler`
+
+Once you know listener type and the action identifier you need to create an extension which is a subclass of one of the abstract listener handlers.
+Abstract listener depends on your listener type.
+
+Form submissions - `Form\SubmissionListenerAbstract`
+
+GraphQL custom - `GraphQL\CustomActionListenerAbstract`
+
+GraphQL general - `GraphQL\GenericActionListenerAbstract`
+
+GridField alter - `GridField\AlterActionListenerAbstract`
+
+GridField URL handler - `GridField\UrlHandlerActionListenerAbstract`
+
+Page `CMSMain` actions - `Page\CMSMainListenerAbstract`
+
+**Example implementation**
+
+config
+
+```
+SilverStripe\Snapshots\Snapshot:
+  extensions:
+    - App\Snapshots\Listener\MutationUpdateLayoutBlockGroup
+```
+
+extension
+
+```
+<?php
+
+namespace App\Snapshots\Listener;
+
+use App\Models\Blocks\LayoutBlock;
+use GraphQL\Type\Schema;
+use Page;
+use SilverStripe\ORM\ValidationException;
+use SilverStripe\Snapshots\Snapshot;
+use SilverStripe\Snapshots\Listener\GraphQL\CustomActionListenerAbstract;
+
+/**
+ * Class MutationUpdateLayoutBlockGroup
+ *
+ * @property Snapshot|$this $owner
+ * @package App\Snapshots\Listener
+ */
+class MutationUpdateLayoutBlockGroup extends CustomActionListenerAbstract
+{
+    protected function getActionName(): string
+    {
+        return 'mutation_updateLayoutBlockGroup';
+    }
+
+    /**
+     * @param Page $page
+     * @param string $action
+     * @param string $message
+     * @param Schema $schema
+     * @param string $query
+     * @param array $context
+     * @param array $params
+     * @return bool
+     * @throws ValidationException
+     */
+    protected function processAction(
+        Page $page,
+        string $action,
+        string $message,
+        Schema $schema,
+        string $query,
+        array $context,
+        array $params
+    ): bool {
+        if (!array_key_exists('block', $params)) {
+            return false;
+        }
+
+        $data = $params['block'];
+
+        if (!array_key_exists('ID', $data)) {
+            return false;
+        }
+
+        $blockId = (int) $data['ID'];
+
+        if (!$blockId) {
+            return false;
+        }
+
+        $block = LayoutBlock::get_by_id($blockId);
+
+        if ($block === null || !$block->exists()) {
+            return false;
+        }
+
+        Snapshot::singleton()->createSnapshotFromAction($page, $block, $message);
+
+        return true;
+    }
+}
+
+```
+
+`getActionName` is the action identifier
+
+`CustomActionListenerAbstract` is the parent class because this action is a custom mutation
+
+Returning `false` inside `processAction` makes the module fallback to default behaviour.
+
+Returning `true` inside `processAction` makes the module skip the default behaviour.
+
+If you return `true` it's up to you to create the snapshot.
+This covers the case where the action uses custom data and it's impossible for the module to figure out the origin object.
+Use this approach when you are unhappy with the default behaviour and you know the way how to find the origin object from the data.
+Note that the context data available is different for each listener type as the context is different.
+
+#### Snapshot creation API
+
+To cover all cases, this module allows you to invoke snapshot creation in any part of your code outside of normal action flow.
+
+When you want to create a snapshot just call `createSnapshotFromAction` function like this:
+
+```
+Snapshot::singleton()->createSnapshotFromAction($owner, $origin, $message, $objects);
+
+```
+
+`$owner` is the top level object which is seen as the owner of the action.
+Most common case is that this object is the page. Owner object is mandatory.
+
+`$origin` is the object which should be matching the action, i.e. the action is changing the origin object.
+Valid values:
+
+**Origin is different from the Owner**
+
+This is the main and most common case. A snapshot will be created which references the changed origin object.
+
+**Origin is the same as Owner**
+
+This means that the changed object is the owner so for example the user edits the page.
+Note that some actions may declare that they are editing the page but they may edit some nested objects (for example block reoreder).
+There is a way to override this behaviour discussed in `Runtime overrides`.
+
+**Origin is `null`**
+
+This will be interpreted as the origin object was't possible to identify or it doesn't make sense to reference it.
+If message is available the snapshot will be created with a special object called `event` which will take place of the missing origin object.
+
+There are two main cases here:
+
+`1` - snapshot module doesn't have enough information to find origin and is using `event` as a placeholder to fill the gap.
+This happens mostly for custom CMS action which have arbitrary effect from the module point of view.
+There is a way to override this behaviour discussed in `Runtime overrides`.
+
+`2` - the changed object is not worth referencing - for example an action which is doing a batch write would reference too many objects (i.e. page import).
+Instead of creating many snapshots for all individual changes you create one batch action with message which explains the details.
+
+`$message` is the a context message which will be shown in the snapshot UI.
+It should be used to provide additional context to the user about the snapshot as sometimes the referenced object may not provide enough information.
+
+`$objects` is a an optional list of other objects that may be related to this action. Consider following example:
+
+
+```
+Snapshot::singleton()->createSnapshotFromAction($page, $block, 'something happened to a block', [$layoutBlock]);
+```
+
+Page is the owner, block is the origin and layout block is a related object.
+Passing the layout block through allows the layout block to display it's own version history in the CMS edit form.
+This feature may have marginal use and it's ok to skip it.
+
+
+### Model work flow
+
 When a dataobject is written, an `onAfterWrite` handler opens a snapshot by writing
 a new `VersionedSnapshot` record. As long as this snapshot is open, any successive dataobject
 writes will add themselves to the open snapshot, on the `VersionedSnapshotItem` table. The dataobject

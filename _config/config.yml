@@ -21,3 +21,61 @@ Only:
 SilverStripe\CMS\Model\SiteTree:
   extensions:
     - SilverStripe\Snapshots\SnapshotSiteTree
+
+---
+Name: snapshot-listeners
+---
+SilverStripe\CMS\Controllers\CMSMain:
+  extensions:
+    - SilverStripe\Snapshots\Listener\Page\CMSMainAction
+
+SilverStripe\Forms\GridField\GridField:
+  extensions:
+    - SilverStripe\Snapshots\Listener\GridField\AlterAction
+    - SilverStripe\Snapshots\Listener\GridField\UrlHandlerAction
+
+SilverStripe\Forms\FormRequestHandler:
+  extensions:
+    - SilverStripe\Snapshots\Listener\Form\Submission
+
+SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Create:
+  extensions:
+    - SilverStripe\Snapshots\Listener\GraphQL\GenericAction
+
+SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Delete:
+  extensions:
+    - SilverStripe\Snapshots\Listener\GraphQL\GenericAction
+
+SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Update:
+  extensions:
+    - SilverStripe\Snapshots\Listener\GraphQL\GenericAction
+
+SilverStripe\GraphQL\Manager:
+  extensions:
+    - SilverStripe\Snapshots\Listener\GraphQL\CustomAction
+
+---
+Name: snapshot-actions
+---
+SilverStripe\Snapshots\Snapshot:
+  actions:
+    # page edit form
+    'save': 'Save page'
+    'publish': 'Publish'
+    'unpublish': 'Unpublish'
+    # site tree
+    'savetreenode': 'Changed site tree position'
+    # grid field item edit form
+    'doSave': 'Save item'
+    'doDelete': 'Delete item'
+    # grid field actions (via standard action)
+    'deleterecord': 'Delete item'
+    # grid field actions (via form submission)
+    'handleReorder': 'Changed items order'
+    # linkable edit form
+    'doSaveLink': 'Link Edit'
+    'doRemoveLink': 'Link Delete'
+    # GraphQL CRUD
+    'graphql_crud_create': 'GraphQL create'
+    'graphql_crud_delete': 'GraphQL delete'
+    'graphql_crud_update': 'GraphQL update'

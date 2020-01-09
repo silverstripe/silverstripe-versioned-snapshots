@@ -3,22 +3,24 @@
 
 namespace SilverStripe\Snapshots\Tests;
 
+use DateTime;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Snapshots\ActivityEntry;
+use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\SnapshotVersioned;
+use SilverStripe\Snapshots\Tests\SnapshotTest\BaseJoin;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Gallery;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImage;
-use SilverStripe\Snapshots\Tests\SnapshotTest\BaseJoin;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImageJoin;
 use SilverStripe\Versioned\ChangeSetItem;
 use SilverStripe\Versioned\Versioned;
-use DateTime;
 
 class SnapshotTest extends FunctionalTest
 {
@@ -35,6 +37,13 @@ class SnapshotTest extends FunctionalTest
         GalleryImageJoin::class,
         ChangeSetItem::class,
     ];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Config::modify()->set(Snapshot::class, 'trigger', Snapshot::TRIGGER_MODEL);
+    }
 
     public function testFundamentals()
     {

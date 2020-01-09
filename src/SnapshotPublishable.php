@@ -2,6 +2,9 @@
 
 namespace SilverStripe\Snapshots;
 
+use BadMethodCallException;
+use Exception;
+use Generator;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
@@ -10,15 +13,16 @@ use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\RecursivePublishable;
-use BadMethodCallException;
 use SilverStripe\Versioned\Versioned;
 
 /**
  * Class SnapshotPublishable
+ *
  * @property DataObject|SnapshotPublishable|Versioned $owner
  */
 class SnapshotPublishable extends RecursivePublishable
 {
+
     use SnapshotHasher;
 
     /**
@@ -70,6 +74,10 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function publishRecursive()
     {
+        if (!Snapshot::singleton()->isModelTriggerActive()) {
+            return parent::publishRecursive();
+        }
+
         if (!self::$active) {
             return parent::publishRecursive();
         }
@@ -81,8 +89,15 @@ class SnapshotPublishable extends RecursivePublishable
         return $result;
     }
 
+    /**
+     * @param int|string $version
+     */
     public function rollbackRelations($version)
     {
+        if (!Snapshot::singleton()->isModelTriggerActive()) {
+            return parent::rollbackRelations($version);
+        }
+
         if (!self::$active) {
             return parent::rollbackRelations($version);
         }
@@ -183,10 +198,11 @@ class SnapshotPublishable extends RecursivePublishable
      *
      * @param int $min Minimal version to start looking with (inclusive)
      * @param int|null $max Maximal version to look until (inclusive)
+     * @param bool $includeAll Include snapshot items that have no modifications
      *
      * @return array list of filters for using in ORM APIs
      */
-    public function getSnapshotsBetweenVersionsFilters($min, $max = null)
+    public function getSnapshotsBetweenVersionsFilters($min, $max = null, $includeAll = false)
     {
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
@@ -215,14 +231,20 @@ class SnapshotPublishable extends RecursivePublishable
             ? sprintf('"SnapshotID" >= (%s)', $minShotSQL)
             : sprintf('"SnapshotID" BETWEEN (%s) and (%s)', $minShotSQL, $maxShotSQL);
 
+        $condtionStatement = [
+            $condition => $max === null ? $minParams : array_merge($minParams, $maxParams),
+            '"ObjectHash"' => $hash,
+            'NOT ("Version" = ? AND "WasPublished" = 1)' => $min,
+        ];
+
+        if (!$includeAll) {
+            $condtionStatement[] = 'Modification = 1';
+        }
+
         $query = SQLSelect::create(
             "\"SnapshotID\"",
             "\"$itemTable\"",
-            [
-                $condition => $max === null ? $minParams : array_merge($minParams, $maxParams),
-                '"ObjectHash"' => $hash,
-                'NOT ("Version" = ? AND "WasPublished" = 1)' => $min,
-            ]
+            $condtionStatement
         );
         $sql = $query->sql($params);
 
@@ -231,6 +253,11 @@ class SnapshotPublishable extends RecursivePublishable
         ];
     }
 
+    /**
+     * @param $min
+     * @param null $max
+     * @return DataList
+     */
     public function getActivityBetweenVersions($min, $max = null)
     {
         $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
@@ -396,6 +423,10 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function onAfterWrite()
     {
+        if (!Snapshot::singleton()->isModelTriggerActive()) {
+            return;
+        }
+
         if (!$this->requiresSnapshot()) {
             return;
         }
@@ -408,13 +439,23 @@ class SnapshotPublishable extends RecursivePublishable
         }
     }
 
+    /**
+     * @throws Exception
+     */
     public function onAfterVersionDelete()
     {
+        if (!Snapshot::singleton()->isModelTriggerActive()) {
+            return;
+        }
+
         if ($this->requiresSnapshot()) {
             $this->doSnapshot();
         }
     }
 
+    /**
+     * @return SnapshotItem
+     */
     public function createSnapshotItem()
     {
         /* @var DataObject|Versioned|SnapshotPublishable $owner */
@@ -444,6 +485,10 @@ class SnapshotPublishable extends RecursivePublishable
 
     public function onAfterPublish()
     {
+        if (!Snapshot::singleton()->isModelTriggerActive()) {
+            return;
+        }
+
         if ($this->activeSnapshot) {
             $item = $this->owner->createSnapshotItem();
             $item->WasPublished = true;
@@ -453,6 +498,10 @@ class SnapshotPublishable extends RecursivePublishable
 
     public function onBeforeRevertToLive()
     {
+        if (!Snapshot::singleton()->isModelTriggerActive()) {
+            return;
+        }
+
         if ($this->requiresSnapshot()) {
             $this->openSnapshot();
             $this->doSnapshot();
@@ -481,8 +530,8 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @return \Generator
-     * @throws \Exception
+     * @return Generator
+     * @throws Exception
      */
     public function getManyManyOwnership()
     {
@@ -538,6 +587,9 @@ class SnapshotPublishable extends RecursivePublishable
         return $config;
     }
 
+    /**
+     * @param $snapshot
+     */
     public function rollbackOwned($snapshot)
     {
         $owner = $this->owner;
@@ -567,6 +619,17 @@ class SnapshotPublishable extends RecursivePublishable
     public static function resume()
     {
         self::$active = true;
+    }
+
+    public static function withPausedSnapshots(callable $callback)
+    {
+        try {
+            static::pause();
+
+            return $callback();
+        } finally {
+            static::resume();
+        }
     }
 
     /**
@@ -626,7 +689,7 @@ class SnapshotPublishable extends RecursivePublishable
 
     /**
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     protected function doSnapshot()
     {
@@ -725,9 +788,6 @@ class SnapshotPublishable extends RecursivePublishable
         $this->activeSnapshot->Items()->add($item);
     }
 
-    /**
-     * @return void
-     */
     protected function closeSnapshot()
     {
         $this->activeSnapshot = null;
