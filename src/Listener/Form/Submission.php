@@ -153,6 +153,14 @@ class Submission extends Extension
         }
 
         // fall back to default snapshot
-        $snapshot->createSnapshotFromAction($page, $record, $message);
+        $snapshotInstance = $snapshot->createSnapshotFromAction($page, $record, $message);
+
+        // mark publish actions as WasPublished - the status flags rely on this being set correctly
+        if ($form->getName() === 'EditForm' && $action === 'publish') {
+            foreach ($snapshotInstance->Items() as $item) {
+                $item->WasPublished = true;
+                $item->write();
+            }
+        }
     }
 }

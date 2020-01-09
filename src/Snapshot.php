@@ -128,6 +128,7 @@ class Snapshot extends DataObject
     public function getOriginVersion()
     {
         $originItem = $this->getOriginItem();
+
         if ($originItem) {
             return Versioned::get_version(
                 $originItem->ObjectClass,
@@ -153,8 +154,10 @@ class Snapshot extends DataObject
     public function getActivityDescription()
     {
         $item = $this->getOriginItem();
+
         if ($item) {
             $activity = ActivityEntry::createFromSnapshotItem($item);
+
             return ucfirst(sprintf(
                 '%s "%s"',
                 $activity->Subject->singular_name(),
@@ -171,6 +174,7 @@ class Snapshot extends DataObject
     public function getActivityType()
     {
         $item = $this->getOriginItem();
+
         if ($item) {
             $activity = ActivityEntry::createFromSnapshotItem($item);
 
@@ -270,7 +274,7 @@ class Snapshot extends DataObject
      * Singleton access only
      *
      * @param DataObject $owner
-     * @param null|DataObject $origin
+     * @param DataObject|null $origin
      * @param string $message
      * @param array $objects
      * @throws ValidationException
@@ -280,9 +284,9 @@ class Snapshot extends DataObject
         ?DataObject $origin,
         string $message,
         array $objects = []
-    ): void {
+    ): ?Snapshot {
         if (!$owner->isInDB()) {
-            return;
+            return null;
         }
 
         if ($origin === null || !$origin->isInDB()) {
@@ -296,7 +300,7 @@ class Snapshot extends DataObject
                 $event->Title = $message;
                 $event->write();
 
-                $message = ($origin === null)
+                $message = $origin === null
                     ? $message
                     : sprintf(
                         '%s %s',
@@ -345,6 +349,8 @@ class Snapshot extends DataObject
             $item->hydrateFromDataObject($object);
             $snapshot->Items()->add($item);
         }
+
+        return $snapshot;
     }
 
     /**
@@ -537,5 +543,19 @@ class Snapshot extends DataObject
         );
 
         return in_array(true, $results);
+    }
+
+    /**
+     * sets the related snapshot items to not modified
+     *
+     * items with modifications are used to determine the owner's modification
+     * status (eg in site tree's status flags)
+     */
+    public function markNoModifications(): void
+    {
+        foreach ($this->Items() as $item) {
+            $item->Modification = false;
+            $item->write();
+        }
     }
 }

@@ -198,10 +198,11 @@ class SnapshotPublishable extends RecursivePublishable
      *
      * @param int $min Minimal version to start looking with (inclusive)
      * @param int|null $max Maximal version to look until (inclusive)
+     * @param bool $includeAll Include snapshot items that have no modifications
      *
      * @return array list of filters for using in ORM APIs
      */
-    public function getSnapshotsBetweenVersionsFilters($min, $max = null)
+    public function getSnapshotsBetweenVersionsFilters($min, $max = null, $includeAll = false)
     {
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
@@ -230,14 +231,20 @@ class SnapshotPublishable extends RecursivePublishable
             ? sprintf('"SnapshotID" >= (%s)', $minShotSQL)
             : sprintf('"SnapshotID" BETWEEN (%s) and (%s)', $minShotSQL, $maxShotSQL);
 
+        $condtionStatement = [
+            $condition => $max === null ? $minParams : array_merge($minParams, $maxParams),
+            '"ObjectHash"' => $hash,
+            'NOT ("Version" = ? AND "WasPublished" = 1)' => $min,
+        ];
+
+        if (!$includeAll) {
+            $condtionStatement[] = 'Modification = 1';
+        }
+
         $query = SQLSelect::create(
             "\"SnapshotID\"",
             "\"$itemTable\"",
-            [
-                $condition => $max === null ? $minParams : array_merge($minParams, $maxParams),
-                '"ObjectHash"' => $hash,
-                'NOT ("Version" = ? AND "WasPublished" = 1)' => $min,
-            ]
+            $condtionStatement
         );
         $sql = $query->sql($params);
 
