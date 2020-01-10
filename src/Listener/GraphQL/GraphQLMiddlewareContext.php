@@ -9,9 +9,9 @@ use GraphQL\Language\Parser;
 use GraphQL\Language\Source;
 use GraphQL\Type\Schema;
 use SilverStripe\GraphQL\Manager;
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 
-class GraphQLMiddlewareContext extends ListenerContext
+class GraphQLMiddlewareContext extends EventContext
 {
     /**
      * @var string

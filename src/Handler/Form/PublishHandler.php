@@ -5,12 +5,12 @@ namespace SilverStripe\Snapshots\Handler\Form;
 
 
 use SilverStripe\Snapshots\Listener\Form\FormContext;
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
 class PublishHandler extends FormSubmissionHandler
 {
-    protected function createSnapshot(ListenerContext $context): ?Snapshot
+    protected function createSnapshot(EventContext $context): ?Snapshot
     {
         /* @var FormContext $context */
         $snapshot = parent::createSnapshot($context);

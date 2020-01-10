@@ -4,7 +4,7 @@
 namespace SilverStripe\Snapshots\Listener;
 
 
-abstract class ListenerContext
+abstract class EventContext
 {
     abstract public function getAction(): string;
 

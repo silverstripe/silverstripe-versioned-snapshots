@@ -6,9 +6,9 @@ namespace SilverStripe\Snapshots\Listener\GridField;
 
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Forms\GridField\GridField;
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 
-class GridFieldContext extends ListenerContext
+class GridFieldContext extends EventContext
 {
     /**
      * @var string

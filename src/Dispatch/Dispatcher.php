@@ -6,7 +6,7 @@ use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Snapshots\Handler\HandlerInterface;
 use InvalidArgumentException;
 use Exception;
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 
 class Dispatcher
 {
@@ -120,9 +120,9 @@ class Dispatcher
 
     /**
      * @param string $event
-     * @param ListenerContext $context
+     * @param EventContext $context
      */
-    public function trigger(string $event, ListenerContext $context): void
+    public function trigger(string $event, EventContext $context): void
     {
         $action = $context->getAction();
         // First fire listeners to <eventName.actionName>, then just fire generic <eventName> listeners

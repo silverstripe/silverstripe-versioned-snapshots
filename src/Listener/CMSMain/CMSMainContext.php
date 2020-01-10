@@ -4,9 +4,9 @@
 namespace SilverStripe\Snapshots\Listener\CMSMain;
 
 
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 
-class CMSMainContext extends ListenerContext
+class CMSMainContext extends EventContext
 {
     /**
      * @var string

@@ -149,7 +149,7 @@ The easiest way to debug events is to put breakpoints or logging into the `Dispa
 will provide all the detail you need about what events are triggered when, and with what context.
 
 ```php
-public function trigger(string $event, ListenerContext $context): void
+public function trigger(string $event, EventContext $context): void
 {
     error_log($event);
     error_log($context->getAction());
@@ -182,12 +182,12 @@ For instance, if you have something custom you with a snapshot when a page is sa
 
 ```php
 use SilverStripe\Snapshots\Handler\Form\SaveHandler;
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
 class MySaveHandler extends SaveHandler
 {
-    protected function createSnapshot(ListenerContext $context): ?Snapshot
+    protected function createSnapshot(EventContext $context): ?Snapshot
     {
         //...
     }

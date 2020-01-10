@@ -8,7 +8,7 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Snapshots\Dispatch\Context;
 use SilverStripe\Snapshots\Listener\CurrentPage;
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
 abstract class HandlerAbstract implements HandlerInterface
@@ -37,14 +37,14 @@ abstract class HandlerAbstract implements HandlerInterface
         return _t($key, $action);
     }
 
-    public function fire(ListenerContext $context): void
+    public function fire(EventContext $context): void
     {
         $this->createSnapshot($context);
     }
 
     /**
-     * @param ListenerContext $context
+     * @param EventContext $context
      * @return Snapshot|null
      */
-    abstract protected function createSnapshot(ListenerContext $context): ?Snapshot;
+    abstract protected function createSnapshot(EventContext $context): ?Snapshot;
 }

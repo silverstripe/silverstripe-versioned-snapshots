@@ -10,10 +10,10 @@ use SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Delete;
 use SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Update;
 use SilverStripe\GraphQL\Scaffolding\Scaffolders\MutationScaffolder;
 use SilverStripe\ORM\SS_List;
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\View\ViewableData;
 
-class GraphQLMutationContext extends ListenerContext
+class GraphQLMutationContext extends EventContext
 {
 
 

@@ -7,7 +7,7 @@ namespace SilverStripe\Snapshots\Handler\GraphQL;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Listener\GraphQL\GraphQLMutationContext;
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
 class MutationHandler extends HandlerAbstract
@@ -15,11 +15,11 @@ class MutationHandler extends HandlerAbstract
     const ACTION_PREFIX = 'graphql_crud_';
 
     /**
-     * @param ListenerContext $context
+     * @param EventContext $context
      * @return Snapshot|null
      * @throws ValidationException
      */
-    protected function createSnapshot(ListenerContext $context): ?Snapshot
+    protected function createSnapshot(EventContext $context): ?Snapshot
     {
         /* @var GraphQLMutationContext $context */
         $type = $context->getAction();

@@ -6,9 +6,9 @@ namespace SilverStripe\Snapshots\Listener\Form;
 
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Forms\Form;
-use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Listener\EventContext;
 
-class FormContext extends ListenerContext
+class FormContext extends EventContext
 {
     /**
      * @var string
