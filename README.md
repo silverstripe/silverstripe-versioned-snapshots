@@ -105,17 +105,17 @@ extensions to key classes in the admin that then trigger these events through th
 * **Listener**: `SilverStripe\Snapshots\Listener\CMSMain\CMSMainActionListener`
 * **Handler**: `SilverStripe\Snapshots\Handler\CMSMain\ActionHandler`
 
-#### Event: gridFieldAlteration
-* **Description**: A standard GridField action (`GridField_ActionProvider`)
-* **Example**:  `handleReorder` (reorder items)
-* **Listener**: `SilverStripe\Snapshots\Listener\GridField\GridFieldAlterationListener`
-* **Handler**: `SilverStripe\Snapshots\Handler\GridField\AlterationHandler`
-
 #### Event: gridFieldAction
-* **Description**: A GridField action invoked via a URL (`GridField_URLHandler`)
-* **Example**:  `deleterecord`
+* **Description**: A standard GridField action invoked via a URL (`GridField_URLHandler`)
+* **Example**:  `handleReorder` (reorder items)
 * **Listener**: `SilverStripe\Snapshots\Listener\GridField\GridFieldURLListener`
 * **Handler**: `SilverStripe\Snapshots\Handler\GridField\URLActionHandler`
+
+#### Event: gridFieldAlteration
+* **Description**: A GridField action invoked via a URL (`GridField_ActionProvider`)
+* **Example**:  `deleterecord`, `archiverecord`
+* **Listener**: `SilverStripe\Snapshots\Listener\GridField\GridFieldAlterationListener`
+* **Handler**: `SilverStripe\Snapshots\Handler\GridField\AlterationHandler`
 
 #### Event: graphqlMutation
 * **Description**: A scaffolded GraphQL mutation
@@ -133,7 +133,7 @@ extensions to key classes in the admin that then trigger these events through th
 
 Each of these handlers is passed a context object that exposes an **action identifier**. This is a string that
 provides specific information about what happened in the event that the handler can then use in its implementation.
-For instance, if a form was submitted, and the function that handles the form is`doSave($data, $form)`, the action
+For instance, if a form was submitted, and the function that handles the form is `doSave($data, $form)`, the action
 identifier is `doSave`. Likewise, controller actions, GridField actions, and GraphQL operations are all action
 identifiers.
 
@@ -142,17 +142,18 @@ the subscribers to only react to a specific subset of events.
 
 #### How to find your action identifier
 
-In the above example, we subscribe to the main event `formSubitted`, but we've added more specificity with `myFormHandler`.
+In the above example, we subscribe to the main event `formSubmitted`, but we've added more specificity with `myFormHandler`.
 This is the name of the `action` provided in the context of the event.
 
 The easiest way to debug events is to put breakpoints or logging into the `Dispatcher::trigger()` function. This
 will provide all the detail you need about what events are triggered when, and with what context.
 
-```
+```php
 public function trigger(string $event, ListenerContext $context): void
 {
     error_log($event);
     error_log($context->getAction());
+    // ...
 ```
 
 When the logging is in place you just go to the CMS and perform the action you are interested in.
@@ -217,7 +218,7 @@ SilverStripe\Core\Injector\Injector:
           handler: %$MyProject\Handlers\MyHandler
 ```
 
-#### Removing snapshot creators
+### Removing snapshot creators
 
 The configuration API doesn't make it easy to remove items from arrays, so this is best done procedurally.
 
@@ -245,7 +246,7 @@ class MyEventLoader implements EventHandlerLoader
 }
 ```
 
-#### Snapshot creation API
+### Snapshot creation API
 
 To cover all cases, this module allows you to invoke snapshot creation in any part of your code outside of normal action flow.
 

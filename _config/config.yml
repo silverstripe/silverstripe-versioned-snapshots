@@ -74,11 +74,11 @@ SilverStripe\Core\Injector\Injector:
           on: [ cmsAction.savetreenode ]
           handler: %$SilverStripe\Snapshots\Handler\CMSMain\ActionHandler
         -
-          on: [ gridFieldAction.deleterecord ]
+          on: [ gridFieldAlteration.deleterecord, gridFieldAlteration.archiverecord ]
           handler: %$SilverStripe\Snapshots\Handler\GridField\URLActionHandler
         -
-          on: [ gridFieldAlteration.handleReorder ]
-          handler: %$SilverStripe\Snapshots\Handler\GridField\AlterationHandler
+          on: [ gridFieldAction.handleReorder ]
+          handler: %$SilverStripe\Snapshots\Handler\GridField\URLActionHandler
         -
           on: [ graphqlMutation.create, graphqlMutation.update, graphqlMutation.delete ]
           handler: %$SilverStripe\Snapshots\Handler\GraphQL\MutationHandler

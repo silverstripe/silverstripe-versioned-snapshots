@@ -4,6 +4,7 @@ namespace SilverStripe\Snapshots;
 
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\View\ArrayData;
+use Exception;
 
 class ActivityEntry extends ArrayData
 {
@@ -49,13 +50,21 @@ class ActivityEntry extends ArrayData
             $previousVersion = Versioned::get_all_versions($item->ObjectClass, $item->ObjectID)
                 ->sort('Version', 'DESC')
                 ->first();
-            if ($previousVersion->exists()) {
+            if ($previousVersion && $previousVersion->exists()) {
                 $itemObj = $item->getItem($previousVersion->Version);
             // This is to deal with the case in which there is no previous version
             // it's better to give a faulty snapshot point than break the app
             } elseif ($item->Version > 1) {
                 $itemObj = $item->getItem($item->Version - 1);
             }
+        }
+
+        if (!$itemObj) {
+            throw new Exception(sprintf(
+                'Could not resolve SnapshotItem %s to a previous %s version',
+                $item->ID,
+                $item->ObjectClass
+            ));
         }
 
         return new static([

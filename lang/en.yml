@@ -1,20 +1,20 @@
 en:
   SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler:
-    HANDLER_publish: 'Publish page'
     HANDLER_unpublish: 'Unpublish page'
     HANDLER_doSave: 'Save item'
     HANDLER_doDelete: 'Delete item'
   SilverStripe\Snapshots\Handler\Form\SaveHandler:
     HANDLER_save: 'Save page'
+  SilverStripe\Snapshots\Handler\Form\PublishHandler:
+    HANDLER_publish: 'Publish page'
   SilverStripe\Snapshots\Handler\CMSMain\ActionHandler:
     HANDLER_savetreenode: 'Reordered site tree'
-    HANDLER_publish: 'Publish page'
-    HANDLER_unpublish: 'Unpublish page'
   SilverStripe\Snapshots\Handler\GraphQL\MutationHandler:
     HANDLER_graphql_crud_create: 'GraphQL create'
     HANDLER_graphql_crud_update: 'GraphQL update'
     HANDLER_graphql_crud_delete: 'GraphQL delete'
-  SilverStripe\Snapshots\Handler\GridField\ActionHandler:
+  SilverStripe\Snapshots\Handler\GridField\URLActionHandler:
     HANDLER_deleterecord: 'Delete record'
+    HANDLER_archiverecord: 'Archive record'
   SilverStripe\Snapshots\Handler\GridField\AlterationHandler:
     HANDLER_handleReorder: 'Reorder items'

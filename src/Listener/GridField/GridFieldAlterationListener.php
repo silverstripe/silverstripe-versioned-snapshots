@@ -32,8 +32,8 @@ class GridFieldAlterationListener extends Extension
         }
         Dispatcher::singleton()->trigger(
             'gridFieldAlteration',
-            new GridFieldContext($action, $request, $result, $this->owner
-        ));
+            new GridFieldAlterationContext($action, $request, $result, $this->owner)
+        );
     }
 
 }
