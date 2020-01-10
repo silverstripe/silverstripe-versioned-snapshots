@@ -1,19 +1,14 @@
 <?php
 
-namespace SilverStripe\Snapshots\Listener;
+namespace SilverStripe\Snapshots\Listener\GraphQL;
 
 use GraphQL\Type\Definition\ResolveInfo;
-use SilverStripe\Control\Controller;
 use SilverStripe\Core\Extension;
 use SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Create;
 use SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Delete;
 use SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Update;
 use SilverStripe\ORM\SS_List;
-use SilverStripe\ORM\ValidationException;
-use SilverStripe\Snapshots\Dispatch\Context;
 use SilverStripe\Snapshots\Dispatch\Dispatcher;
-use SilverStripe\Snapshots\Snapshot;
-use SilverStripe\Snapshots\Listener\CurrentPage;
 
 /**
  * Class GenericAction
@@ -21,7 +16,6 @@ use SilverStripe\Snapshots\Listener\CurrentPage;
  * Snapshot action listener for GraphQL actions via generic CRUD API
  *
  * @property Create|Delete|Update|$this $owner
- * @package SilverStripe\Snapshots\Listener\GraphQL
  */
 class GraphQLMutationListener extends Extension
 {
@@ -35,17 +29,19 @@ class GraphQLMutationListener extends Extension
      * @param array $args
      * @param mixed $context
      * @param mixed $info
-     * @throws ValidationException
      */
     public function afterMutation($recordOrList, array $args, $context, ResolveInfo $info): void
     {
-        Dispatcher::singleton()->trigger('graphqlMutation', new Context([
-            'list' => $recordOrList instanceof SS_List ? $recordOrList : null,
-            'record' => !$recordOrList instanceof SS_List ? $recordOrList : null,
-            'args' => $arge,
-            'context' => $context,
-            'resolveInfo' => $info,
-            'mutation' => $this->owner,
-        ]));
+        Dispatcher::singleton()->trigger(
+            'graphqlMutation',
+            new GraphQLMutationContext(
+                $this->owner,
+                $recordOrList instanceof SS_List ? $recordOrList : null,
+                !$recordOrList instanceof SS_List ? $recordOrList : null,
+                $args,
+                $context,
+                $info
+            )
+        );
     }
 }

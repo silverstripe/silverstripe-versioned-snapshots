@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\Snapshots\Listener;
+namespace SilverStripe\Snapshots\Listener\CMSMain;
 
 use SilverStripe\CMS\Controllers\CMSMain;
 use SilverStripe\CMS\Model\SiteTree;
@@ -19,7 +19,6 @@ use SilverStripe\Snapshots\Snapshot;
  * Snapshot action listener for CMS main actions
  *
  * @property CMSMain|$this $owner
- * @package SilverStripe\Snapshots\Listener\Page
  */
 class CMSMainActionListener extends Extension
 {
@@ -29,18 +28,16 @@ class CMSMainActionListener extends Extension
      * @param HTTPRequest $request
      * @param $action
      * @param $result
-     * @throws ValidationException
      */
-    public function afterCallActionHandler( // phpcs:ignore SlevomatCodingStandard.TypeHints
-        HTTPRequest $request,
-        $action,
-        $result
-    ): void {
-        Dispatcher::singleton()->trigger('cmsAction', new Context([
-            'action' => $action,
-            'result' => $result,
-            'treeClass' => $this->owner->config()->get('tree_class'),
-            'id' => $request->requestVar('ID'),
-        ]));
+    public function afterCallActionHandler(HTTPRequest $request, $action, $result): void {
+        Dispatcher::singleton()->trigger(
+            'cmsAction',
+            new CMSMainContext(
+                $action,
+                $result,
+                $this->owner->config()->get('tree_class'),
+                $request->requestVar('ID')
+            )
+        );
     }
 }

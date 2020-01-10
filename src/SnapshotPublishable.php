@@ -61,50 +61,12 @@ class SnapshotPublishable extends RecursivePublishable
 
         $list = DataList::create($baseClass)
             ->setDataQueryParam([
-              'Versioned.mode' => 'archive',
-              'Versioned.date' => $snapshotDate,
-              'Versioned.stage' => Versioned::DRAFT,
+                'Versioned.mode' => 'archive',
+                'Versioned.date' => $snapshotDate,
+                'Versioned.stage' => Versioned::DRAFT,
             ]);
 
         return $list->byID($id);
-    }
-
-    /**
-     * @return bool
-     */
-    public function publishRecursive()
-    {
-        if (!Snapshot::singleton()->isModelTriggerActive()) {
-            return parent::publishRecursive();
-        }
-
-        if (!self::$active) {
-            return parent::publishRecursive();
-        }
-
-        $this->openSnapshot();
-        $result = parent::publishRecursive();
-        $this->closeSnapshot();
-
-        return $result;
-    }
-
-    /**
-     * @param int|string $version
-     */
-    public function rollbackRelations($version)
-    {
-        if (!Snapshot::singleton()->isModelTriggerActive()) {
-            return parent::rollbackRelations($version);
-        }
-
-        if (!self::$active) {
-            return parent::rollbackRelations($version);
-        }
-
-        $this->openSnapshot();
-        parent::rollbackRelations($version);
-        $this->closeSnapshot();
     }
 
     /**
@@ -236,7 +198,6 @@ class SnapshotPublishable extends RecursivePublishable
             '"ObjectHash"' => $hash,
             'NOT ("Version" = ? AND "WasPublished" = 1)' => $min,
         ];
-
         if (!$includeAll) {
             $condtionStatement[] = 'Modification = 1';
         }
@@ -293,7 +254,7 @@ class SnapshotPublishable extends RecursivePublishable
                     'SnapshotID' => $snapShotIDs,
                 ])
                 ->where(
-                    // Only get the items that were the subject of a user's action
+                // Only get the items that were the subject of a user's action
                     "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
                 )
                 ->sort([
@@ -419,41 +380,6 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @return void
-     */
-    public function onAfterWrite()
-    {
-        if (!Snapshot::singleton()->isModelTriggerActive()) {
-            return;
-        }
-
-        if (!$this->requiresSnapshot()) {
-            return;
-        }
-
-        $this->doSnapshot();
-
-        $changes = $this->getChangedOwnership();
-        if (!empty($changes)) {
-            $this->reconcileOwnershipChanges($changes);
-        }
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function onAfterVersionDelete()
-    {
-        if (!Snapshot::singleton()->isModelTriggerActive()) {
-            return;
-        }
-
-        if ($this->requiresSnapshot()) {
-            $this->doSnapshot();
-        }
-    }
-
-    /**
      * @return SnapshotItem
      */
     public function createSnapshotItem()
@@ -481,31 +407,6 @@ class SnapshotPublishable extends RecursivePublishable
         }
 
         return SnapshotItem::create($record);
-    }
-
-    public function onAfterPublish()
-    {
-        if (!Snapshot::singleton()->isModelTriggerActive()) {
-            return;
-        }
-
-        if ($this->activeSnapshot) {
-            $item = $this->owner->createSnapshotItem();
-            $item->WasPublished = true;
-            $this->activeSnapshot->Items()->add($item);
-        }
-    }
-
-    public function onBeforeRevertToLive()
-    {
-        if (!Snapshot::singleton()->isModelTriggerActive()) {
-            return;
-        }
-
-        if ($this->requiresSnapshot()) {
-            $this->openSnapshot();
-            $this->doSnapshot();
-        }
     }
 
     /**

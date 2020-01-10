@@ -15,7 +15,7 @@ which is particularly visible in [content blocks](https://github.com/dnadesign/s
 
 This module enables the data model. To take full advantage of its core offering, you should install [silverstripe/versioned-snapshot-admin](https://github.com/silverstripe/silverstripe-versioned-snapshot-admin) to expose these snapshots through the "History" tab of the CMS.
 
-WARNING: This module is experimental, and not considered stable. 
+WARNING: This module is experimental, and not considered stable.
 
 ## Installation
 
@@ -38,7 +38,7 @@ BlockPage
 
 Ownership between each of those nodes affords publication of the entire graph through one commmand
 (or click of a button). But it is not apparent to the user what owned content, if any, will
-be published. If the Gallery is modified, `BlockPage` will not show a modified state. 
+be published. If the Gallery is modified, `BlockPage` will not show a modified state.
 
 This module aims to make these modification states and implicit edit history more transparent.
 
@@ -75,7 +75,7 @@ on a template to create a human-readable activity feed. Returns an array of `Act
 
 The snapshot functionality is provided through the `SnapshotPublishable` extension, which
 is a drop-in replacement for `RecursivePublishable`. By default, this module will replace
-`RecursivePublishable`, which is added to all dataobjects by `silverstripe-versioned`, with 
+`RecursivePublishable`, which is added to all dataobjects by `silverstripe-versioned`, with
 this custom subclass.
 
 For CMS views, use the `SnapshotSiteTreeExtension` to provide notifications about
@@ -83,250 +83,167 @@ owned modification state (WORK IN PROGRESS, POC ONLY)
 
 ## How it works
 
-This module comes with two very different work flows.
+Snapshots are created in response to user events in the CMS. These events are driven by a simple
+pub/sub API in the `SilverStripe\Snapshots\Dispatch\Dispatcher` API.
 
-* CMS action work flow (default) - trigger is on user action, actions are opt-in with some core actions already available
-* model work flow - trigger is on after model write, actions are opt-out
+### CMS Events and the Dispatcher
 
-### CMS action work flow
+By default, there are a handful
+of broad-based CMS events that will trigger handlers that create snapshots. A suite of listeners are added via
+extensions to key classes in the admin that then trigger these events through the
+`Dispatcher` API, e.g. `Dispatcher::singleton()->trigger('formSubmitted')`.
 
-#### Static configuration
+#### Event: formSubmitted
+* **Description**: Any form submitted in the CMS
+* **Example**:  save, publish, unpublish, delete
+* **Listener**: `SilverStripe\Snapshots\Listener\Form\FormSubmissionListener`
+* **Handler**: `SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler`
 
-This module comes with some CMS actions already provided. This configuration is located in `config.yml` under `snapshot-actions`.
-The format is very simple:
+#### Event: cmsAction
+* **Description**: A `CMSMain` controller action
+* **Example**:  `savetreenode` (reorder site tree)
+* **Listener**: `SilverStripe\Snapshots\Listener\CMSMain\CMSMainActionListener`
+* **Handler**: `SilverStripe\Snapshots\Handler\CMSMain\ActionHandler`
 
-'`identifier`': '`message`'
+#### Event: gridFieldAlteration
+* **Description**: A standard GridField action (`GridField_ActionProvider`)
+* **Example**:  `handleReorder` (reorder items)
+* **Listener**: `SilverStripe\Snapshots\Listener\GridField\GridFieldAlterationListener`
+* **Handler**: `SilverStripe\Snapshots\Handler\GridField\AlterationHandler`
 
-Where `identifier` is the action identifier (this is internal name from the component which is responsible for handling the action).
-For example for page edit form we have the following rule:
+#### Event: gridFieldAction
+* **Description**: A GridField action invoked via a URL (`GridField_URLHandler`)
+* **Example**:  `deleterecord`
+* **Listener**: `SilverStripe\Snapshots\Listener\GridField\GridFieldURLListener`
+* **Handler**: `SilverStripe\Snapshots\Handler\GridField\URLActionHandler`
 
-'`save`': '`Save page`'
+#### Event: graphqlMutation
+* **Description**: A scaffolded GraphQL mutation
+* **Example**:  `mutation createMyDataObject(Input: $Input)`
+* **Listener**: `SilverStripe\Snapshots\Listener\GraphQL\GraphQLMutationListener`
+* **Handler**: `SilverStripe\Snapshots\Handler\GraphQL\MutationHandler`
 
-This means each time a user saves a page via page edit form a snapshot will be created with a context message `Save page`.
+#### Event: graphqlOperation
+* **Description**: Any generic GraphQL operation
+* **Example**:  `mutation publishAllFiles`, `query allTheThings`
+* **Listener**: `SilverStripe\Snapshots\Listener\GraphQL\GraphQLMiddlewareListener`
+* **Handler**: `SilverStripe\Snapshots\Handler\GraphQL\GenericHandler`
 
-This configuration can be overridden via standard configuration API means.
+### Action identifiers
 
-**I want to add more actions**
+Each of these handlers is passed a context object that exposes an **action identifier**. This is a string that
+provides specific information about what happened in the event that the handler can then use in its implementation.
+For instance, if a form was submitted, and the function that handles the form is`doSave($data, $form)`, the action
+identifier is `doSave`. Likewise, controller actions, GridField actions, and GraphQL operations are all action
+identifiers.
 
-Create following configuration in your project `_config` folder:
-
-```
-Name: snapshot-custom-actions
-After:
-  - '#snapshot-actions'
----
-SilverStripe\Snapshots\Snapshot:
-  actions:
-    # grid field actions (via standard action)
-    'togglelayoutwidth': 'Toggle layout width'
-```
-
-This will add a new action for the `togglelayoutwidth` action and the snapshot message for this action will be `Toggle layout width`.
-
-**I want to disable a default action**
-
-```
-Name: snapshot-custom-actions
-After:
-  - '#snapshot-actions'
----
-SilverStripe\Snapshots\Snapshot:
-  actions:
-    # GraphQL CRUD - disable default
-    'graphql_crud_create': null
-```
-
-This will disable the action `graphql_crud_create` so no snapshot will be created when this action is executed.
-
-**I want to add a action but with no message**
-
-```
-Name: snapshot-custom-actions
-After:
-  - '#snapshot-actions'
----
-SilverStripe\Snapshots\Snapshot:
-  actions:
-    # grid field actions (via standard action)
-    'togglelayoutwidth': ''
-```
-
-This will still create a snapshot for the action but no snapshot message will be displayed.
-
-**I want to change message of existing action**
-
-```
-Name: snapshot-custom-actions
-After:
-  - '#snapshot-actions'
----
-SilverStripe\Snapshots\Snapshot:
-  actions:
-    # GraphQL CRUD - disable default
-    'graphql_crud_create': 'My custom message'
-```
-
-This will create snapshot for the action with your custom message.
-Setting empty string as a message will still create the snapshot but with no message.
+Events are always called with `eventName.<action identifier>`. For instance `formSubmitted.doSave`, allowing
+the subscribers to only react to a specific subset of events.
 
 #### How to find your action identifier
 
-Common case is where you want to add a new action configuration but you don't know what your action identifier is.
-This really depends on what the component responsible for handling the action is.
-The most basic approach is to add temporary logging to start of `SilverStripe\Snapshots\Snapshot::getActionMessage()`.
-Every action which is covered by this module (regardless of the configuration) flows through this function.
+In the above example, we subscribe to the main event `formSubitted`, but we've added more specificity with `myFormHandler`.
+This is the name of the `action` provided in the context of the event.
+
+The easiest way to debug events is to put breakpoints or logging into the `Dispatcher::trigger()` function. This
+will provide all the detail you need about what events are triggered when, and with what context.
 
 ```
-public function getActionMessage($identifier): ?string
+public function trigger(string $event, ListenerContext $context): void
 {
-    error_log($identifier);
+    error_log($event);
+    error_log($context->getAction());
 ```
 
 When the logging is in place you just go to the CMS and perform the action you are interested in.
 This should narrow the list of identifier down to a much smaller subset.
 
-#### Runtime overrides
+### Customising the snapshot messages
 
-In case static configuration in not enough, runtime overrides are available. This module comes with following types of listeners:
+By default, these events will trigger the message defined in the language file, e.g.
+`_t('SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler.HANDLER_publish', 'Publish page')`. However, if you want
+to customise this message at the configuration level, simply override the message on the handler class.
 
-* Form submissions - actions that comes via form submissions (for example page edit form)
-* GraphQL general - actions executed via GraphQL CRUD (for example standard model mutation)
-* GraphQL custom - actions executed via GraphQL API (for example custom mutation)
-* GridField alter - actions which are implemented via `GridField_ActionProvider` (for example delete item via GridField)
-* GridField URL handler - actions which are implemented via `GridField_URLHandler`
-* Page `CMSMain` actions - this covers page actions which are now handled by form submissions
-
-Each type of listener provides an extension point which allows the override of the default module behaviour.
-
-To apply your override you need to first know which listener is handling your action.
-Sometimes you can guess based on the action category but using logging may help you determine the listener type more easily.
-
-Form submissions - `Form\Submission::processAction`
-
-GraphQL custom - `GraphQL\CustomAction::onAfterCallMiddleware`
-
-GraphQL general - `GraphQL\GenericAction::afterMutation`
-
-GridField alter - `GridField\AlterAction::afterCallActionHandler`
-
-GridField URL handler - `GridField\UrlHandlerAction::afterCallActionURLHandler`
-
-Page `CMSMain` actions - `Page\CMSMainAction::afterCallActionHandler`
-
-Once you know listener type and the action identifier you need to create an extension which is a subclass of one of the abstract listener handlers.
-Abstract listener depends on your listener type.
-
-Form submissions - `Form\SubmissionListenerAbstract`
-
-GraphQL custom - `GraphQL\CustomActionListenerAbstract`
-
-GraphQL general - `GraphQL\GenericActionListenerAbstract`
-
-GridField alter - `GridField\AlterActionListenerAbstract`
-
-GridField URL handler - `GridField\UrlHandlerActionListenerAbstract`
-
-Page `CMSMain` actions - `Page\CMSMainListenerAbstract`
-
-**Example implementation**
-
-config
-
-```
-SilverStripe\Snapshots\Snapshot:
-  extensions:
-    - App\Snapshots\Listener\MutationUpdateLayoutBlockGroup
+```yaml
+SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler:
+  messages:
+    publish: 'My publish message'
 ```
 
-extension
+In this case "publish" is the **action identifier** (the function that handles the form).
 
-```
-<?php
+### Customising existing snapshot creators
 
-namespace App\Snapshots\Listener;
+All of the handlers are registered with injector, so the simplest way to customise them is to override their
+definitions in the configuration.
 
-use App\Models\Blocks\LayoutBlock;
-use GraphQL\Type\Schema;
-use Page;
-use SilverStripe\ORM\ValidationException;
+For instance, if you have something custom you with a snapshot when a page is saved:
+
+```php
+use SilverStripe\Snapshots\Handler\Form\SaveHandler;
+use SilverStripe\Snapshots\Listener\ListenerContext;
 use SilverStripe\Snapshots\Snapshot;
-use SilverStripe\Snapshots\Listener\GraphQL\CustomActionListenerAbstract;
 
-/**
- * Class MutationUpdateLayoutBlockGroup
- *
- * @property Snapshot|$this $owner
- * @package App\Snapshots\Listener
- */
-class MutationUpdateLayoutBlockGroup extends CustomActionListenerAbstract
+class MySaveHandler extends SaveHandler
 {
-    protected function getActionName(): string
+    protected function createSnapshot(ListenerContext $context): ?Snapshot
     {
-        return 'mutation_updateLayoutBlockGroup';
-    }
-
-    /**
-     * @param Page $page
-     * @param string $action
-     * @param string $message
-     * @param Schema $schema
-     * @param string $query
-     * @param array $context
-     * @param array $params
-     * @return bool
-     * @throws ValidationException
-     */
-    protected function processAction(
-        Page $page,
-        string $action,
-        string $message,
-        Schema $schema,
-        string $query,
-        array $context,
-        array $params
-    ): bool {
-        if (!array_key_exists('block', $params)) {
-            return false;
-        }
-
-        $data = $params['block'];
-
-        if (!array_key_exists('ID', $data)) {
-            return false;
-        }
-
-        $blockId = (int) $data['ID'];
-
-        if (!$blockId) {
-            return false;
-        }
-
-        $block = LayoutBlock::get_by_id($blockId);
-
-        if ($block === null || !$block->exists()) {
-            return false;
-        }
-
-        Snapshot::singleton()->createSnapshotFromAction($page, $block, $message);
-
-        return true;
+        //...
     }
 }
-
 ```
 
-`getActionName` is the action identifier
+```yaml
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Snapshots\Handler\Form\SaveHandler:
+    class: MyProject\MySaveHandler
+```
 
-`CustomActionListenerAbstract` is the parent class because this action is a custom mutation
+### Adding snapshot creators
 
-Returning `false` inside `processAction` makes the module fallback to default behaviour.
+If you have custom actions or form handlers you've added to the CMS, you might want to either ensure their tracked
+by the default snapshot creators, or maybe even build your own snapshot creator for them. In this case, you can
+use the declarative API on `Dispatcher` to subscribe to the events you need.
 
-Returning `true` inside `processAction` makes the module skip the default behaviour.
+Let's say we have a form that submits to a function: `public function myFormHandler($data, $form)`.
 
-If you return `true` it's up to you to create the snapshot.
-This covers the case where the action uses custom data and it's impossible for the module to figure out the origin object.
-Use this approach when you are unhappy with the default behaviour and you know the way how to find the origin object from the data.
-Note that the context data available is different for each listener type as the context is different.
+```yaml
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Snapshots\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        -
+          on: [ formSubmitted.myFormHandler ]
+          handler: %$MyProject\Handlers\MyHandler
+```
+
+#### Removing snapshot creators
+
+The configuration API doesn't make it easy to remove items from arrays, so this is best done procedurally.
+
+You can register a `EventHandlerLoader` implementation with `Dispatcher` to procedurally register and unregister
+events.
+
+```yaml
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Snapshots\Dispatch\Dispatcher:
+    constructor:
+      myLoader: %$MyProject\MyEventLoader
+```
+
+```php
+use SilverStripe\Snapshots\Dispatch\EventHandlerLoader;
+use SilverStripe\Snapshots\Dispatch\Dispatcher;
+use SilverStripe\Snapshots\Handler\Form\SaveHandler;
+
+class MyEventLoader implements EventHandlerLoader
+{
+    public function addToDispatcher(Dispatcher $dispatcher): void
+    {
+        $dispatcher->removeListenerByClassName('formSubmitted.save', SaveHandler::class);
+    }
+}
+```
 
 #### Snapshot creation API
 
@@ -382,27 +299,6 @@ Snapshot::singleton()->createSnapshotFromAction($page, $block, 'something happen
 Page is the owner, block is the origin and layout block is a related object.
 Passing the layout block through allows the layout block to display it's own version history in the CMS edit form.
 This feature may have marginal use and it's ok to skip it.
-
-
-### Model work flow
-
-When a dataobject is written, an `onAfterWrite` handler opens a snapshot by writing
-a new `VersionedSnapshot` record. As long as this snapshot is open, any successive dataobject
-writes will add themselves to the open snapshot, on the `VersionedSnapshotItem` table. The dataobject
-that opens the snapshot is stored as the `Origin` on the `VersionedSnapshot` table (a polymorphic `has_one`).
-It then looks up the ownership chain using `findOwners()` and puts each of its owners into the snapshot.
-
-Each snapshot item contains its version, class, and ID at the time of the snapshot. This
-provides enough information to query what snapshots a given dataobject was involved in since
-a given version or date.
-
-For the most part, the snapshot tables are considered immutable historical records, but there
-are a few cases when snapshots are retroactively updated
-
-* When changes are reverted to live, any snapshots those changes made are deleted.
-* When the ownership structure is changed, the previous owners are surgically removed
-from the graph and the new ones stitched in.
-
 
 
 ## Versioning

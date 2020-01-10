@@ -6,6 +6,9 @@ use Page;
 use SilverStripe\Admin\AdminRootController;
 use SilverStripe\CMS\Controllers\CMSMain;
 use SilverStripe\CMS\Controllers\CMSPageEditController;
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Control\Controller;
+use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest;
 use SilverStripe\ORM\DataObject;
@@ -24,7 +27,7 @@ trait CurrentPage
      * @param mixed $controller
      * @return Page|null
      */
-    private function getCurrentPageFromController($controller): ?Page
+    protected function getCurrentPageFromController($controller): ?Page
     {
         while ($controller && ($controller instanceof Form || $controller instanceof GridFieldDetailForm_ItemRequest)) {
             $controller = $controller->getController();
@@ -100,5 +103,28 @@ trait CurrentPage
         }
 
         return $page;
+    }
+
+    /**
+     * @return HTTPRequest|null
+     */
+    protected function getCurrentRequest(): ?HTTPRequest
+    {
+        return Controller::has_curr() ? Controller::curr()->getRequest() : null;
+    }
+
+    /**
+     * @return SiteTree|null
+     */
+    protected function getPageFromReferrer(): ?SiteTree
+    {
+        $request = $this->getCurrentRequest();
+        if (!$request) {
+            return null;
+        }
+        $url = $request->getHeader('referer');
+        $url = parse_url($url, PHP_URL_PATH);
+        $url = ltrim($url, '/');
+        return $this->getCurrentPageFromRequestUrl($url);
     }
 }

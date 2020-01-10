@@ -27,135 +27,58 @@ Name: snapshot-listeners
 ---
 SilverStripe\CMS\Controllers\CMSMain:
   extensions:
-    - SilverStripe\Snapshots\Listener\Page\CMSMainAction
+    - SilverStripe\Snapshots\Listener\CMSMain\CMSMainActionListener
 
 SilverStripe\Forms\GridField\GridField:
   extensions:
-    - SilverStripe\Snapshots\Listener\GridField\AlterAction
-    - SilverStripe\Snapshots\Listener\GridField\UrlHandlerAction
+    - SilverStripe\Snapshots\Listener\GridField\GridFieldAlterationListener
+    - SilverStripe\Snapshots\Listener\GridField\GridFieldURLListener
 
 SilverStripe\Forms\FormRequestHandler:
   extensions:
-    - SilverStripe\Snapshots\Listener\Form\Submission
+    - SilverStripe\Snapshots\Listener\Form\FormSubmissionListener
 
 SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Create:
   extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\GenericAction
+    - SilverStripe\Snapshots\Listener\GraphQL\GraphQLMutationListener
 
 SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Delete:
   extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\GenericAction
+    - SilverStripe\Snapshots\Listener\GraphQL\GraphQLMutationListener
 
 SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Update:
   extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\GenericAction
+    - SilverStripe\Snapshots\Listener\GraphQL\GraphQLMutationListener
 
 SilverStripe\GraphQL\Manager:
   extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\CustomAction
+    - SilverStripe\Snapshots\Listener\GraphQL\GraphQLMiddlewareListener
 
 ---
-Name: snapshot-actions
+Name: snapshot-events
 ---
 SilverStripe\Core\Injector\Injector:
-  # Form submission handlers
-  SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler.publish:
-    class: SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler
-    constructor:
-      message: 'Publish page'
-      handlerName: 'publish'
-  SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler.unpublish:
-    class: SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler
-    constructor:
-      message: 'Unpublish page'
-      handlerName: 'unpublish'
-  SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler.gridFieldSave:
-    class: SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler
-    constructor:
-      message: 'Save item'
-      handlerName: 'doSave'
-  SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler.gridFieldDelete:
-    class: SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler
-    constructor:
-      message: 'Delete item'
-      handlerName: 'doDelete'
-
-  # CMS action handlers
-  SilverStripe\Snapshots\Handler\CMSMain\ActionHandler.savetreenode:
-    class: SilverStripe\Snapshots\Handler\CMSMain\ActionHandler
-    constructor:
-      action: 'savetreenode'
-      message: 'Changed site tree position'
-
-  # GridField action handlers
-  SilverStripe\Snapshots\Handler\GridField\ActionHandler.deleterecord:
-    class: SilverStripe\Snapshots\Handler\GridField\ActionHandler
-    constructor:
-      action: 'deleterecord'
-      message: 'Delete item'
-
-  # GridField manipulator handlers
-  SilverStripe\Snapshots\Handler\GridField\AlterationHandler.handleReorder:
-    class: SilverStripe\Snapshots\Handler\GridField\AlterationHandler
-    constructor:
-      action: 'handleReorder'
-      message: 'Changed items order'
-
-  # GraphQL mutation handlers
-  SilverStripe\Snapshots\Handler\GraphQL\MutationHandler.create:
-    class: SilverStripe\Snapshots\Handler\GraphQL\MutationHandler
-    constructor:
-      mutationType: 'create'
-  SilverStripe\Snapshots\Handler\GraphQL\MutationHandler.update:
-    class: SilverStripe\Snapshots\Handler\GraphQL\MutationHandler
-    constructor:
-      mutationType: 'update'
-  SilverStripe\Snapshots\Handler\GraphQL\MutationHandler.delete:
-    class: SilverStripe\Snapshots\Handler\GraphQL\MutationHandler
-    constructor:
-      mutationType: 'delete'
-
-
   SilverStripe\Snapshots\Dispatch\Dispatcher:
     properties:
       handlers:
-        # Form submission handlers
-        saveHandler:
-          event: 'formSubmitted'
+        -
+          on: [ formSubmitted.unpublish, formSubmitted.doSave, formSubmitted.doDelete]
+          handler: %$SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler
+        -
+          on: [ formSubmitted.save ]
           handler: %$SilverStripe\Snapshots\Handler\Form\SaveHandler
-        publishHandler:
-          event: 'formSubmitted'
-          handler: %$SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler.publish
-        unpublishHandler:
-          event: 'formSubmitted'
-          handler: %$SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler.unpublish
-        gridFieldSaveHandler:
-          event: 'formSubmitted'
-          handler: %$SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler.gridFieldSave
-        gridFieldDeleteHandler:
-          event: 'formSubmitted'
-          handler: %$SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler.gridFieldDelete
-
-        # CMSMain actions
-        reorderSiteTreeHandler:
-          event: 'cmsAction'
-          handler: %$SilverStripe\Snapshots\Handler\CMSMain\ActionHandler.savetreenode
-
-        # GridField URL providers
-        deleteRecordHandler:
-          event: 'gridFieldAction'
-          handler: %$SilverStripe\Snapshots\Handler\GridField\ActionHandler.deleterecord
-
-        # GridField action providers
-        reorderHandler:
-          event: 'gridFieldAlteration'
-          handler: %$SilverStripe\Snapshots\Handler\GridField\AlterationHandler.handleReorder
-        graphqlCreate:
-          event: 'graphqlMutation'
-          handler: %$SilverStripe\Snapshots\Handler\GraphQL\MutationHandler.create
-        graphqlUpdate:
-          event: 'graphqlMutation'
-          handler: %$SilverStripe\Snapshots\Handler\GraphQL\MutationHandler.update
-        graphqlDelete:
-          event: 'graphqlMutation'
-          handler: %$SilverStripe\Snapshots\Handler\GraphQL\MutationHandler.delete
+        -
+          on: [ formSubmitted.publish ]
+          handler: %$SilverStripe\Snapshots\Handler\Form\PublishHandler
+        -
+          on: [ cmsAction.savetreenode ]
+          handler: %$SilverStripe\Snapshots\Handler\CMSMain\ActionHandler
+        -
+          on: [ gridFieldAction.deleterecord ]
+          handler: %$SilverStripe\Snapshots\Handler\GridField\URLActionHandler
+        -
+          on: [ gridFieldAlteration.handleReorder ]
+          handler: %$SilverStripe\Snapshots\Handler\GridField\AlterationHandler
+        -
+          on: [ graphqlMutation.create, graphqlMutation.update, graphqlMutation.delete ]
+          handler: %$SilverStripe\Snapshots\Handler\GraphQL\MutationHandler

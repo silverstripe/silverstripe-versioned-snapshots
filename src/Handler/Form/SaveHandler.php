@@ -4,32 +4,26 @@
 namespace SilverStripe\Snapshots\Handler\Form;
 
 
-use SilverStripe\Snapshots\Dispatch\Context;
+use SilverStripe\ORM\ValidationException;
+use SilverStripe\Snapshots\Listener\Form\FormContext;
+use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Snapshot;
 
 class SaveHandler extends FormSubmissionHandler
 {
     /**
-     * @var string
+     * @param ListenerContext $context
+     * @return Snapshot|null
+     * @throws ValidationException
      */
-    protected $formHandlerName = 'save';
-
-    /**
-     * @return string
-     */
-    protected function getMessage(): string
+    protected function createSnapshot(ListenerContext $context): ?Snapshot
     {
-        return _t('Snapshots.HANDLER_SAVE', 'Save page');
-    }
+        /* @var FormContext $context */
+        $page = $this->getPage($context);
+        if (!$page || !$page->isModifiedOnDraft()) {
+            return null;
+        }
 
-    /**
-     * @param Context $context
-     * @return bool
-     */
-    public function shouldFire(Context $context): bool
-    {
-        $url = $context->request->getURL();
-        $page = $this->getCurrentPageFromRequestUrl($url);
-
-        return parent::shouldFire($context) && $page && $page->isModifiedOnDraft();
+        return parent::createSnapshot($context);
     }
 }

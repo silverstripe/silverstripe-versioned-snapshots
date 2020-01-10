@@ -4,9 +4,10 @@
 namespace SilverStripe\Snapshots\Handler;
 
 
-use SilverStripe\Snapshots\Dispatch\Context;
+use SilverStripe\Snapshots\Listener\ListenerContext;
 
 interface HandlerInterface
 {
-    public function fire(Context $context): void;
+    public function fire(ListenerContext $context): void;
+
 }

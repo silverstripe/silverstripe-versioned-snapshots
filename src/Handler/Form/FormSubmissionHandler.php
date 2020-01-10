@@ -4,91 +4,43 @@
 namespace SilverStripe\Snapshots\Handler\Form;
 
 
-use SilverStripe\Admin\LeftAndMain;
-use SilverStripe\Snapshots\Dispatch\Context;
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
-use SilverStripe\Snapshots\Listener\CurrentPage;
+use SilverStripe\Snapshots\Listener\Form\FormContext;
+use SilverStripe\Snapshots\Listener\ListenerContext;
+use SilverStripe\Snapshots\Snapshot;
 
-class FormSubmissionHandler extends HandlerAbstract implements HandlerInterface
+class FormSubmissionHandler extends HandlerAbstract
 {
-
     /**
-     * @var string
+     * @param ListenerContext $context
+     * @return Snapshot|null
+     * @throws ValidationException
      */
-    protected $message;
-
-    /**
-     * @var string
-     */
-    protected $formHandlerName;
-
-    /**
-     * @var string
-     */
-    protected $formName = 'EditForm';
-
-    /**
-     * @var string
-     */
-    protected $controllerClass = LeftAndMain::class;
-
-    /**
-     * FormSubmissionSnapshotHandler constructor.
-     * @param string $message
-     * @param string $formHandlerName
-     * @param string $formName
-     * @param string $controllerClass
-     */
-    public function __construct(
-        string $message,
-        string $formHandlerName,
-        string $formName = 'EditForm',
-        string $controllerClass = LeftAndMain::class
-    ) {
-        $this->message = $message;
-        $this->formHandlerName = $formHandlerName;
-        $this->formName = $formName;
-        $this->controllerClass = $controllerClass;
-    }
-
-    public function getMessage(): string
+    protected function createSnapshot(ListenerContext $context): ?Snapshot
     {
-        return $this->message;
-    }
+        /* @var FormContext $context */
+        $action = $context->getAction();
+        $page = $this->getPage($context);
+        $record = $context->getForm()->getRecord();
 
-    /**
-     * @param Context $context
-     * @return bool
-     */
-    public function shouldFire(Context $context): bool
-    {
-        return (
-            parent::shouldFire($context) &&
-            $context->form->getController() instanceof $this->controllerClass &&
-            $context->form->getName() === $this->formName &&
-            $context->handlerName == $this->formHandlerName
-        );
-    }
-
-    /**
-     * @param Context $context
-     */
-    public function fire(Context $context): void
-    {
-        $message = $this->getMessage();
-        $record = $context->form->getRecord();
-
-        if ($record === null) {
-            return;
+        if ($page === null || $record === null) {
+            return null;
         }
 
-        $url = $context->request->getURL();
-        $page = $this->getCurrentPageFromRequestUrl($url);
+        $message = $this->getMessage($action);
 
-        if ($page === null) {
-            return;
-        }
+        return Snapshot::singleton()->createSnapshotFromAction($page, $record, $message);
+    }
 
-        $snapshot->createSnapshotFromAction($page, $record, $message);
+    /**
+     * @param FormContext $context
+     * @return SiteTree|null
+     */
+    protected function getPage(FormContext $context): ?SiteTree
+    {
+        $url = $context->getRequest()->getURL();
+        return $this->getCurrentPageFromRequestUrl($url);
     }
 }

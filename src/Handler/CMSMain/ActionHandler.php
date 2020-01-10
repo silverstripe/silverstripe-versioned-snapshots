@@ -7,57 +7,48 @@ namespace SilverStripe\Snapshots\Handler\CMSMain;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Snapshots\Dispatch\Context;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
-use SilverStripe\Snapshots\Handler\HandlerInterface;
+use SilverStripe\Snapshots\Listener\CMSMain\CMSMainContext;
+use SilverStripe\Snapshots\Listener\ListenerContext;
 use SilverStripe\Snapshots\Snapshot;
 
-class ActionHandler extends HandlerAbstract implements HandlerInterface
+class ActionHandler extends HandlerAbstract
 {
-    protected $message;
-
-    protected $action;
-
-    public function __construct(string $action, string $message)
+    /**
+     * @param ListenerContext $context
+     * @return Snapshot|null
+     * @throws ValidationException
+     */
+    protected function createSnapshot(ListenerContext $context): ?Snapshot
     {
-        $this->action = $action;
-        $this->message = $message;
-    }
-
-    public function shouldFire(Context $context): bool
-    {
-        return (
-            parent::shouldFire($context) &&
-            $context->action === $this->action
-        );
-    }
-
-    public function fire(Context $context): void
-    {
-        $message = $this->getMessage();
-
-        if (!$context->result instanceof HTTPResponse) {
-            return;
+        /* @var CMSMainContext $context */
+        $action = $context->getAction();
+        /* @var HTTPResponse $result */
+        $result = $context->getResult();
+        if (!$result instanceof HTTPResponse) {
+            return null;
+        }
+        if ((int) $result->getStatusCode() !== 200) {
+            return null;
         }
 
-        if ((int) $context->result->getStatusCode() !== 200) {
-            return;
-        }
-
-        $className = $context->treeClass;
-        $id = (int) $context->id;
+        $className = $context->getTreeClass();
+        $id = (int) $context->getId();
 
         if (!$id) {
-            return;
+            return null;
         }
 
         /** @var SiteTree $page */
         $page = DataObject::get_by_id($className, $id);
 
         if ($page === null) {
-            return;
+            return null;
         }
 
-        $snapshot->createSnapshotFromAction($page, null, $message);
+        $message = $this->getMessage($action);
+
+        return Snapshot::singleton()->createSnapshotFromAction($page, null, $message);
     }
 }

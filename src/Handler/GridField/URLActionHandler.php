@@ -9,7 +9,7 @@ use SilverStripe\Snapshots\Listener\GridField\GridFieldContext;
 use SilverStripe\Snapshots\Listener\ListenerContext;
 use SilverStripe\Snapshots\Snapshot;
 
-class AlterationHandler extends HandlerAbstract
+class URLActionHandler extends HandlerAbstract
 {
     /**
      * @param ListenerContext $context
@@ -41,6 +41,4 @@ class AlterationHandler extends HandlerAbstract
 
         return Snapshot::singleton()->createSnapshotFromAction($page, $record, $message);
     }
-
-
 }

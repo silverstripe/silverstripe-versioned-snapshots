@@ -38,24 +38,6 @@ class Snapshot extends DataObject
     const TRIGGER_MODEL = 'model';
 
     /**
-     * Specifies which type of snapshot creation trigger is used
-     * valid values
-     * action - snapshot will be created via CMS actions, trigger is opt-in
-     * model - snapshot will be created via model writes, trigger is opt-out
-     *
-     * @config
-     * @var string
-     */
-    private static $trigger = self::TRIGGER_ACTION;
-
-    /**
-     * Whitelist of CMS actions which will create a snapshot
-     *
-     * @var array
-     */
-    private static $actions = [];
-
-    /**
      * @var array
      */
     private static $db = [
@@ -128,7 +110,6 @@ class Snapshot extends DataObject
     public function getOriginVersion()
     {
         $originItem = $this->getOriginItem();
-
         if ($originItem) {
             return Versioned::get_version(
                 $originItem->ObjectClass,
@@ -154,10 +135,8 @@ class Snapshot extends DataObject
     public function getActivityDescription()
     {
         $item = $this->getOriginItem();
-
         if ($item) {
             $activity = ActivityEntry::createFromSnapshotItem($item);
-
             return ucfirst(sprintf(
                 '%s "%s"',
                 $activity->Subject->singular_name(),
@@ -174,7 +153,6 @@ class Snapshot extends DataObject
     public function getActivityType()
     {
         $item = $this->getOriginItem();
-
         if ($item) {
             $activity = ActivityEntry::createFromSnapshotItem($item);
 
@@ -232,27 +210,12 @@ class Snapshot extends DataObject
     }
 
     /**
-     * @return bool
-     */
-    public function isActionTriggerActive(): bool
-    {
-        return $this->config()->get('trigger') === static::TRIGGER_ACTION;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isModelTriggerActive(): bool
-    {
-        return $this->config()->get('trigger') === static::TRIGGER_MODEL;
-    }
-
-    /**
      *
      * @param DataObject $owner
      * @param DataObject|null $origin
      * @param string $message
      * @param array $objects
+     * @return Snapshot|null
      * @throws ValidationException
      */
     public function createSnapshotFromAction(
@@ -276,7 +239,7 @@ class Snapshot extends DataObject
                 $event->Title = $message;
                 $event->write();
 
-                $message = $origin === null
+                $message = ($origin === null)
                     ? $message
                     : sprintf(
                         '%s %s',
@@ -328,5 +291,19 @@ class Snapshot extends DataObject
 
         return $snapshot;
     }
-    
+
+    /**
+     * sets the related snapshot items to not modified
+     *
+     * items with modifications are used to determine the owner's modification
+     * status (eg in site tree's status flags)
+     */
+    public function markNoModifications(): void
+    {
+        foreach ($this->Items() as $item) {
+            $item->Modification = false;
+            $item->write();
+        }
+    }
+
 }
