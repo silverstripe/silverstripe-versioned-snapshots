@@ -6,6 +6,7 @@ use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Extension;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Snapshots\Dispatch\Dispatcher;
+use SilverStripe\Snapshots\Listener\EventContext;
 
 /**
  * Class UrlHandlerAction
@@ -29,7 +30,14 @@ class GridFieldURLListener extends Extension
     public function afterCallActionURLHandler(HTTPRequest $request, $action, $result): void {
         Dispatcher::singleton()->trigger(
             'gridFieldAction',
-            new GridFieldContext($action, $request, $result, $this->owner)
+            new EventContext(
+                $action,
+                [
+                    'request' => $request,
+                    'result' => $result,
+                    'gridField' => $this->owner
+                ]
+            )
         );
     }
 }

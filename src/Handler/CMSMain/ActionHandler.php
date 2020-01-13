@@ -9,7 +9,6 @@ use SilverStripe\Control\HTTPResponse;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
-use SilverStripe\Snapshots\Listener\CMSMain\CMSMainContext;
 use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
@@ -22,10 +21,9 @@ class ActionHandler extends HandlerAbstract
      */
     protected function createSnapshot(EventContext $context): ?Snapshot
     {
-        /* @var CMSMainContext $context */
         $action = $context->getAction();
         /* @var HTTPResponse $result */
-        $result = $context->getResult();
+        $result = $context->get('result');
         if (!$result instanceof HTTPResponse) {
             return null;
         }
@@ -33,8 +31,8 @@ class ActionHandler extends HandlerAbstract
             return null;
         }
 
-        $className = $context->getTreeClass();
-        $id = (int) $context->getId();
+        $className = $context->get('treeClass');
+        $id = (int) $context->get('id');
 
         if (!$id) {
             return null;

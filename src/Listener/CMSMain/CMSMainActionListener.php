@@ -3,15 +3,10 @@
 namespace SilverStripe\Snapshots\Listener\CMSMain;
 
 use SilverStripe\CMS\Controllers\CMSMain;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
-use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Extension;
-use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\ValidationException;
-use SilverStripe\Snapshots\Dispatch\Context;
 use SilverStripe\Snapshots\Dispatch\Dispatcher;
-use SilverStripe\Snapshots\Snapshot;
+use SilverStripe\Snapshots\Listener\EventContext;
 
 /**
  * Class CMSMainAction
@@ -32,11 +27,13 @@ class CMSMainActionListener extends Extension
     public function afterCallActionHandler(HTTPRequest $request, $action, $result): void {
         Dispatcher::singleton()->trigger(
             'cmsAction',
-            new CMSMainContext(
+            new EventContext(
                 $action,
-                $result,
-                $this->owner->config()->get('tree_class'),
-                $request->requestVar('ID')
+                [
+                    'result' => $result,
+                    'treeClass' => $this->owner->config()->get('tree_class'),
+                    'id' => $request->requestVar('ID'),
+                ]
             )
         );
     }

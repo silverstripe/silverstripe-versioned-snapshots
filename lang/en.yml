@@ -16,5 +16,4 @@ en:
   SilverStripe\Snapshots\Handler\GridField\URLActionHandler:
     HANDLER_deleterecord: 'Delete record'
     HANDLER_archiverecord: 'Archive record'
-  SilverStripe\Snapshots\Handler\GridField\AlterationHandler:
     HANDLER_handleReorder: 'Reorder items'

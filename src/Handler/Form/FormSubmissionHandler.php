@@ -5,9 +5,9 @@ namespace SilverStripe\Snapshots\Handler\Form;
 
 
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Control\HTTPRequest;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
-use SilverStripe\Snapshots\Listener\Form\FormContext;
 use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
@@ -20,10 +20,12 @@ class FormSubmissionHandler extends HandlerAbstract
      */
     protected function createSnapshot(EventContext $context): ?Snapshot
     {
-        /* @var FormContext $context */
         $action = $context->getAction();
         $page = $this->getPage($context);
-        $record = $context->getForm()->getRecord();
+        $record = null;
+        if ($form = $context->get('form')) {
+            $record = $form->getRecord();
+        }
 
         if ($page === null || $record === null) {
             return null;
@@ -35,12 +37,14 @@ class FormSubmissionHandler extends HandlerAbstract
     }
 
     /**
-     * @param FormContext $context
+     * @param EventContext $context
      * @return SiteTree|null
      */
-    protected function getPage(FormContext $context): ?SiteTree
+    protected function getPage(EventContext $context): ?SiteTree
     {
-        $url = $context->getRequest()->getURL();
+        /* @var HTTPRequest $request */
+        $request = $context->get('request');
+        $url = $request->getURL();
         return $this->getCurrentPageFromRequestUrl($url);
     }
 }

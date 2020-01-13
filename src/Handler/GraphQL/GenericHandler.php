@@ -6,7 +6,6 @@ namespace SilverStripe\Snapshots\Handler\GraphQL;
 
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
-use SilverStripe\Snapshots\Listener\GraphQL\GraphQLMiddlewareContext;
 use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
@@ -19,7 +18,6 @@ class GenericHandler extends HandlerAbstract
      */
     protected function createSnapshot(EventContext $context): ?Snapshot
     {
-        /* @var GraphQLMiddlewareContext $context */
         $action = $context->getAction();
         $message = $this->getMessage($action);
         $page = $this->getPageFromReferrer();

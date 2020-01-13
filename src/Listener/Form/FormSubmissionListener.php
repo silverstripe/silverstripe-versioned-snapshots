@@ -7,6 +7,7 @@ use SilverStripe\Core\Extension;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\FormRequestHandler;
 use SilverStripe\Snapshots\Dispatch\Dispatcher;
+use SilverStripe\Snapshots\Listener\EventContext;
 
 /**
  * Class Submission
@@ -28,6 +29,16 @@ class FormSubmissionListener extends Extension
      */
     public function afterCallFormHandler (HTTPRequest $request, $funcName, $vars, $form): void
     {
-        Dispatcher::singleton()->trigger('formSubmitted', new FormContext($funcName, $form, $request, $vars));
+        Dispatcher::singleton()->trigger(
+            'formSubmitted',
+            new EventContext(
+                $funcName,
+                [
+                    'form' => $form,
+                    'request' => $request,
+                    'vars' => $vars
+                ]
+            )
+        );
     }
 }

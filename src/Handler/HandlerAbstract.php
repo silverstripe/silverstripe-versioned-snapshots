@@ -3,10 +3,7 @@
 
 namespace SilverStripe\Snapshots\Handler;
 
-
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
-use SilverStripe\Snapshots\Dispatch\Context;
 use SilverStripe\Snapshots\Listener\CurrentPage;
 use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
