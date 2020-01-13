@@ -81,7 +81,6 @@ SilverStripe\Core\Injector\Injector:
           handler: %$SilverStripe\Snapshots\Handler\CMSMain\Handler
         gridFieldAction:
           on:
-            'gridFieldAction.handleReorder': true
             'gridFieldAlteration.deleterecord': true
             'gridFieldAlteration.archiverecord': true
           handler: %$SilverStripe\Snapshots\Handler\GridField\Action\Handler
