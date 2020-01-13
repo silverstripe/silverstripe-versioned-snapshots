@@ -64,6 +64,11 @@ class Listener extends Extension
                 continue;
             }
             if (in_array($statement->operation, [Manager::MUTATION_ROOT, Manager::QUERY_ROOT])) {
+                // If the operation was given a name, use that
+                $name = $statement->name;
+                if ($name && $name->value) {
+                    return $name->value;
+                }
                 $selectionSet = $statement->selectionSet;
                 if ($selectionSet) {
                     $selections = $selectionSet->selections;
