@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots\Handler\CMSMain;
 
-
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\ORM\DataObject;
@@ -12,7 +11,7 @@ use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
-class ActionHandler extends HandlerAbstract
+class Handler extends HandlerAbstract
 {
     /**
      * @param EventContext $context
@@ -22,6 +21,10 @@ class ActionHandler extends HandlerAbstract
     protected function createSnapshot(EventContext $context): ?Snapshot
     {
         $action = $context->getAction();
+        if ($action === null) {
+            return null;
+        }
+
         /* @var HTTPResponse $result */
         $result = $context->get('result');
         if (!$result instanceof HTTPResponse) {

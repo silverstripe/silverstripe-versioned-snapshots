@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\Snapshots\Listener\GridField;
+namespace SilverStripe\Snapshots\Listener\GridField\Alteration;
 
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Extension;
@@ -17,7 +17,7 @@ use SilverStripe\Snapshots\Listener\EventContext;
  *
  * @property GridField|$this $owner
  */
-class GridFieldAlterationListener extends Extension
+class Listener extends Extension
 {
 
     /**
@@ -29,7 +29,8 @@ class GridFieldAlterationListener extends Extension
      * @param $action
      * @param $result
      */
-    public function afterCallActionHandler(HTTPRequest $request, $action, $result): void {
+    public function afterCallActionHandler(HTTPRequest $request, $action, $result): void
+    {
         if (!in_array($action, ['index', 'gridFieldAlterAction'])) {
             return;
         }
@@ -89,6 +90,4 @@ class GridFieldAlterationListener extends Extension
 
         return null;
     }
-
-
 }

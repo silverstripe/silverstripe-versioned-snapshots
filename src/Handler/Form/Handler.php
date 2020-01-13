@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots\Handler\Form;
 
-
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\ORM\ValidationException;
@@ -11,7 +10,7 @@ use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
-class FormSubmissionHandler extends HandlerAbstract
+class Handler extends HandlerAbstract
 {
     /**
      * @param EventContext $context
@@ -21,6 +20,10 @@ class FormSubmissionHandler extends HandlerAbstract
     protected function createSnapshot(EventContext $context): ?Snapshot
     {
         $action = $context->getAction();
+        if ($action === null) {
+            return null;
+        }
+
         $page = $this->getPage($context);
         $record = null;
         if ($form = $context->get('form')) {

@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\Snapshots\Listener\GraphQL;
+namespace SilverStripe\Snapshots\Listener\GraphQL\Middleware;
 
 use GraphQL\Error\SyntaxError;
 use GraphQL\Language\AST\NodeKind;
@@ -19,7 +19,7 @@ use SilverStripe\Snapshots\Listener\EventContext;
  *
  * @property Manager|$this $owner
  */
-class GraphQLMiddlewareListener extends Extension
+class Listener extends Extension
 {
     /**
      * Extension point in @see Manager::callMiddleware
@@ -78,5 +78,4 @@ class GraphQLMiddlewareListener extends Extension
         }
         return 'graphql';
     }
-
 }

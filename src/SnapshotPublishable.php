@@ -254,7 +254,7 @@ class SnapshotPublishable extends RecursivePublishable
                     'SnapshotID' => $snapShotIDs,
                 ])
                 ->where(
-                // Only get the items that were the subject of a user's action
+                    // Only get the items that were the subject of a user's action
                     "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
                 )
                 ->sort([

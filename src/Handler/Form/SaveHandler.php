@@ -3,12 +3,11 @@
 
 namespace SilverStripe\Snapshots\Handler\Form;
 
-
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
-class SaveHandler extends FormSubmissionHandler
+class SaveHandler extends Handler
 {
     /**
      * @param EventContext $context

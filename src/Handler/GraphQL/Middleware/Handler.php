@@ -1,15 +1,14 @@
 <?php
 
 
-namespace SilverStripe\Snapshots\Handler\GridField;
+namespace SilverStripe\Snapshots\Handler\GraphQL\Middleware;
 
-use SilverStripe\Forms\Form;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
-class URLActionHandler extends HandlerAbstract
+class Handler extends HandlerAbstract
 {
     /**
      * @param EventContext $context
@@ -19,26 +18,17 @@ class URLActionHandler extends HandlerAbstract
     protected function createSnapshot(EventContext $context): ?Snapshot
     {
         $action = $context->getAction();
+        if ($action === null) {
+            return null;
+        }
+
         $message = $this->getMessage($action);
-        /* @var Form $form */
-        $form = $context->get('gridField')->getForm();
-
-        if (!$form) {
-            return null;
-        }
-
-        $record = $form->getRecord();
-
-        if (!$record) {
-            return null;
-        }
-
-        $page = $this->getCurrentPageFromController($form);
+        $page = $this->getPageFromReferrer();
 
         if ($page === null) {
             return null;
         }
 
-        return Snapshot::singleton()->createSnapshotFromAction($page, $record, $message);
+        return Snapshot::singleton()->createSnapshotFromAction($page, null, $message);
     }
 }

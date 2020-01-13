@@ -16,7 +16,7 @@ use SilverStripe\Snapshots\Listener\EventContext;
  *
  * @property FormRequestHandler|$this $owner
  */
-class FormSubmissionListener extends Extension
+class Listener extends Extension
 {
     /**
      * Extension point in @see FormRequestHandler::httpSubmission
@@ -27,7 +27,7 @@ class FormSubmissionListener extends Extension
      * @param $vars
      * @param Form $form
      */
-    public function afterCallFormHandler (HTTPRequest $request, $funcName, $vars, $form): void
+    public function afterCallFormHandler(HTTPRequest $request, $funcName, $vars, $form): void
     {
         Dispatcher::singleton()->trigger(
             'formSubmitted',

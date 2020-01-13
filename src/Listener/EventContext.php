@@ -3,13 +3,10 @@
 
 namespace SilverStripe\Snapshots\Listener;
 
-
-use phpDocumentor\Reflection\Types\Scalar;
-
 class EventContext
 {
     /**
-     * @var string
+     * @var string|null
      */
     private $action;
 
@@ -20,19 +17,19 @@ class EventContext
 
     /**
      * EventContext constructor.
-     * @param string $action
+     * @param string|null $action
      * @param array $meta
      */
-    public function __construct(string $action, array $meta = [])
+    public function __construct(?string $action = null, array $meta = [])
     {
         $this->action = $action;
         $this->meta = $meta;
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getAction(): string
+    public function getAction(): ?string
     {
         return $this->action;
     }
@@ -54,5 +51,4 @@ class EventContext
     {
         return $this->get($name);
     }
-
 }

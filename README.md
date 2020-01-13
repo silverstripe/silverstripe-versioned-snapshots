@@ -96,38 +96,38 @@ extensions to key classes in the admin that then trigger these events through th
 #### Event: formSubmitted
 * **Description**: Any form submitted in the CMS
 * **Example**:  save, publish, unpublish, delete
-* **Listener**: `SilverStripe\Snapshots\Listener\Form\FormSubmissionListener`
-* **Handler**: `SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler`
+* **Listener**: `SilverStripe\Snapshots\Listener\Form\Listener`
+* **Handler**: `SilverStripe\Snapshots\Handler\Form\Handler`
 
 #### Event: cmsAction
 * **Description**: A `CMSMain` controller action
 * **Example**:  `savetreenode` (reorder site tree)
-* **Listener**: `SilverStripe\Snapshots\Listener\CMSMain\CMSMainActionListener`
-* **Handler**: `SilverStripe\Snapshots\Handler\CMSMain\ActionHandler`
+* **Listener**: `SilverStripe\Snapshots\Listener\CMSMain\Listener`
+* **Handler**: `SilverStripe\Snapshots\Handler\CMSMain\Handler`
 
 #### Event: gridFieldAction
 * **Description**: A standard GridField action invoked via a URL (`GridField_URLHandler`)
 * **Example**:  `handleReorder` (reorder items)
-* **Listener**: `SilverStripe\Snapshots\Listener\GridField\GridFieldURLListener`
-* **Handler**: `SilverStripe\Snapshots\Handler\GridField\URLActionHandler`
+* **Listener**: `SilverStripe\Snapshots\Listener\GridField\Action\Listener`
+* **Handler**: `SilverStripe\Snapshots\Handler\GridField\Action\Handler`
 
 #### Event: gridFieldAlteration
 * **Description**: A GridField action invoked via a URL (`GridField_ActionProvider`)
 * **Example**:  `deleterecord`, `archiverecord`
-* **Listener**: `SilverStripe\Snapshots\Listener\GridField\GridFieldAlterationListener`
-* **Handler**: `SilverStripe\Snapshots\Handler\GridField\AlterationHandler`
+* **Listener**: `SilverStripe\Snapshots\Listener\GridField\Alteration\Listener`
+* **Handler**: `SilverStripe\Snapshots\Handler\GridField\Alteration\Handler`
 
 #### Event: graphqlMutation
 * **Description**: A scaffolded GraphQL mutation
 * **Example**:  `mutation createMyDataObject(Input: $Input)`
-* **Listener**: `SilverStripe\Snapshots\Listener\GraphQL\GraphQLMutationListener`
-* **Handler**: `SilverStripe\Snapshots\Handler\GraphQL\MutationHandler`
+* **Listener**: `SilverStripe\Snapshots\Listener\GraphQL\Mutation\Listener`
+* **Handler**: `SilverStripe\Snapshots\Handler\GraphQL\Mutation\Handler`
 
 #### Event: graphqlOperation
 * **Description**: Any generic GraphQL operation
 * **Example**:  `mutation publishAllFiles`, `query allTheThings`
-* **Listener**: `SilverStripe\Snapshots\Listener\GraphQL\GraphQLMiddlewareListener`
-* **Handler**: `SilverStripe\Snapshots\Handler\GraphQL\GenericHandler`
+* **Listener**: `SilverStripe\Snapshots\Listener\GraphQL\Middleware\Listener`
+* **Handler**: `SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler`
 
 ### Action identifiers
 
@@ -213,14 +213,30 @@ SilverStripe\Core\Injector\Injector:
   SilverStripe\Snapshots\Dispatch\Dispatcher:
     properties:
       handlers:
-        -
-          on: [ formSubmitted.myFormHandler ]
+        myForm:
+          on:
+            'formSubmitted.myFormHandler': true
           handler: %$MyProject\Handlers\MyHandler
 ```
 
+Notice that the event name is in the key of the configuration. This makes it possible for another layer of
+configuration to disable it. See below.
+
 ### Removing snapshot creators
 
-The configuration API doesn't make it easy to remove items from arrays, so this is best done procedurally.
+To remove an event from a handler, simply set its value to `false`.
+
+```yaml
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Snapshots\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        myForm:
+          on:
+            'formSubmitted.myFormHandler': false
+```
+
+### Procedurally adding event handlers
 
 You can register a `EventHandlerLoader` implementation with `Dispatcher` to procedurally register and unregister
 events.
@@ -228,8 +244,9 @@ events.
 ```yaml
 SilverStripe\Core\Injector\Injector:
   SilverStripe\Snapshots\Dispatch\Dispatcher:
-    constructor:
-      myLoader: %$MyProject\MyEventLoader
+    properties:
+      loaders:
+        myLoader: %$MyProject\MyEventLoader
 ```
 
 ```php

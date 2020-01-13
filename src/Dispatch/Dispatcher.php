@@ -13,15 +13,25 @@ class Dispatcher
     use Injectable;
 
     /**
+     * @var EventHandlerLoader[]
+     */
+    private $loaders = [];
+
+    /**
      * @var array HandlerInterface[]
      */
     private $handlers = [];
 
     /**
-     * Dispatcher constructor.
-     * @param EventHandlerLoader[] $loaders
+     * @var bool
      */
-    public function __construct($loaders = [])
+    private $initialised = false;
+
+    /**
+     * @param EventHandlerLoader[] $loaders
+     * @return $this
+     */
+    public function setLoaders($loaders = [])
     {
         foreach ($loaders as $loader) {
             if (!$loader instanceof EventHandlerLoader) {
@@ -31,9 +41,10 @@ class Dispatcher
                     EventHandlerLoader::class
                 ));
             }
-
-            $loader->addToDispatcher($this);
         }
+        $this->loaders = $loaders;
+
+        return $this;
     }
 
     /**
@@ -57,8 +68,10 @@ class Dispatcher
                 ));
             }
 
-            foreach ($on as $eventName) {
-                $this->addListener($eventName, $handler);
+            foreach ($on as $eventName => $shouldInclude) {
+                if ($shouldInclude) {
+                    $this->addListener($eventName, $handler);
+                }
             }
         }
     }
@@ -124,7 +137,15 @@ class Dispatcher
      */
     public function trigger(string $event, EventContext $context): void
     {
+        // TODO: This could be moved to procedural code in something like _config.php,
+        // or add a new class that bootstraps the dispatcher.
+        $this->initialise();
+
         $action = $context->getAction();
+        if ($action === null) {
+            return;
+        }
+
         // First fire listeners to <eventName.actionName>, then just fire generic <eventName> listeners
         $eventsToFire = [ $event . '.' . $action, $event];
         foreach ($eventsToFire as $event) {
@@ -134,5 +155,17 @@ class Dispatcher
                 $handler->fire($context);
             }
         }
+    }
+
+    private function initialise(): void
+    {
+        if ($this->initialised) {
+            return;
+        }
+
+        foreach ($this->loaders as $loader) {
+            $loader->addToDispatcher($this);
+        }
+        $this->initialised = true;
     }
 }

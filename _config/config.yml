@@ -27,32 +27,32 @@ Name: snapshot-listeners
 ---
 SilverStripe\CMS\Controllers\CMSMain:
   extensions:
-    - SilverStripe\Snapshots\Listener\CMSMain\CMSMainActionListener
+    - SilverStripe\Snapshots\Listener\CMSMain\Listener
 
 SilverStripe\Forms\GridField\GridField:
   extensions:
-    - SilverStripe\Snapshots\Listener\GridField\GridFieldAlterationListener
-    - SilverStripe\Snapshots\Listener\GridField\GridFieldURLListener
+    - SilverStripe\Snapshots\Listener\GridField\Alteration\Listener
+    - SilverStripe\Snapshots\Listener\GridField\Action\Listener
 
 SilverStripe\Forms\FormRequestHandler:
   extensions:
-    - SilverStripe\Snapshots\Listener\Form\FormSubmissionListener
+    - SilverStripe\Snapshots\Listener\Form\Listener
 
 SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Create:
   extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\GraphQLMutationListener
+    - SilverStripe\Snapshots\Listener\GraphQL\Mutation\Listener
 
 SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Delete:
   extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\GraphQLMutationListener
+    - SilverStripe\Snapshots\Listener\GraphQL\Mutation\Listener
 
 SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Update:
   extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\GraphQLMutationListener
+    - SilverStripe\Snapshots\Listener\GraphQL\Mutation\Listener
 
 SilverStripe\GraphQL\Manager:
   extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\GraphQLMiddlewareListener
+    - SilverStripe\Snapshots\Listener\GraphQL\Middleware\Listener
 
 ---
 Name: snapshot-events
@@ -61,24 +61,33 @@ SilverStripe\Core\Injector\Injector:
   SilverStripe\Snapshots\Dispatch\Dispatcher:
     properties:
       handlers:
-        -
-          on: [ formSubmitted.unpublish, formSubmitted.doSave, formSubmitted.doDelete]
-          handler: %$SilverStripe\Snapshots\Handler\Form\FormSubmissionHandler
-        -
-          on: [ formSubmitted.save ]
+        formGeneric:
+          on:
+            'formSubmitted.unpublish': true
+            'formSubmitted.doSave': true
+            'formSubmitted.doDelete': true
+          handler: %$SilverStripe\Snapshots\Handler\Form\Handler
+        save:
+          on:
+            'formSubmitted.save': true
           handler: %$SilverStripe\Snapshots\Handler\Form\SaveHandler
-        -
-          on: [ formSubmitted.publish ]
+        publish:
+          on:
+            'formSubmitted.publish': true
           handler: %$SilverStripe\Snapshots\Handler\Form\PublishHandler
-        -
-          on: [ cmsAction.savetreenode ]
-          handler: %$SilverStripe\Snapshots\Handler\CMSMain\ActionHandler
-        -
-          on: [ gridFieldAlteration.deleterecord, gridFieldAlteration.archiverecord ]
-          handler: %$SilverStripe\Snapshots\Handler\GridField\URLActionHandler
-        -
-          on: [ gridFieldAction.handleReorder ]
-          handler: %$SilverStripe\Snapshots\Handler\GridField\URLActionHandler
-        -
-          on: [ graphqlMutation.create, graphqlMutation.update, graphqlMutation.delete ]
-          handler: %$SilverStripe\Snapshots\Handler\GraphQL\MutationHandler
+        cmsMain:
+          on:
+            'cmsAction.savetreenode': true
+          handler: %$SilverStripe\Snapshots\Handler\CMSMain\Handler
+        gridFieldAction:
+          on:
+            'gridFieldAction.handleReorder': true
+            'gridFieldAlteration.deleterecord': true
+            'gridFieldAlteration.archiverecord': true
+          handler: %$SilverStripe\Snapshots\Handler\GridField\Action\Handler
+        graphqlMutation:
+          on:
+            'graphqlMutation.create': true
+            'graphqlMutation.update': true
+            'graphqlMutation.delete': true
+          handler: %$SilverStripe\Snapshots\Handler\GraphQL\Mutation\Handler

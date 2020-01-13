@@ -15,7 +15,7 @@ use SilverStripe\Snapshots\Listener\EventContext;
  *
  * @property CMSMain|$this $owner
  */
-class CMSMainActionListener extends Extension
+class Listener extends Extension
 {
     /**
      * Extension point in @see CMSMain::handleAction
@@ -24,7 +24,8 @@ class CMSMainActionListener extends Extension
      * @param $action
      * @param $result
      */
-    public function afterCallActionHandler(HTTPRequest $request, $action, $result): void {
+    public function afterCallActionHandler(HTTPRequest $request, $action, $result): void
+    {
         Dispatcher::singleton()->trigger(
             'cmsAction',
             new EventContext(

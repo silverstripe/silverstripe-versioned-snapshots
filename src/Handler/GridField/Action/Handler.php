@@ -1,7 +1,7 @@
 <?php
 
 
-namespace SilverStripe\Snapshots\Handler\GridField;
+namespace SilverStripe\Snapshots\Handler\GridField\Action;
 
 use SilverStripe\Forms\Form;
 use SilverStripe\ORM\ValidationException;
@@ -9,7 +9,7 @@ use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
-class AlterationHandler extends HandlerAbstract
+class Handler extends HandlerAbstract
 {
     /**
      * @param EventContext $context
@@ -19,6 +19,10 @@ class AlterationHandler extends HandlerAbstract
     protected function createSnapshot(EventContext $context): ?Snapshot
     {
         $action = $context->getAction();
+        if ($action === null) {
+            return null;
+        }
+
         $message = $this->getMessage($action);
         /* @var Form $form */
         $form = $context->get('gridField')->getForm();
@@ -41,6 +45,4 @@ class AlterationHandler extends HandlerAbstract
 
         return Snapshot::singleton()->createSnapshotFromAction($page, $record, $message);
     }
-
-
 }

@@ -305,5 +305,4 @@ class Snapshot extends DataObject
             $item->write();
         }
     }
-
 }

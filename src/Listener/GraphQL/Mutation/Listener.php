@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\Snapshots\Listener\GraphQL;
+namespace SilverStripe\Snapshots\Listener\GraphQL\Mutation;
 
 use GraphQL\Type\Definition\ResolveInfo;
 use SilverStripe\Core\Extension;
@@ -19,7 +19,7 @@ use SilverStripe\Snapshots\Listener\EventContext;
  *
  * @property Create|Delete|Update|$this $owner
  */
-class GraphQLMutationListener extends Extension
+class Listener extends Extension
 {
 
     const TYPE_CREATE = 'create';
