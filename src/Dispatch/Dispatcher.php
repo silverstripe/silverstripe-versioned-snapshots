@@ -109,7 +109,7 @@ class Dispatcher
     public function removeListener(string $event, HandlerInterface $handler): self
     {
         $handlers = $this->handlers[$event] ?? [];
-        $this->handlers = array_filter($handlers, function ($existing) use ($handler) {
+        $this->handlers[$event] = array_filter($handlers, function ($existing) use ($handler) {
             return $existing !== $handler;
         });
 
@@ -124,7 +124,7 @@ class Dispatcher
     public function removeListenerByClassName(string $event, string $className): self
     {
         $handlers = $this->handlers[$event] ?? [];
-        $this->handlers = array_filter($handlers, function ($existing) use ($className) {
+        $this->handlers[$event] = array_filter($handlers, function ($existing) use ($className) {
             return get_class($existing) !== $className;
         });
 
