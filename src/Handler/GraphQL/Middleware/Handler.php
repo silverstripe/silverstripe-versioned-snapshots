@@ -3,19 +3,19 @@
 
 namespace SilverStripe\Snapshots\Handler\GraphQL\Middleware;
 
+use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
-use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
 class Handler extends HandlerAbstract
 {
     /**
-     * @param EventContext $context
+     * @param EventContextInterface $context
      * @return Snapshot|null
      * @throws ValidationException
      */
-    protected function createSnapshot(EventContext $context): ?Snapshot
+    protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
         $action = $context->getAction();
         if ($action === null) {

@@ -4,11 +4,11 @@
 namespace SilverStripe\Snapshots\Handler;
 
 use SilverStripe\Core\Config\Configurable;
-use SilverStripe\Snapshots\Listener\CurrentPage;
-use SilverStripe\Snapshots\Listener\EventContext;
+use SilverStripe\EventDispatcher\Event\EventContextInterface;
+use SilverStripe\EventDispatcher\Event\EventHandlerInterface;
 use SilverStripe\Snapshots\Snapshot;
 
-abstract class HandlerAbstract implements HandlerInterface
+abstract class HandlerAbstract implements EventHandlerInterface
 {
     use CurrentPage;
     use Configurable;
@@ -34,14 +34,14 @@ abstract class HandlerAbstract implements HandlerInterface
         return _t($key, $action);
     }
 
-    public function fire(EventContext $context): void
+    public function fire(EventContextInterface $context): void
     {
         $this->createSnapshot($context);
     }
 
     /**
-     * @param EventContext $context
+     * @param EventContextInterface $context
      * @return Snapshot|null
      */
-    abstract protected function createSnapshot(EventContext $context): ?Snapshot;
+    abstract protected function createSnapshot(EventContextInterface $context): ?Snapshot;
 }

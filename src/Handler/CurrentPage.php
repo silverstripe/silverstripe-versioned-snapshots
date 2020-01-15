@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\Snapshots\Listener;
+namespace SilverStripe\Snapshots\Handler;
 
 use Page;
 use SilverStripe\Admin\AdminRootController;

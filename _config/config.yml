@@ -21,44 +21,11 @@ Only:
 SilverStripe\CMS\Model\SiteTree:
   extensions:
     - SilverStripe\Snapshots\SnapshotSiteTree
-
----
-Name: snapshot-listeners
----
-SilverStripe\CMS\Controllers\CMSMain:
-  extensions:
-    - SilverStripe\Snapshots\Listener\CMSMain\Listener
-
-SilverStripe\Forms\GridField\GridField:
-  extensions:
-    - SilverStripe\Snapshots\Listener\GridField\Alteration\Listener
-    - SilverStripe\Snapshots\Listener\GridField\Action\Listener
-
-SilverStripe\Forms\FormRequestHandler:
-  extensions:
-    - SilverStripe\Snapshots\Listener\Form\Listener
-
-SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Create:
-  extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\Mutation\Listener
-
-SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Delete:
-  extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\Mutation\Listener
-
-SilverStripe\GraphQL\Scaffolding\Scaffolders\CRUD\Update:
-  extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\Mutation\Listener
-
-SilverStripe\GraphQL\Manager:
-  extensions:
-    - SilverStripe\Snapshots\Listener\GraphQL\Middleware\Listener
-
 ---
 Name: snapshot-events
 ---
 SilverStripe\Core\Injector\Injector:
-  SilverStripe\Snapshots\Dispatch\Dispatcher:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
     properties:
       handlers:
         formGeneric:
@@ -84,9 +51,15 @@ SilverStripe\Core\Injector\Injector:
             'gridFieldAlteration.deleterecord': true
             'gridFieldAlteration.archiverecord': true
           handler: %$SilverStripe\Snapshots\Handler\GridField\Action\Handler
+        gridFieldAlteration:
+          on: []
+          handler: %$SilverStripe\Snapshots\Handler\GridField\Alteration\Handler
         graphqlMutation:
           on:
             'graphqlMutation.create': true
             'graphqlMutation.update': true
             'graphqlMutation.delete': true
           handler: %$SilverStripe\Snapshots\Handler\GraphQL\Mutation\Handler
+        graphqlMutation:
+          on: []
+          handler: %$SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler

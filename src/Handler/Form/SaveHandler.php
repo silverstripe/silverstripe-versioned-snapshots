@@ -3,18 +3,18 @@
 
 namespace SilverStripe\Snapshots\Handler\Form;
 
+use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\ORM\ValidationException;
-use SilverStripe\Snapshots\Listener\EventContext;
 use SilverStripe\Snapshots\Snapshot;
 
 class SaveHandler extends Handler
 {
     /**
-     * @param EventContext $context
+     * @param EventContextInterface $context
      * @return Snapshot|null
      * @throws ValidationException
      */
-    protected function createSnapshot(EventContext $context): ?Snapshot
+    protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
 
         $page = $this->getPage($context);
