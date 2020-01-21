@@ -25,9 +25,9 @@ trait CurrentPage
      * note that this can be only used for actions that are aware of the current page
      *
      * @param mixed $controller
-     * @return Page|null
+     * @return SiteTree|null
      */
-    protected function getCurrentPageFromController($controller): ?Page
+    protected function getCurrentPageFromController($controller): ?SiteTree
     {
         while ($controller && ($controller instanceof Form || $controller instanceof GridFieldDetailForm_ItemRequest)) {
             $controller = $controller->getController();
@@ -66,8 +66,10 @@ trait CurrentPage
         }
 
         $adminSegment = AdminRootController::get_admin_route();
-        $controllerSegment = CMSPageEditController::config()->get('url_segment');
-        $formSegment = 'EditForm';
+        $controller = CMSPageEditController::singleton();
+        $controllerSegment = $controller->config()->get('url_segment');
+        $editForm = $controller->getEditForm();
+        $formSegment = $editForm->getName();
         $viewSegment = 'show';
 
         foreach ([$adminSegment, $controllerSegment, $formSegment, $viewSegment] as $segment) {

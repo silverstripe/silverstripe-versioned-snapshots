@@ -83,81 +83,9 @@ owned modification state (WORK IN PROGRESS, POC ONLY)
 
 ## How it works
 
-Snapshots are created in response to user events in the CMS. These events are driven by a simple
-pub/sub API in the `SilverStripe\Snapshots\Dispatch\Dispatcher` API.
-
-### CMS Events and the Dispatcher
-
-By default, there are a handful
-of broad-based CMS events that will trigger handlers that create snapshots. A suite of listeners are added via
-extensions to key classes in the admin that then trigger these events through the
-`Dispatcher` API, e.g. `Dispatcher::singleton()->trigger('formSubmitted')`.
-
-#### Event: formSubmitted
-* **Description**: Any form submitted in the CMS
-* **Example**:  save, publish, unpublish, delete
-* **Listener**: `SilverStripe\Snapshots\Listener\Form\Listener`
-* **Handler**: `SilverStripe\Snapshots\Handler\Form\Handler`
-
-#### Event: cmsAction
-* **Description**: A `CMSMain` controller action
-* **Example**:  `savetreenode` (reorder site tree)
-* **Listener**: `SilverStripe\Snapshots\Listener\CMSMain\Listener`
-* **Handler**: `SilverStripe\Snapshots\Handler\CMSMain\Handler`
-
-#### Event: gridFieldAction
-* **Description**: A standard GridField action invoked via a URL (`GridField_URLHandler`)
-* **Example**:  `handleReorder` (reorder items)
-* **Listener**: `SilverStripe\Snapshots\Listener\GridField\Action\Listener`
-* **Handler**: `SilverStripe\Snapshots\Handler\GridField\Action\Handler`
-
-#### Event: gridFieldAlteration
-* **Description**: A GridField action invoked via a URL (`GridField_ActionProvider`)
-* **Example**:  `deleterecord`, `archiverecord`
-* **Listener**: `SilverStripe\Snapshots\Listener\GridField\Alteration\Listener`
-* **Handler**: `SilverStripe\Snapshots\Handler\GridField\Alteration\Handler`
-
-#### Event: graphqlMutation
-* **Description**: A scaffolded GraphQL mutation
-* **Example**:  `mutation createMyDataObject(Input: $Input)`
-* **Listener**: `SilverStripe\Snapshots\Listener\GraphQL\Mutation\Listener`
-* **Handler**: `SilverStripe\Snapshots\Handler\GraphQL\Mutation\Handler`
-
-#### Event: graphqlOperation
-* **Description**: Any generic GraphQL operation
-* **Example**:  `mutation publishAllFiles`, `query allTheThings`
-* **Listener**: `SilverStripe\Snapshots\Listener\GraphQL\Middleware\Listener`
-* **Handler**: `SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler`
-
-### Action identifiers
-
-Each of these handlers is passed a context object that exposes an **action identifier**. This is a string that
-provides specific information about what happened in the event that the handler can then use in its implementation.
-For instance, if a form was submitted, and the function that handles the form is `doSave($data, $form)`, the action
-identifier is `doSave`. Likewise, controller actions, GridField actions, and GraphQL operations are all action
-identifiers.
-
-Events are always called with `eventName.<action identifier>`. For instance `formSubmitted.doSave`, allowing
-the subscribers to only react to a specific subset of events.
-
-#### How to find your action identifier
-
-In the above example, we subscribe to the main event `formSubmitted`, but we've added more specificity with `myFormHandler`.
-This is the name of the `action` provided in the context of the event.
-
-The easiest way to debug events is to put breakpoints or logging into the `Dispatcher::trigger()` function. This
-will provide all the detail you need about what events are triggered when, and with what context.
-
-```php
-public function trigger(string $event, EventContext $context): void
-{
-    error_log($event);
-    error_log($context->getAction());
-    // ...
-```
-
-When the logging is in place you just go to the CMS and perform the action you are interested in.
-This should narrow the list of identifier down to a much smaller subset.
+Snapshots are created with handlers registered to user events in the CMS triggered by
+the [`silverstripe/cms-events`](https://github.com/silverstripe/silverstripe-cms-events)
+module.
 
 ### Customising the snapshot messages
 

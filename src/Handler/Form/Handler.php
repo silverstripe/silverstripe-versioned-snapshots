@@ -6,6 +6,7 @@ namespace SilverStripe\Snapshots\Handler\Form;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
@@ -41,10 +42,15 @@ class Handler extends HandlerAbstract
 
     /**
      * @param EventContextInterface $context
-     * @return SiteTree|null
+     * @return DataObject|null
      */
-    protected function getPage(EventContextInterface $context): ?SiteTree
+    protected function getPage(EventContextInterface $context): ?DataObject
     {
+        $page = $context->get('page');
+        if ($page) {
+            return $page;
+        }
+
         /* @var HTTPRequest $request */
         $request = $context->get('request');
         $url = $request->getURL();

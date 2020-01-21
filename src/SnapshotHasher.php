@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Snapshots;
 
+use SilverStripe\Core\ClassInfo;
 use SilverStripe\ORM\DataObject;
 
 /**
@@ -18,6 +19,8 @@ trait SnapshotHasher
      */
     public static function hashForSnapshot($class, $id): string
     {
+        // test code. remove.
+        return ClassInfo::shortName($class) . '#' . $id;
         return base64_encode(hash('sha256', sprintf('%s:%s', $class, $id), true));
     }
 
