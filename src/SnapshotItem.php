@@ -8,6 +8,7 @@ use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\ChangeSet;
 use SilverStripe\Versioned\Versioned;
+use Exception;
 
 /**
  * Class SnapshotItem
@@ -20,14 +21,8 @@ use SilverStripe\Versioned\Versioned;
  * @property int $SnapshotID
  * @property int $ObjectID
  * @property string $ObjectClass
- * @property int $LinkedFromObjectID
- * @property string $LinkedFromObjectClass
- * @property int $LinkedToObjectID
- * @property string $LinkedToObjectClass
  * @method Snapshot Snapshot()
  * @method DataObject Object()
- * @method DataObject LinkedFromObject()
- * @method DataObject LinkedToObject()
  * @package SilverStripe\Snapshots
  */
 class SnapshotItem extends DataObject
@@ -53,8 +48,7 @@ class SnapshotItem extends DataObject
     private static $has_one = [
         'Snapshot' => Snapshot::class,
         'Object' => DataObject::class,
-        'LinkedFromObject' => DataObject::class,
-        'LinkedToObject' => DataObject::class,
+        'Parent' => SnapshotItem::class,
     ];
 
     /**
@@ -188,17 +182,14 @@ class SnapshotItem extends DataObject
     }
 
     /**
-     * @param DataObject|Versioned $object
+     * @param DataObject|Versioned|SnapshotPublishable $object
      * @return SnapshotItem
+     * @throws Exception
      */
     public function hydrateFromDataObject(DataObject $object)
     {
         $this->ObjectClass = $object->baseClass();
         $this->ObjectID = (int) $object->ID;
-        $this->LinkedFromObjectClass = null;
-        $this->LinkedFromObjectID = 0;
-        $this->LinkedToObjectClass = null;
-        $this->LinkedToObjectID = 0;
 
         // Track versioning changes on the record if the owner is versioned
         if ($object->hasExtension(Versioned::class)) {

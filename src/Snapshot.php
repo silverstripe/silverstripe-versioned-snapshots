@@ -2,12 +2,6 @@
 
 namespace SilverStripe\Snapshots;
 
-use GraphQL\Type\Definition\ResolveInfo;
-use GraphQL\Type\Schema;
-use Page;
-use SilverStripe\Control\HTTPRequest;
-use SilverStripe\Forms\Form;
-use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\ORM\ValidationException;
@@ -35,7 +29,6 @@ class Snapshot extends DataObject
     use SnapshotHasher;
 
     const TRIGGER_ACTION = 'action';
-    const TRIGGER_MODEL = 'model';
 
     /**
      * @var array
@@ -214,7 +207,7 @@ class Snapshot extends DataObject
      * @param DataObject $owner
      * @param DataObject|null $origin
      * @param string $message
-     * @param array $objects
+     * @param array $extraObjects
      * @return Snapshot|null
      * @throws ValidationException
      */
@@ -222,12 +215,12 @@ class Snapshot extends DataObject
         DataObject $owner,
         ?DataObject $origin,
         string $message,
-        array $objects = []
+        array $extraObjects = []
     ): ?Snapshot {
         if (!$owner->isInDB()) {
             return null;
         }
-
+        $objectsToAdd = [];
         if ($origin === null || !$origin->isInDB()) {
             // case 1: no origin provided or the origin got deleted
             // this means we can't point to a specific origin object
@@ -248,7 +241,7 @@ class Snapshot extends DataObject
                     );
 
                 $origin = $event;
-                array_unshift($objects, $origin);
+                array_unshift($objectsToAdd, $origin);
             } else {
                 // no message is available - fallback to the owner
                 // no need to add the origin to the list of objects as it's already there
@@ -260,11 +253,11 @@ class Snapshot extends DataObject
             $origin = $owner;
         } else {
             // case 3: stadard origin - add it to the object list
-            array_unshift($objects, $origin);
+            $objectsToAdd[] = $origin;
         }
 
         // owner is added as the last item
-        array_push($objects, $owner);
+        $objectsToAdd[] = $owner;
 
         $currentUser = Security::getCurrentUser();
         $snapshot = Snapshot::create();
@@ -277,7 +270,7 @@ class Snapshot extends DataObject
             : 0;
 
         $snapshot->write();
-
+        $objects = array_merge($objectsToAdd, $extraObjects);
         // the rest of the objects are processed in the provided order
         foreach ($objects as $object) {
             if (!$object instanceof DataObject) {

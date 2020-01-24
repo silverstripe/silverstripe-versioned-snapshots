@@ -16,3 +16,6 @@ en:
   SilverStripe\Snapshots\Handler\GridField\Action\Handler:
     HANDLER_deleterecord: 'Delete record'
     HANDLER_archiverecord: 'Archive record'
+  SilverStripe\Snapshots\Handler\Form:
+    MANY_MANY_ADD: 'Added {count} {name}'
+    MANY_MANY_REMOVE: 'Removed {count} {name}'
