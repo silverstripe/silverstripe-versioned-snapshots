@@ -72,21 +72,23 @@ class Handler extends HandlerAbstract
         foreach ($intermediaryObjects as $extra) {
             $extraObjects[SnapshotHasher::hashObjectForSnapshot($extra)] = $extra;
         }
-        foreach($implicitObjects as $spec) {
+        foreach ($implicitObjects as $spec) {
             $extraObjects[SnapshotHasher::hashObjectForSnapshot($spec['record'])] = $spec['record'];
         }
 
         $snapshot = Snapshot::singleton()->createSnapshotFromAction($page, $record, $message, $extraObjects);
         if ($snapshot && !empty($implicitObjects)) {
             $parentItem = $snapshot->Items()->filter(
-                'ObjectHash', SnapshotHasher::hashObjectForSnapshot($record)
+                'ObjectHash',
+                SnapshotHasher::hashObjectForSnapshot($record)
             )->first();
             if ($parentItem) {
                 foreach ($implicitObjects as $spec) {
                     $obj = $spec['record'];
                     $type = $spec['type'];
                     $item = $snapshot->Items()->filter(
-                        'ObjectHash', SnapshotHasher::hashObjectForSnapshot($obj)
+                        'ObjectHash',
+                        SnapshotHasher::hashObjectForSnapshot($obj)
                     )->first();
                     if ($item) {
                         $item->ParentID = $parentItem->ID;
@@ -146,7 +148,6 @@ class Handler extends HandlerAbstract
                     ]
                 );
             }
-
         }
 
         return implode("\n", $messages);
