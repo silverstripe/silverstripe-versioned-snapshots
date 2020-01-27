@@ -9,9 +9,6 @@ env:
 matrix:
   fast_finish: true
   include:
-    - php: &min-version '7.1'
-      env: DB=MYSQL PHPUNIT_TEST=1
-
     - php: '7.2'
       env: DB=MYSQL PHPUNIT_TEST=1
 
