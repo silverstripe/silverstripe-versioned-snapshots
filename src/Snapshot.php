@@ -298,4 +298,32 @@ class Snapshot extends DataObject
             $item->write();
         }
     }
+
+    /**
+     * When implicit objects are updated (e.g. many_many), assign the ParentID
+     *
+     * @param array $implicitObjects An array of hashes containing 'record' and 'type' (added|removed)
+     * @throws ValidationException
+     */
+    public function applyImplicitObjects($implicitObjects = []): void
+    {
+        $parentItem = $this->getOriginItem();
+        if (!$parentItem) {
+            return;
+        }
+
+        foreach ($implicitObjects as $spec) {
+            $obj = $spec['record'];
+            $type = $spec['type'];
+            $item = $this->Items()->filter(
+                'ObjectHash',
+                SnapshotHasher::hashObjectForSnapshot($obj)
+            )->first();
+            if ($item) {
+                $item->ParentID = $parentItem->ID;
+                $item->WasDeleted = $type === ActivityEntry::REMOVED;
+                $item->write();
+            }
+        }
+    }
 }

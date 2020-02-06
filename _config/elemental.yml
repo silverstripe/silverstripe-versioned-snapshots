@@ -1,0 +1,22 @@
+---
+Name: versioned-snapshots-elemental
+Only:
+  moduleexists: 'dnadesign/silverstripe-elemental'
+---
+DNADesign\Elemental\Forms\ElementalAreaField:
+  extensions:
+    - SilverStripe\Snapshots\Elemental\SaveListener
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        elementalPageSave:
+          on: [ 'elementalAreaUpdated' ]
+          handler: %$SilverStripe\Snapshots\Handler\Elemental\SaveHandler
+        elementalEditor:
+          on:
+            - 'graphqlOperation.UnpublishBlock'
+            - 'graphqlOperation.ArchiveBlock'
+            - 'graphqlOperation.AddElementToArea'
+            - 'graphqlOperation.SortBlockMutation'
+          handler: %$SilverStripe\Snapshots\Handler\Elemental\ElementalEditorHandler

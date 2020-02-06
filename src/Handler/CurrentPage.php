@@ -68,8 +68,7 @@ trait CurrentPage
         $adminSegment = AdminRootController::get_admin_route();
         $controller = CMSPageEditController::singleton();
         $controllerSegment = $controller->config()->get('url_segment');
-        $editForm = $controller->getEditForm();
-        $formSegment = $editForm->getName();
+        $formSegment = 'EditForm';
         $viewSegment = 'show';
 
         foreach ([$adminSegment, $controllerSegment, $formSegment, $viewSegment] as $segment) {

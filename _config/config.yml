@@ -29,10 +29,10 @@ SilverStripe\Core\Injector\Injector:
     properties:
       handlers:
         formGeneric:
-          on: [ 'formSubmitted.unpublish', 'formSubmitted.doSave', 'formSubmitted.doDelete', 'formSubmitted.archive' ]
+          on: [ 'formSubmitted.unpublish', 'formSubmitted.doDelete', 'formSubmitted.archive' ]
           handler: %$SilverStripe\Snapshots\Handler\Form\Handler
         save:
-          on: [ 'formSubmitted.save' ]
+          on: [ 'formSubmitted.save', 'formSubmitted.doSave' ]
           handler: %$SilverStripe\Snapshots\Handler\Form\SaveHandler
         publish:
           on: [ 'formSubmitted.publish' ]
