@@ -9,6 +9,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
+use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Versioned\Versioned;
 
 class SaveHandler extends Handler
@@ -20,15 +21,8 @@ class SaveHandler extends Handler
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
-        /** @var Form $form */
-        $form = $context->get('form');
-        if ($form === null) {
-            return parent::createSnapshot($context);
-        }
-
-        /** @var DataObject|Versioned $record */
-        $record = $form->getRecord();
-
+        /* @var SnapshotPublishable|DataObject $record */
+        $record = $this->getRecordFromContext($context);
         if ($record === null) {
             return parent::createSnapshot($context);
         }
@@ -41,7 +35,7 @@ class SaveHandler extends Handler
             return parent::createSnapshot($context);
         }
 
-        if ($record->isModifiedOnDraft()) {
+        if ($record->isModifiedSinceLastSnapshot()) {
             return parent::createSnapshot($context);
         }
 

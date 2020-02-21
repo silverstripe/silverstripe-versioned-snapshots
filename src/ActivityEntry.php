@@ -20,22 +20,27 @@ class ActivityEntry extends ArrayData
 
     const PUBLISHED = 'PUBLISHED';
 
+    const UNPUBLISHED = 'UNPUBLISHED';
+
     public static function createFromSnapshotItem(SnapshotItem $item)
     {
-        $flag = null;
-        if ($item->Parent()->exists()) {
+        $itemObj = $item->getItem();
+
+        if ($itemObj !== null && $itemObj instanceof SnapshotEvent) {
+            $flag = null;
+        } else if ($item->Parent()->exists()) {
             $flag = $item->WasDeleted ? self::REMOVED : self::ADDED;
         } elseif ($item->WasDeleted) {
             $flag = self::DELETED;
+        } elseif ($item->WasUnpublished) {
+            $flag = self::UNPUBLISHED;
         } elseif ($item->WasPublished) {
             $flag = self::PUBLISHED;
-        } elseif ($item->Version == 1) {
+        } elseif ($item->WasCreated) {
             $flag = self::CREATED;
         } else {
             $flag = self::MODIFIED;
         }
-
-        $itemObj = $item->getItem();
 
         // If the items been deleted then we want to get the last version of it
         if ($itemObj === null) {
@@ -67,4 +72,21 @@ class ActivityEntry extends ArrayData
             'Date' => $item->obj('Created')->Nice(),
         ]);
     }
+
+    /**
+     * @return string
+     */
+    public function getDescription(): string
+    {
+        if ($this->Subject instanceof SnapshotEvent && $this->Subject->Title) {
+            return $this->Subject->Title;
+        }
+
+        return ucfirst(sprintf(
+            '%s "%s"',
+            $this->Subject->singular_name(),
+            $this->Subject->getTitle()
+        ));
+    }
+
 }

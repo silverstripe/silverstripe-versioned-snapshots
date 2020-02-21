@@ -8,7 +8,7 @@ use SilverStripe\Forms\Form;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotHasher;
 
-class PublishHandler extends Handler
+class UnpublishHandler extends Handler
 {
     use SnapshotHasher;
 
@@ -25,7 +25,7 @@ class PublishHandler extends Handler
         foreach ($snapshot->Items() as $item) {
             // If it's the origin item, set published state.
             if (static::hashSnapshotCompare($item->getItem(), $record)) {
-                $item->WasPublished = true;
+                $item->WasUnpublished = true;
             }
         }
 

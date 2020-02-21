@@ -10,7 +10,7 @@ use SilverStripe\ORM\DataExtension;
 
 class SaveListener extends DataExtension
 {
-    public function onElementsSaved(array $elements)
+    public function onSaveInto(array $elements)
     {
         /* @var ElementalAreaField $owner */
         $owner = $this->getOwner();

@@ -10,6 +10,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
+use SilverStripe\Snapshots\SnapshotEvent;
 
 class Handler extends HandlerAbstract
 {
@@ -50,6 +51,6 @@ class Handler extends HandlerAbstract
 
         $message = $this->getMessage($action);
 
-        return Snapshot::singleton()->createSnapshotFromAction($page, null, $message);
+        return Snapshot::singleton()->createSnapshotEvent($message);
     }
 }

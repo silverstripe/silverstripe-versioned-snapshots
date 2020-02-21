@@ -15,6 +15,8 @@ use Exception;
  *
  * @property int $Version
  * @property int $WasPublished
+ * @property int $WasUnpublished
+ * @property int $WasCreated
  * @property int $WasDraft
  * @property int $WasDeleted
  * @property string $ObjectHash
@@ -38,6 +40,8 @@ class SnapshotItem extends DataObject
         'WasPublished' => 'Boolean',
         'WasDraft' => 'Boolean',
         'WasDeleted' => 'Boolean',
+        'WasUnpublished' => 'Boolean',
+        'WasCreated' => 'Boolean',
         'ObjectHash' => 'Varchar(64)',
         'Modification' => 'Boolean', // indicates the snapshot item changes data (default true)
     ];
@@ -59,7 +63,7 @@ class SnapshotItem extends DataObject
         'ObjectHash' => true,
         'Object' => [
             'type' => 'unique',
-            'columns' => ['ObjectHash', 'Version', 'SnapshotID']
+            'columns' => ['ObjectHash', 'SnapshotID']
         ]
     ];
 
@@ -193,8 +197,12 @@ class SnapshotItem extends DataObject
 
         // Track versioning changes on the record if the owner is versioned
         if ($object->hasExtension(Versioned::class)) {
+            $exists = SnapshotItem::get()->filter([
+                'ObjectHash' => static::hashObjectForSnapshot($object)
+            ]);
             $this->WasDraft = $object->isModifiedOnDraft();
             $this->WasDeleted = $object->isOnLiveOnly() || $object->isArchived();
+            $this->WasCreated = !$exists->exists();
             $this->Version = $object->Version;
         } else {
             // Track publish state for non-versioned owners, they're always in a published state.

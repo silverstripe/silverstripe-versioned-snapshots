@@ -22,13 +22,12 @@ class Handler extends HandlerAbstract
             return null;
         }
 
-        $message = $this->getMessage($action);
         $page = $this->getPageFromReferrer();
 
         if ($page === null) {
             return null;
         }
 
-        return Snapshot::singleton()->createSnapshotFromAction($page, null, $message);
+        return Snapshot::singleton()->createSnapshot($page);
     }
 }

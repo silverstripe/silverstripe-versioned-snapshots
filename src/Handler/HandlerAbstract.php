@@ -36,7 +36,10 @@ abstract class HandlerAbstract implements EventHandlerInterface
 
     public function fire(EventContextInterface $context): void
     {
-        $this->createSnapshot($context);
+        $snapshot = $this->createSnapshot($context);
+        if ($snapshot) {
+            $snapshot->write();
+        }
     }
 
     /**

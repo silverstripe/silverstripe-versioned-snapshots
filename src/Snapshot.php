@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Snapshots;
 
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\ORM\ValidationException;
@@ -9,6 +10,7 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
+use Exception;
 
 /**
  * Class Snapshot
@@ -28,14 +30,11 @@ class Snapshot extends DataObject
 
     use SnapshotHasher;
 
-    const TRIGGER_ACTION = 'action';
-
     /**
      * @var array
      */
     private static $db = [
         'OriginHash' => 'Varchar(64)',
-        'Message' => 'Varchar',
     ];
 
     /**
@@ -98,6 +97,28 @@ class Snapshot extends DataObject
     }
 
     /**
+     * Shortcut for adding items by their associated dataobjects
+     * @param DataObject $obj
+     * @return $this
+     * @throws Exception
+     */
+    public function addObject(DataObject $obj): self
+    {
+        // Ensure uniqueness
+        foreach ($this->Items() as $item) {
+            if ($item->ObjectClass === $obj->baseClass() && $item->ID === $obj->ID) {
+                return $this;
+            }
+        }
+        $item = SnapshotItem::create()
+            ->hydrateFromDataObject($obj);
+
+        $this->Items()->add($item);
+
+        return $this;
+    }
+
+    /**
      * @return SnapshotItem|null
      */
     public function getOriginVersion()
@@ -125,34 +146,24 @@ class Snapshot extends DataObject
     /**
      * @return string
      */
-    public function getActivityDescription()
+    public function getActivityDescription(): string
     {
         $item = $this->getOriginItem();
-        if ($item) {
-            $activity = ActivityEntry::createFromSnapshotItem($item);
-            return ucfirst(sprintf(
-                '%s "%s"',
-                $activity->Subject->singular_name(),
-                $activity->Subject->getTitle()
-            ));
-        }
-
-        return 'none';
+        return $item
+            ? ActivityEntry::createFromSnapshotItem($item)->getDescription()
+            : _t(__CLASS__ . 'ACTIVITY_NONE', 'none');
     }
 
     /**
-     * @return string
+     * @return string|null
+     * @throws Exception
      */
-    public function getActivityType()
+    public function getActivityType(): ?string
     {
         $item = $this->getOriginItem();
-        if ($item) {
-            $activity = ActivityEntry::createFromSnapshotItem($item);
-
-            return $activity->Action;
-        }
-
-        return '';
+        return $item
+            ? ActivityEntry::createFromSnapshotItem($item)->Action
+            : null;
     }
 
     /**
@@ -204,85 +215,83 @@ class Snapshot extends DataObject
 
     /**
      *
-     * @param DataObject $owner
      * @param DataObject|null $origin
-     * @param string $message
      * @param array $extraObjects
      * @return Snapshot|null
      * @throws ValidationException
      */
-    public function createSnapshotFromAction(
-        DataObject $owner,
-        ?DataObject $origin,
-        string $message,
+    public function createSnapshot(
+        DataObject $origin,
         array $extraObjects = []
     ): ?Snapshot {
-        if (!$owner->isInDB()) {
+        if (!$origin->hasExtension(SnapshotPublishable::class)) {
             return null;
         }
-        $objectsToAdd = [];
-        if ($origin === null || !$origin->isInDB()) {
-            // case 1: no origin provided or the origin got deleted
-            // this means we can't point to a specific origin object
-
-            if ($message) {
-                // message is available - we can create an event to represent the change
-                // the event is added to the list of objects so a matching snapshot item is created
-                $event = SnapshotEvent::create();
-                $event->Title = $message;
-                $event->write();
-
-                $message = ($origin === null)
-                    ? $message
-                    : sprintf(
-                        '%s %s',
-                        $message,
-                        $origin->singular_name()
-                    );
-
-                $origin = $event;
-                array_unshift($objectsToAdd, $origin);
-            } else {
-                // no message is available - fallback to the owner
-                // no need to add the origin to the list of objects as it's already there
-                $origin = $owner;
-            }
-        } elseif (static::hashSnapshotCompare($origin, $owner)) {
-            // case 2: origin is same as the owner
-            // no need to add the origin to the list of objects as it's already there
-            $origin = $owner;
-        } else {
-            // case 3: stadard origin - add it to the object list
-            $objectsToAdd[] = $origin;
+        $objectsToAdd = [$origin];
+        /* @var SnapshotPublishable $origin */
+        $intermediaryObjects = $origin->getIntermediaryObjects();
+        $implicitModifications = [];
+        $messages = [];
+        $diffs = $origin->getRelationDiffs();
+        /* @var RelationDiffer $diff */
+        foreach ($diffs as $diff) {
+            $messages = array_merge($messages, $this->getMessagesForDiff($diff));
+            $implicitModifications = array_merge($implicitModifications, $diff->getModifications());
+        }
+        if (!empty($implicitModifications)) {
+            $origin = SnapshotEvent::create([
+              'Title' => implode("\n", $messages),
+            ]);
+            $origin->write();
         }
 
-        // owner is added as the last item
-        $objectsToAdd[] = $owner;
+        $implicitObjects = array_map(function (Modification $mod) {
+                return $mod->getRecord();
+        }, $implicitModifications);
+
+        $objectsToAdd = array_merge($objectsToAdd, $intermediaryObjects, $implicitObjects);
 
         $currentUser = Security::getCurrentUser();
         $snapshot = Snapshot::create();
 
         $snapshot->OriginClass = $origin->baseClass();
         $snapshot->OriginID = (int) $origin->ID;
-        $snapshot->Message = $message;
         $snapshot->AuthorID = $currentUser
             ? (int) $currentUser->ID
             : 0;
 
-        $snapshot->write();
         $objects = array_merge($objectsToAdd, $extraObjects);
         // the rest of the objects are processed in the provided order
         foreach ($objects as $object) {
             if (!$object instanceof DataObject) {
                 continue;
             }
-
-            $item = SnapshotItem::create();
-            $item->hydrateFromDataObject($object);
-            $snapshot->Items()->add($item);
+            $snapshot->addObject($object);
         }
 
+        if (!empty($implicitObjects)) {
+            $snapshot->applyImplicitObjects($implicitObjects);
+        }
+
+        $origin->reconcileOwnershipChanges($origin->getPreviousVersion());
+
         return $snapshot;
+    }
+
+    /**
+     * @param string $message
+     * @param array $extraObjects
+     * @return Snapshot
+     * @throws ValidationException
+     */
+    public function createSnapshotEvent(string $message, $extraObjects = []): Snapshot
+    {
+        $event = SnapshotEvent::create([
+            'Title' => $message,
+        ]);
+        $event->write();
+
+        return $this->createSnapshot($event, $extraObjects);
     }
 
     /**
@@ -302,7 +311,7 @@ class Snapshot extends DataObject
     /**
      * When implicit objects are updated (e.g. many_many), assign the ParentID
      *
-     * @param array $implicitObjects An array of hashes containing 'record' and 'type' (added|removed)
+     * @param Modification[] $implicitObjects
      * @throws ValidationException
      */
     public function applyImplicitObjects($implicitObjects = []): void
@@ -312,9 +321,9 @@ class Snapshot extends DataObject
             return;
         }
 
-        foreach ($implicitObjects as $spec) {
-            $obj = $spec['record'];
-            $type = $spec['type'];
+        foreach ($implicitObjects as $mod) {
+            $obj = $mod->getRecord();
+            $type = $mod->getActivityType();
             $item = $this->Items()->filter(
                 'ObjectHash',
                 SnapshotHasher::hashObjectForSnapshot($obj)
@@ -325,5 +334,57 @@ class Snapshot extends DataObject
                 $item->write();
             }
         }
+    }
+
+    private function getMessagesForDiff(RelationDiffer $diff): array
+    {
+        $relationType = $diff->getRelationType();
+        $messages = [];
+        $class = $diff->getRelationClass();
+        $sng = Injector::inst()->get($class);
+        $i18nGraph = [
+            'added' => ['Added', 'Created'],
+            'removed' => ['Removed', 'Deleted'],
+            'changed' => ['Modified', 'Modified'],
+        ];
+        foreach ($i18nGraph as $category => $labels) {
+            $getter = 'get' . ucfirst($category);
+            // Number of records in 'added', or 'removed', etc.
+            $ct = count($diff->$getter());
+            // e.g. MANY_MANY, HAS_MANY
+            $i18nRelationKey = strtoupper($relationType);
+            // e.g. use "Added" for many_many, "Created" for has_many
+            list ($manyManyLabel, $hasManyLabel) = $labels;
+            $action = $relationType === 'many_many' ? $manyManyLabel : $hasManyLabel;
+            // e.g. ADDED, for MANY_MANY_ADDED
+            $i18nActionKey = strtoupper($action);
+
+            // If singular, be specific with the record
+            if ($ct === 1) {
+                $record = DataObject::get_by_id($class, $diff->$getter()[0]);
+                if ($record) {
+                    $messages[] = _t(
+                        __CLASS__ . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_ONE',
+                        $action . ' {type} "{title}"',
+                        [
+                            'type' => $sng->singular_name(),
+                            'title' => $record->getTitle(),
+                        ]
+                    );
+                }
+                // Otherwise, just give a count
+            } else if ($ct > 1) {
+                $messages[] = _t(
+                    __CLASS__ . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_MANY',
+                    $action . ' {count} {name}',
+                    [
+                        'count' => $ct,
+                        'name' => $ct > 1 ? $sng->plural_name() : $sng->singular_name()
+                    ]
+                );
+            }
+        }
+
+        return $messages;
     }
 }

@@ -3,17 +3,13 @@
 
 namespace SilverStripe\Snapshots\Handler\Form;
 
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
+use SilverStripe\Forms\Form;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
-use SilverStripe\Snapshots\SnapshotHasher;
-use SilverStripe\Snapshots\SnapshotItem;
-use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Versioned\Versioned;
 
 class Handler extends HandlerAbstract
@@ -30,37 +26,20 @@ class Handler extends HandlerAbstract
             return null;
         }
 
-        $page = $this->getPage($context);
-        $record = null;
-        if ($form = $context->get('form')) {
-            $record = $form->getRecord();
-        }
+        $record = $this->getRecordFromContext($context);
 
-        if ($page === null || $record === null) {
+        if ($record === null || !$record->hasExtension(Versioned::class)) {
             return null;
         }
 
-        $message = $this->getMessage($action);
-
-        /* @var SnapshotPublishable|DataObject|Versioned $record */
-        list ($extraObjects, $newMessage) = $record->createOwnershipGraph($page);
-
-        $snapshot = Snapshot::singleton()->createSnapshotFromAction($page, $record, $newMessage ?: $message, $extraObjects);
-
-        if ($snapshot && !empty($implicitObjects)) {
-            $snapshot->applyImplicitObjects($implicitObjects);
-        }
-
-        $record->reconcileOwnershipChanges($this->getPreviousVersion($record));
-
-        return $snapshot;
+        return Snapshot::singleton()->createSnapshot($record);
     }
 
     /**
      * @param EventContextInterface $context
      * @return DataObject|null
      */
-    protected function getPage(EventContextInterface $context): ?DataObject
+    protected function getPageFromContext(EventContextInterface $context): ?DataObject
     {
         $page = $context->get('page');
         if ($page) {
@@ -69,28 +48,24 @@ class Handler extends HandlerAbstract
 
         /* @var HTTPRequest $request */
         $request = $context->get('request');
+
+        if (!$request || !$request instanceof HTTPRequest) {
+            return null;
+        }
+
         $url = $request->getURL();
         return $this->getCurrentPageFromRequestUrl($url);
     }
 
     /**
-     * @param DataObject $record
-     * @param null $version
+     * @param EventContextInterface $context
      * @return DataObject|null
      */
-    protected function getPreviousVersion(DataObject $record, $version = null): ?DataObject
+    protected function getRecordFromContext(EventContextInterface $context): ?DataObject
     {
-        $previous = null;
-        if ($record->Version == 1) {
-            $previous = Injector::inst()->create(get_class($record));
-        } else {
-            if ($version === null) {
-                $version = $record->Version - 1;
-            }
+        /** @var Form $form */
+        $form = $context->get('form');
 
-            $previous = $record->getAtVersion($version);
-        }
-
-        return $previous;
+        return $form ? $form->getRecord() : null;
     }
 }

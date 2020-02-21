@@ -29,23 +29,31 @@ SilverStripe\Core\Injector\Injector:
     properties:
       handlers:
         formGeneric:
-          on: [ 'formSubmitted.unpublish', 'formSubmitted.doDelete', 'formSubmitted.archive' ]
+          on:
+            - 'formSubmitted.doDelete'
+            - 'formSubmitted.archive'
+            - 'formSubmitted.doArchive'
           handler: %$SilverStripe\Snapshots\Handler\Form\Handler
+        unpublish:
+          on:
+            - 'formSubmitted.unpublish'
+            - 'formSubmitted.doUnpublish'
+          handler: %$SilverStripe\Snapshots\Handler\Form\UnpublishHandler
         save:
           on: [ 'formSubmitted.save', 'formSubmitted.doSave' ]
           handler: %$SilverStripe\Snapshots\Handler\Form\SaveHandler
         publish:
-          on: [ 'formSubmitted.publish' ]
+          on: [ 'formSubmitted.publish', 'formSubmitted.doPublish' ]
           handler: %$SilverStripe\Snapshots\Handler\Form\PublishHandler
         cmsMain:
           on: [ 'cmsAction.savetreenode' ]
           handler: %$SilverStripe\Snapshots\Handler\CMSMain\Handler
-        gridFieldAction:
-          on: [ 'gridFieldAlteration.deleterecord', 'gridFieldAlteration.archiverecord' ]
-          handler: %$SilverStripe\Snapshots\Handler\GridField\Action\Handler
         gridFieldAlteration:
-          on: []
+          on: [ 'gridFieldAlteration.deleterecord', 'gridFieldAlteration.archiverecord' ]
           handler: %$SilverStripe\Snapshots\Handler\GridField\Alteration\Handler
+        gridFieldAction:
+          on: [ ]
+          handler: %$SilverStripe\Snapshots\Handler\GridField\Action\Handler
         graphqlMutation:
           on: []
           handler: %$SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler

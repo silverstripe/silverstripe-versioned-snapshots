@@ -54,6 +54,21 @@ class SnapshotPublishable extends RecursivePublishable
         return $list->byID($id);
     }
 
+    public static function get_at_last_snapshot(string $class, int $id): ?DataObject
+    {
+        $lastItem = SnapshotItem::get()->filter([
+            'ObjectHash' => static::hashForSnapshot($class, $id)
+        ])
+            ->sort('Created', 'DESC')
+            ->first();
+
+        if(!$lastItem) {
+            return null;
+        }
+
+        return static::get_at_snapshot($class, $id, $lastItem->SnapshotID);
+    }
+
     /**
      * @return DataList
      */
@@ -366,6 +381,20 @@ class SnapshotPublishable extends RecursivePublishable
         return static::get_at_snapshot($this->owner->baseClass(), $this->owner->ID, $snapshot);
     }
 
+    public function getAtLastSnapshot()
+    {
+        $lastItem = SnapshotItem::get()->filter([
+            'ObjectHash' => static::hashObjectForSnapshot($this->owner),
+        ])
+            ->sort('Created DESC')
+            ->first();
+        if (!$lastItem) {
+            return null;
+        }
+
+        return static::get_at_snapshot($this->owner->baseClass(), $this->owner->ID, $lastItem->SnapshotID);
+    }
+
     /**
      * Tidy up all the irrelevant snapshot records now that the changes have been reverted.
      */
@@ -437,67 +466,6 @@ class SnapshotPublishable extends RecursivePublishable
         return $config;
     }
 
-    /**
-     * Get the IDs that have been added and removed for a given relation based on the previous snapshot
-     * @param string $relation
-     * @param int $relationDepth
-     * @return array Data containing the class and the IDs that have been added and/or removed
-     */
-    public function diffRelation(string $relation, $relationDepth = 1): array
-    {
-        $owner = $this->owner;
-        $relationClass = $owner->getRelationClass($relation);
-        if (!$relationClass) {
-            throw new InvalidArgumentException(sprintf(
-                '%s is not a valid relation on %s',
-                $relation,
-                get_class($owner)
-            ));
-        }
-
-        $currentVersionMapping = $owner->$relation()->map('ID', 'Version')->toArray();
-        $diff = $this->atPreviousSnapshot(
-            function (?string $timestamp) use ($owner, $relation, $relationClass ,$currentVersionMapping) {
-                if ($timestamp) {
-                    $prevVersionMapping = $owner->$relation()->map('ID', 'Version')->toArray();
-                } else {
-                    $prevVersionMapping = [];
-                }
-
-                $currentIDs = array_keys($currentVersionMapping);
-                $previousIDs = array_keys($prevVersionMapping);
-
-                $added = array_diff($currentIDs, $previousIDs);
-                $removed = array_diff($previousIDs, $currentIDs);
-                $changed = [];
-
-                foreach ($prevVersionMapping as $prevID => $prevVersion) {
-                    // Record no longer exists. Not a change.
-                    if (!isset($currentVersionMapping[$prevID])) {
-                        continue;
-                    }
-                    $currentVersion = $currentVersionMapping[$prevID];
-                    // Versioned extension not applied
-                    if ($prevVersion === null && $currentVersion === null) {
-                        continue;
-                    }
-                    // New version is higher than old version. It's a change.
-                    if ($currentVersion > $prevVersion) {
-                        $changed[] = $prevID;
-                    }
-                }
-
-                return [
-                    'class' => $relationClass,
-                    'added' => $added,
-                    'removed' => $removed,
-                    'changed' => $changed,
-                ];
-        });
-
-        return $diff;
-    }
-
     public function atPreviousSnapshot(callable $callback)
     {
         // Get the last time this record was in a snapshot. Doesn't matter where or why. We just need a
@@ -510,6 +478,52 @@ class SnapshotPublishable extends RecursivePublishable
             Versioned::reading_archived_date($lastSnapshot);
             return $callback($lastSnapshot);
         });
+    }
+
+    /**
+     * @return DataObject|null
+     */
+    public function getPreviousSnapshotVersion(): ?DataObject
+    {
+        return $this->atPreviousSnapshot(function ($date) {
+           if (!$date) {
+               return null;
+           }
+
+           return DataList::create($this->owner->baseClass())->byID($this->owner->ID);
+        });
+    }
+
+    /**
+     * @return bool
+     */
+    public function isModifiedSinceLastSnapshot(): bool
+    {
+        $previous = $this->getPreviousSnapshotVersion();
+
+        return $previous ? $previous->Version < $this->owner->Version : true;
+    }
+
+    /**
+     * @param null $version
+     * @return DataObject|null
+     */
+    public function getPreviousVersion($version = null): ?DataObject
+    {
+        $previous = null;
+        $record = $this->owner;
+
+        if ($record->Version == 1) {
+            $previous = Injector::inst()->create(get_class($record));
+        } else {
+            if ($version === null) {
+                $version = $record->Version - 1;
+            }
+
+            $previous = $record->getAtVersion($version);
+        }
+
+        return $previous;
     }
 
     /**
@@ -571,8 +585,8 @@ class SnapshotPublishable extends RecursivePublishable
         $map = array_combine($fields, array_values($hasOne));
         $result = [];
         foreach ($fields as $field) {
-            $previousValue = $previous->$field;
-            $currentValue = $owner->$field;
+            $previousValue = (int) $previous->$field;
+            $currentValue = (int) $owner->$field;
             if ($previousValue === $currentValue) {
                 continue;
             }
@@ -660,119 +674,41 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @param SiteTree $page
-     * @param int $relationDepth
-     * @return array Tuple of extraObjects, message
+     * @return array
      */
-    public function createOwnershipGraph(SiteTree $page, $relationDepth = 1): array
+    public function getIntermediaryObjects(): array
     {
-        $intermediaryObjects = [];
-        $implicitObjects = [];
-        $message = null;
-        $record = $this->owner;
-
         /* @var SnapshotPublishable|Versioned|DataObject $record */
-        if ($record->hasExtension(static::class)) {
-            // Get all the owners that aren't the page
-            $intermediaryObjects = $record->findOwners()->filterByCallback(function ($owner) use ($page) {
-                return !static::hashSnapshotCompare($page, $owner);
-            })->toArray();
-            $messages = [];
-
-            foreach (['many_many', 'has_many'] as $relationType) {
-                foreach ($record->config()->get($relationType) as $component => $spec) {
-                    $data = $record->diffRelation($component, $relationDepth);
-                    if (empty($data['added']) && empty($data['removed']) && empty($data['changed'])) {
-                        continue;
-                    }
-                    foreach (['added', 'removed', 'changed'] as $actionType) {
-                        foreach ($data[$actionType] as $id) {
-                            $obj = DataObject::get_by_id($data['class'], $id);
-                            if ($obj) {
-                                $implicitObjects[] = ['type' => $actionType, 'record' => $obj];
-                            }
-                        }
-                    }
-                    $messages = array_merge($messages, $this->getMessagesForRelation($data, $relationType));
-                }
-            }
-            if (!empty($messages)) {
-                $message = implode("\n", $messages);
-            }
+        $record = $this->owner;
+        if (!$record->hasExtension(static::class)) {
+            return [];
         }
+        $intermediaryObjects = $record->findOwners();
+//        $intermediaryObjects = $record->findOwners()->filterByCallback(function ($owner) use ($page) {
+//                return !static::hashSnapshotCompare($page, $owner);
+//            })->toArray();
 
         $extraObjects = [];
-
         foreach ($intermediaryObjects as $extra) {
             $extraObjects[SnapshotHasher::hashObjectForSnapshot($extra)] = $extra;
         }
-        foreach ($implicitObjects as $spec) {
-            $extraObjects[SnapshotHasher::hashObjectForSnapshot($spec['record'])] = $spec['record'];
-        }
 
-        return [$extraObjects, $message];
+        return $extraObjects;
     }
 
     /**
-     * @param array $details The result of a diffRelation() call
-     * @param string $relationType many_many, has_many
-     * @return array
+     * @return array RelationDiff[]
      */
-    private function getMessagesForRelation(array $details, string $relationType): array
+    public function getRelationDiffs(): array
     {
-        if (!in_array($relationType, ['has_many', 'many_many'])) {
-            throw new InvalidArgumentException(sprintf(
-                'Invalid relation type %s',
-                $relationType
-            ));
-        }
-
-        $messages = [];
-        $class = $details['class'];
-        $sng = Injector::inst()->get($details['class']);
-        $i18nGraph = [
-            'added' => ['Added', 'Created'],
-            'removed' => ['Removed', 'Deleted'],
-            'changed' => ['Modified', 'Modified'],
-        ];
-        foreach ($i18nGraph as $category => $labels) {
-            // Number of records in 'added', or 'removed', etc.
-            $ct = count($details[$category]);
-            // e.g. MANY_MANY, HAS_MANY
-            $i18nRelationKey = strtoupper($relationType);
-            // e.g. use "Added" for many_many, "Created" for has_many
-            list ($manyManyLabel, $hasManyLabel) = $labels;
-            $action = $relationType === 'many_many' ? $manyManyLabel : $hasManyLabel;
-            // e.g. ADDED, for MANY_MANY_ADDED
-            $i18nActionKey = strtoupper($action);
-
-            // If singular, be specific with the record
-            if ($ct === 1) {
-                $record = DataObject::get_by_id($class, $details[$category][0]);
-                if ($record) {
-                    $messages[] = _t(
-                        __CLASS__ . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_ONE',
-                        $action . ' {type} "{title}"',
-                        [
-                            'type' => $sng->singular_name(),
-                            'title' => $record->getTitle(),
-                        ]
-                    );
-                }
-            // Otherwise, just give a count
-            } else if ($ct > 1) {
-                $messages[] = _t(
-                    __CLASS__ . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_MANY',
-                    $action . ' {count} {name}',
-                    [
-                        'count' => $ct,
-                        'name' => $ct > 1 ? $sng->plural_name() : $sng->singular_name()
-                    ]
-                );
+        $diffs = [];
+        foreach (['many_many', 'has_many'] as $relationType) {
+            foreach ($this->owner->config()->get($relationType) as $component => $spec) {
+                $diffs[] = RelationDiffer::create($this->owner, $component);
             }
         }
 
-        return $messages;
+        return $diffs;
     }
 
 }

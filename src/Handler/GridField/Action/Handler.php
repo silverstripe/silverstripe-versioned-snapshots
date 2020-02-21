@@ -8,6 +8,7 @@ use SilverStripe\Forms\Form;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
+use SilverStripe\Versioned\Versioned;
 
 class Handler extends HandlerAbstract
 {
@@ -33,16 +34,10 @@ class Handler extends HandlerAbstract
 
         $record = $form->getRecord();
 
-        if (!$record) {
+        if (!$record || !$record->hasExtension(Versioned::class)) {
             return null;
         }
 
-        $page = $this->getCurrentPageFromController($form);
-
-        if ($page === null) {
-            return null;
-        }
-
-        return Snapshot::singleton()->createSnapshotFromAction($page, $record, $message);
+        return Snapshot::singleton()->createSnapshot($record);
     }
 }
