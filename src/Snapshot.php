@@ -154,6 +154,11 @@ class Snapshot extends DataObject
             : _t(__CLASS__ . 'ACTIVITY_NONE', 'none');
     }
 
+    public function getActivityAgo(): string
+    {
+        return $this->obj('Created')->Ago(false);
+    }
+
     /**
      * @return string|null
      * @throws Exception
@@ -269,8 +274,8 @@ class Snapshot extends DataObject
             $snapshot->addObject($object);
         }
 
-        if (!empty($implicitObjects)) {
-            $snapshot->applyImplicitObjects($implicitObjects);
+        if (!empty($implicitModifications)) {
+            $snapshot->applyImplicitObjects($implicitModifications);
         }
 
         $origin->reconcileOwnershipChanges($origin->getPreviousVersion());

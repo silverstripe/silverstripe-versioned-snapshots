@@ -90,7 +90,9 @@ class RelationDiffer
             function (?string $timestamp) {
                 $relation = $this->relation;
                 if ($timestamp) {
-                    return $this->owner->$relation()->map('ID', 'Version')->toArray();
+                    $a = DataObject::get_by_id($this->owner->baseClass(), $this->owner->ID);
+                    $map = $a->$relation()->map('ID', 'Version');
+                    return $map->toArray();
                 }
 
                 return [];
