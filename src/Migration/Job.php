@@ -3,10 +3,13 @@
 
 namespace SilverStripe\Snapshots\Migration;
 
-
 use SilverStripe\Core\Environment;
 use Symbiote\QueuedJobs\Services\AbstractQueuedJob;
 use Symbiote\QueuedJobs\Services\QueuedJob;
+
+if (!class_exists(AbstractQueuedJob::class)) {
+    return;
+}
 
 class Job extends AbstractQueuedJob
 {
