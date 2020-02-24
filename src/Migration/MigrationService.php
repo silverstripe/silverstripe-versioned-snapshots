@@ -67,7 +67,7 @@ class MigrationService
         $versionsTable = $baseTable . '_Versions';
         $rows = $this->migrateSnapshots($versionsTable);
         $rows += $this->migrateItems($versionsTable);
-        $this->baseID = DB::query("SELECT MAX(\"ID\") FROM \"$this->snapshotsTable\"")->value();
+        $this->baseID = (int) DB::query("SELECT MAX(\"ID\") FROM \"$this->snapshotsTable\"")->value();
 
         return $rows;
     }
@@ -255,5 +255,10 @@ SQL;
     private function sanitiseClassName($class): string
     {
         return str_replace('\\', '\\\\', $class);
+    }
+
+    public function getBaseID()
+    {
+        return $this->baseID;
     }
 }

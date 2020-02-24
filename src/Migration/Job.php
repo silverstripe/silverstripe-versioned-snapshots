@@ -59,6 +59,7 @@ class Job extends AbstractQueuedJob
         $baseClass = array_shift($remainingChildren);
         $this->addMessage("Migrating $baseClass");
         $rows = $this->getMigrator()->migrate($baseClass);
+        $this->addMessage("Base ID " . $this->getMigrator()->getBaseID());
         $this->addMessage("Migrated $rows records");
 
         $this->classesToProcess = $remainingChildren;
