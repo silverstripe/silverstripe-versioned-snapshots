@@ -67,7 +67,7 @@ class MigrationService
         $versionsTable = $baseTable . '_Versions';
         $rows = $this->migrateSnapshots($versionsTable);
         $rows += $this->migrateItems($versionsTable);
-        $this->baseID = DB::query("SELECT MAX(ID) FROM \"$this->snapshotsTable\"")->value();
+        $this->baseID = DB::query("SELECT MAX(\"ID\") FROM \"$this->snapshotsTable\"")->value();
 
         return $rows;
     }
@@ -112,7 +112,6 @@ SQL;
      */
     private function migrateSnapshots(string $versionsTable): int
     {
-        $id = (string) $this->baseID;
         DB::query(
             "INSERT INTO \"$this->snapshotsTable\"
             (
@@ -126,7 +125,7 @@ SQL;
             )
             (
                 SELECT
-                    \"ID\" + $id,
+                    \"ID\" + $this->baseID,
                     \"Created\",
                     \"LastEdited\",
                     MD5(CONCAT($this->baseClassSubquery, ':', \"RecordID\")),
@@ -148,7 +147,6 @@ SQL;
      */
     private function migrateItems(string $versionsTable): int
     {
-        $id = (string) $this->baseID;
         DB::query(
             "INSERT INTO \"$this->itemsTable\"
             (
@@ -175,7 +173,7 @@ SQL;
                     \"WasDeleted\",
                     MD5(CONCAT($this->baseClassSubquery, ':', \"RecordID\")),
                     1,
-                    \"ID\" + $id,
+                    \"ID\" + $this->baseID,
                     0,
                     \"RecordID\",
                     $this->baseClassSubquery
