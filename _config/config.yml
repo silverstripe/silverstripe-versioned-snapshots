@@ -26,6 +26,7 @@ Name: snapshot-queuedjob
 Only:
   moduleexists: symbiote/silverstripe-queuedjobs
 ---
+SilverStripe\Core\Injector\Injector:
   SilverStripe\Snapshots\Migration\Job:
     properties:
       migrator: %$SilverStripe\Snapshots\Migration\MigrationService
