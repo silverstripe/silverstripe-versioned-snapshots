@@ -112,6 +112,7 @@ SQL;
      */
     private function migrateSnapshots(string $versionsTable): int
     {
+        $id = (string) $this->baseID;
         DB::query(
             "INSERT INTO \"$this->snapshotsTable\"
             (
@@ -125,7 +126,7 @@ SQL;
             )
             (
                 SELECT
-                    \"ID\" + $this->baseID,
+                    \"ID\" + $id,
                     \"Created\",
                     \"LastEdited\",
                     MD5(CONCAT($this->baseClassSubquery, ':', \"RecordID\")),
@@ -147,6 +148,7 @@ SQL;
      */
     private function migrateItems(string $versionsTable): int
     {
+        $id = (string) $this->baseID;
         DB::query(
             "INSERT INTO \"$this->itemsTable\"
             (
@@ -173,7 +175,7 @@ SQL;
                     \"WasDeleted\",
                     MD5(CONCAT($this->baseClassSubquery, ':', \"RecordID\")),
                     1,
-                    \"ID\" + $this->baseID,
+                    \"ID\" + $id,
                     0,
                     \"RecordID\",
                     $this->baseClassSubquery
