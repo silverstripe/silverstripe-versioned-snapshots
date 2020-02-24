@@ -15,6 +15,21 @@ SilverStripe\ORM\DataObject:
   extensions:
     - SilverStripe\Snapshots\SnapshotExtension
 ---
+Name: snapshot-migration
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Snapshots\Migration\Task:
+    constructor:
+      migrator: %$SilverStripe\Snapshots\Migration\MigrationService
+---
+Name: snapshot-queuedjob
+Only:
+  moduleexists: symbiote/silverstripe-queuedjobs
+---
+  SilverStripe\Snapshots\Migration\Job:
+    properties:
+      migrator: %$SilverStripe\Snapshots\Migration\MigrationService
+---
 Only:
   moduleexists: 'silverstripe/cms'
 ---
