@@ -119,7 +119,6 @@ SQL;
                 \"Created\",
                 \"LastEdited\",
                 \"OriginHash\",
-                \"Message\",
                 \"AuthorID\",
                 \"OriginID\",
                 \"OriginClass\"
@@ -130,7 +129,6 @@ SQL;
                     \"Created\",
                     \"LastEdited\",
                     MD5(CONCAT($this->baseClassSubquery, ':', \"RecordID\")),
-                    'Previous version',
                     \"AuthorID\",
                     \"RecordID\",
                     $this->baseClassSubquery
