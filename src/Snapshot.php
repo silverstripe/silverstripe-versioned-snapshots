@@ -106,7 +106,7 @@ class Snapshot extends DataObject
     {
         // Ensure uniqueness
         foreach ($this->Items() as $item) {
-            if ($item->ObjectClass === $obj->baseClass() && $item->ID === $obj->ID) {
+            if ($item->ObjectClass === $obj->baseClass() && $item->ObjectID === $obj->ID) {
                 return $this;
             }
         }
