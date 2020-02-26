@@ -23,8 +23,6 @@ class ArchiveElementHandler extends Handler
             return null;
         }
 
-        $message = $this->getMessage($action);
-
         $params = $context->get('params');
         $blockID = $params['blockId'];
         $block = BaseElement::get()->byID($blockID);

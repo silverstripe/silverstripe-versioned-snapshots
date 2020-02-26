@@ -20,24 +20,14 @@ class CreateElementHandler extends Handler
             return null;
         }
 
-        $message = $this->getMessage($action);
         $params = $context->get('params');
-        $className = $params['className'];
         $areaID = $params['elementalAreaID'];
         $area = ElementalArea::get()->byID($areaID);
 
         if (!$area) {
             return null;
         }
-        $justCreated = $area->Elements()
-            ->filter('ClassName', $className)
-            ->sort('Created', 'DESC')
-            ->first();
 
-        if (!$justCreated) {
-            return null;
-        }
-
-        return Snapshot::singleton()->createSnapshot($justCreated);
+        return Snapshot::singleton()->createSnapshot($area);
     }
 }

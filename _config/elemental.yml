@@ -6,13 +6,16 @@ Only:
 DNADesign\Elemental\Forms\ElementalAreaField:
   extensions:
     - SilverStripe\Snapshots\Elemental\SaveListener
+DNADesign\Elemental\Models\ElementalArea:
+  snapshot_relation_tracking:
+    - Elements
 SilverStripe\Core\Injector\Injector:
+  # custom page save handler for elemental
+  SilverStripe\Snapshots\Handler\Form\SaveHandler:
+    class: SilverStripe\Snapshots\Handler\Elemental\PageSaveHandler
   SilverStripe\EventDispatcher\Dispatch\Dispatcher:
     properties:
       handlers:
-        elementalPageSave:
-          on: [ 'elementalAreaUpdated' ]
-          handler: %$SilverStripe\Snapshots\Handler\Elemental\PageSaveHandler
         elementalEditorCreate:
           on: [ 'graphqlOperation.AddElementToArea' ]
           handler: %$SilverStripe\Snapshots\Handler\Elemental\CreateElementHandler

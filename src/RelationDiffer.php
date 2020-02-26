@@ -5,25 +5,13 @@ namespace SilverStripe\Snapshots;
 
 
 use SilverStripe\Core\Injector\Injectable;
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use InvalidArgumentException;
-use SilverStripe\Versioned\Versioned;
 
 class RelationDiffer
 {
     use Injectable;
-
-    /**
-     * @var DataObject|SnapshotPublishable|Versioned
-     */
-    private $owner;
-
-    /**
-     * @var string
-     */
-    private $relation;
 
     /**
      * @var string
@@ -34,6 +22,16 @@ class RelationDiffer
      * @var string
      */
     private $relationType;
+
+    /**
+     * @var array
+     */
+    private $previousVersionMapping = [];
+
+    /**
+     * @var array
+     */
+    private $currentVersionMapping = [];
 
     /**
      * @var array
@@ -52,29 +50,27 @@ class RelationDiffer
 
     /**
      * RelationDiffer constructor.
-     * @param DataObject $owner
-     * @param string $relation
+     * @var string $relationClass
+     * @var string $relationTypes
+     * @var array $previousVersionMapping
+     * @var array $currentVersionMapping
      */
-    public function __construct(DataObject $owner, string $relation)
-    {
-        if (!$owner->hasExtension(SnapshotPublishable::class)) {
+    public function __construct(
+        string $relationClass,
+        string $relationType,
+        array $previousVersionMapping = [],
+        array $currentVersionMapping = []
+    ) {
+        if (!is_subclass_of($relationClass, DataObject::class)) {
+            throw new InvalidArgumentException(sprintf('%s is not a DataObject', $relationClass));
+        }
+        if (!$relationClass::singleton()->hasExtension(SnapshotPublishable::class)) {
             throw new InvalidArgumentException(sprintf('DataObject must use the %s extension', SnapshotPublishable::class));
         }
-        $relationClass = $owner->getRelationClass($relation);
-        $relationType = $owner->getRelationType($relation);
-        if (!$relationClass || !$relationType) {
-            throw new InvalidArgumentException(sprintf(
-                '%s is not a valid relation on %s',
-                $relation,
-                get_class($owner)
-            ));
-        }
-
-        $this->owner = $owner;
         $this->relationClass = $relationClass;
         $this->relationType = $relationType;
-        $this->relation = $relation;
-
+        $this->previousVersionMapping = $previousVersionMapping;
+        $this->currentVersionMapping = $currentVersionMapping;
         $this->diff();
     }
 
@@ -83,35 +79,20 @@ class RelationDiffer
      */
     private function diff(): void
     {
-        $owner = $this->owner;
-        $relation = $this->relation;
-        $currentVersionMapping = $this->owner->$relation()->map('ID', 'Version')->toArray();
-        $prevVersionMapping = $owner->atPreviousSnapshot(
-            function (?string $timestamp) {
-                $relation = $this->relation;
-                if ($timestamp) {
-                    $a = DataObject::get_by_id($this->owner->baseClass(), $this->owner->ID);
-                    $map = $a->$relation()->map('ID', 'Version');
-                    return $map->toArray();
-                }
-
-                return [];
-            });
-
-        $currentIDs = array_keys($currentVersionMapping);
-        $previousIDs = array_keys($prevVersionMapping);
+        $currentIDs = array_keys($this->currentVersionMapping);
+        $previousIDs = array_keys($this->previousVersionMapping);
 
         $this->added = array_diff($currentIDs, $previousIDs);
         $this->removed = array_diff($previousIDs, $currentIDs);
 
         $changed = [];
 
-        foreach ($prevVersionMapping as $prevID => $prevVersion) {
+        foreach ($this->previousVersionMapping as $prevID => $prevVersion) {
             // Record no longer exists. Not a change.
-            if (!isset($currentVersionMapping[$prevID])) {
+            if (!isset($this->currentVersionMapping[$prevID])) {
                 continue;
             }
-            $currentVersion = $currentVersionMapping[$prevID];
+            $currentVersion = $this->currentVersionMapping[$prevID];
             // Versioned extension not applied
             if ($prevVersion === null && $currentVersion === null) {
                 continue;
@@ -174,22 +155,6 @@ class RelationDiffer
     }
 
     /**
-     * @return DataObject|SnapshotPublishable|Versioned
-     */
-    public function getOwner()
-    {
-        return $this->owner;
-    }
-
-    /**
-     * @return string
-     */
-    public function getRelation(): string
-    {
-        return $this->relation;
-    }
-
-    /**
      * @return string
      */
     public function getRelationClass(): string
@@ -228,6 +193,5 @@ class RelationDiffer
     {
         return $this->changed;
     }
-
 
 }

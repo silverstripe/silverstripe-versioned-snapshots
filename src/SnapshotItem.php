@@ -9,6 +9,7 @@ use SilverStripe\Security\Security;
 use SilverStripe\Versioned\ChangeSet;
 use SilverStripe\Versioned\Versioned;
 use Exception;
+use SilverStripe\View\ArrayData;
 
 /**
  * Class SnapshotItem
@@ -43,7 +44,7 @@ class SnapshotItem extends DataObject
         'WasUnpublished' => 'Boolean',
         'WasCreated' => 'Boolean',
         'ObjectHash' => 'Varchar(64)',
-        'Modification' => 'Boolean', // indicates the snapshot item changes data (default true)
+        'Modification' => 'Boolean',
     ];
 
     /**
@@ -153,7 +154,7 @@ class SnapshotItem extends DataObject
         }
 
         // Default permissions
-        return (bool)Permission::checkMember($member, ChangeSet::config()->get('required_permission'));
+        return (bool) Permission::checkMember($member, ChangeSet::config()->get('required_permission'));
     }
 
     public function onBeforeWrite()
@@ -194,7 +195,6 @@ class SnapshotItem extends DataObject
     {
         $this->ObjectClass = $object->baseClass();
         $this->ObjectID = (int) $object->ID;
-
         // Track versioning changes on the record if the owner is versioned
         if ($object->hasExtension(Versioned::class)) {
             $exists = SnapshotItem::get()->filter([
@@ -209,6 +209,9 @@ class SnapshotItem extends DataObject
             $this->WasPublished = true;
         }
 
+        $object->invokeWithExtensions('updateHydrateFromObject', $this);
+
         return $this;
     }
+
 }

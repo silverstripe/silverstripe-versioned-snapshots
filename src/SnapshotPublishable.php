@@ -13,6 +13,7 @@ use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Versioned\RecursivePublishable;
 use SilverStripe\Versioned\Versioned;
 use InvalidArgumentException;
+use SilverStripe\View\ArrayData;
 
 /**
  * Class SnapshotPublishable
@@ -23,6 +24,17 @@ class SnapshotPublishable extends RecursivePublishable
 {
 
     use SnapshotHasher;
+
+    /**
+     * @var array
+     * @config
+     */
+    private static $snapshot_relation_tracking = [];
+
+    /**
+     * @var array
+     */
+    private $relationDiffs = [];
 
     /**
      * @param $class
@@ -56,17 +68,26 @@ class SnapshotPublishable extends RecursivePublishable
 
     public static function get_at_last_snapshot(string $class, int $id): ?DataObject
     {
-        $lastItem = SnapshotItem::get()->filter([
-            'ObjectHash' => static::hashForSnapshot($class, $id)
-        ])
-            ->sort('Created', 'DESC')
-            ->first();
-
+        $lastItem = static::get_last_snapshot_item($class, $id);
         if(!$lastItem) {
             return null;
         }
 
         return static::get_at_snapshot($class, $id, $lastItem->SnapshotID);
+    }
+
+    /**
+     * @param string $class
+     * @param int $id
+     * @return DataObject|null
+     */
+    public static function get_last_snapshot_item(string $class, int $id): ? DataObject
+    {
+        return SnapshotItem::get()->filter([
+            'ObjectHash' => static::hashForSnapshot($class, $id)
+        ])
+            ->sort('Created', 'DESC')
+            ->first();
     }
 
     /**
@@ -310,6 +331,23 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
+     * @return array
+     */
+    public function getRelationTracking(): array
+    {
+        $owner = $this->owner;
+        $tracking = $owner->config()->get('snapshot_relation_tracking') ?? [];
+        $data = [];
+        foreach ($tracking as $relation) {
+            if ($owner->hasMethod($relation) && $owner->getRelationClass($relation)) {
+                $data[$relation] = $owner->$relation()->map('ID', 'Version')->toArray();
+            }
+        }
+
+        return $data;
+    }
+
+    /**
      * @return boolean
      */
     public function hasOwnedModifications()
@@ -381,13 +419,12 @@ class SnapshotPublishable extends RecursivePublishable
         return static::get_at_snapshot($this->owner->baseClass(), $this->owner->ID, $snapshot);
     }
 
+    /**
+     * @return DataObject|null
+     */
     public function getAtLastSnapshot()
     {
-        $lastItem = SnapshotItem::get()->filter([
-            'ObjectHash' => static::hashObjectForSnapshot($this->owner),
-        ])
-            ->sort('Created DESC')
-            ->first();
+        $lastItem = $this->owner->getPreviousSnapshotItem();
         if (!$lastItem) {
             return null;
         }
@@ -409,63 +446,21 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @return array
-     * @throws Exception
+     * @return SnapshotItem|null
      */
-    public function getManyManyOwnership()
+    public function getPreviousSnapshotItem(): ?DataObject
     {
-        /* @var DataObject|SnapshotPublishable $owner */
-        $owner = $this->owner;
-        $linking = $owner->getManyManyLinking();
-        $r = [];
-        foreach ($linking as $parentClass => $specs) {
-            foreach ($specs as $spec) {
-                list ($parentName, $childName) = $spec;
-                $parent = $owner->getComponent($parentName);
-                $child = $owner->getComponent($childName);
-                if ($parent->exists() && $child->exists()) {
-                    $r[] = [$parentClass, $parentName, $parent, $child];
-                }
-            }
-        }
-
-        return $r;
+        return SnapshotItem::get()->filter([
+            'ObjectHash' => static::hashObjectForSnapshot($this->owner),
+        ])
+            ->sort('Created', 'DESC')
+            ->first();
     }
 
     /**
-     * @return array
+     * @param callable $callback
+     * @return mixed
      */
-    public function getManyManyLinking()
-    {
-        /* @var DataObject|SnapshotPublishable $owner */
-        $owner = $this->owner;
-        $config = [];
-
-        // Has to have two has_ones
-        $hasOnes = $owner->hasOne();
-        if (sizeof($hasOnes) < 2) {
-            return $config;
-        }
-
-        foreach ($hasOnes as $name => $class) {
-            /* @var DataObject $sng */
-            $sng = Injector::inst()->get($class);
-            foreach ($sng->manyMany() as $component => $spec) {
-                if (!is_array($spec)) {
-                    continue;
-                }
-                if (!($owner instanceof $spec['through'])) {
-                    continue;
-                }
-                if (!isset($config[$class])) {
-                    $config[$class][] = [$spec['from'], $spec['to']];
-                }
-            }
-        }
-
-        return $config;
-    }
-
     public function atPreviousSnapshot(callable $callback)
     {
         // Get the last time this record was in a snapshot. Doesn't matter where or why. We just need a
@@ -502,6 +497,52 @@ class SnapshotPublishable extends RecursivePublishable
         $previous = $this->getPreviousSnapshotVersion();
 
         return $previous ? $previous->Version < $this->owner->Version : true;
+    }
+
+    /**
+     * @param bool $useCache
+     * @return RelationDiffer[]
+     */
+    public function getRelationDiffs($useCache = true): array
+    {
+        $cached = $this->relationDiffs[static::hashObjectForSnapshot($this->owner)] ?? null;
+        if ($useCache && $cached) {
+            return $cached;
+        }
+        $diffs = [];
+        $previousTracking = $this->owner->atPreviousSnapshot(function ($date) {
+           $record = DataObject::get_by_id($this->owner->baseClass(), $this->owner->ID, false);
+           if (!$record) {
+               return [];
+           }
+           /* @var DataObject|SnapshotPublishable $record */
+           return $record->getRelationTracking();
+        });
+        $currentTracking = $this->owner->getRelationTracking();
+        foreach ($currentTracking as $relationName => $currentMap) {
+            $class = $this->owner->getRelationClass($relationName);
+            $type = $this->owner->getRelationType($relationName);
+            $prevMap = $previousTracking[$relationName] ?? [];
+            $diffs[] = RelationDiffer::create($class, $type, $prevMap, $currentMap);
+        }
+
+        $this->relationDiffs[static::hashObjectForSnapshot($this->owner)] = $diffs;
+
+        return $diffs;
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasRelationChanges(): bool
+    {
+        foreach ($this->getRelationDiffs() as $diff) {
+            if ($diff->hasChanges()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -684,10 +725,6 @@ class SnapshotPublishable extends RecursivePublishable
             return [];
         }
         $intermediaryObjects = $record->findOwners();
-//        $intermediaryObjects = $record->findOwners()->filterByCallback(function ($owner) use ($page) {
-//                return !static::hashSnapshotCompare($page, $owner);
-//            })->toArray();
-
         $extraObjects = [];
         foreach ($intermediaryObjects as $extra) {
             $extraObjects[SnapshotHasher::hashObjectForSnapshot($extra)] = $extra;
@@ -696,19 +733,5 @@ class SnapshotPublishable extends RecursivePublishable
         return $extraObjects;
     }
 
-    /**
-     * @return array RelationDiff[]
-     */
-    public function getRelationDiffs(): array
-    {
-        $diffs = [];
-        foreach (['many_many', 'has_many'] as $relationType) {
-            foreach ($this->owner->config()->get($relationType) as $component => $spec) {
-                $diffs[] = RelationDiffer::create($this->owner, $component);
-            }
-        }
-
-        return $diffs;
-    }
 
 }

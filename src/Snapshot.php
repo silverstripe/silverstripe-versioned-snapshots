@@ -232,7 +232,6 @@ class Snapshot extends DataObject
         if (!$origin->hasExtension(SnapshotPublishable::class)) {
             return null;
         }
-        $objectsToAdd = [$origin];
         /* @var SnapshotPublishable $origin */
         $intermediaryObjects = $origin->getIntermediaryObjects();
         $implicitModifications = [];
@@ -250,6 +249,7 @@ class Snapshot extends DataObject
             $origin->write();
         }
 
+        $objectsToAdd = [$origin];
         $implicitObjects = array_map(function (Modification $mod) {
                 return $mod->getRecord();
         }, $implicitModifications);

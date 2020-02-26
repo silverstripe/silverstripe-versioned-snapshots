@@ -2,19 +2,26 @@
 
 
 namespace SilverStripe\Snapshots\Handler\Elemental;
+use DNADesign\Elemental\Extensions\ElementalAreasExtension;
 use DNADesign\Elemental\Models\BaseElement;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
-use SilverStripe\Snapshots\Handler\Form\Handler;
+use SilverStripe\Snapshots\Handler\Form\SaveHandler;
+use SilverStripe\Snapshots\RelationDiffer;
 use SilverStripe\Snapshots\Snapshot;
 use DNADesign\Elemental\ElementalEditor;
 use SilverStripe\Snapshots\SnapshotPublishable;
-use SilverStripe\Versioned\Versioned;
+use SilverStripe\ORM\ValidationException;
 
 /**
  * Handles elemental changes at the *page* level, e.g. one or many inline edits saved with Page form.
  */
-class PageSaveHandler extends Handler
+class PageSaveHandler extends SaveHandler
 {
+    /**
+     * @param EventContextInterface $context
+     * @return Snapshot|null
+     * @throws ValidationException
+     */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
         // Wonky check for elemental 4.
@@ -23,18 +30,31 @@ class PageSaveHandler extends Handler
             return null;
         }
 
-        $changedElements = array_filter($context->get('elements'), function ($element) {
-           /* @var SnapshotPublishable|Versioned $element */
-           return $element->isModifiedSinceLastSnapshot() && $element->Version > 1;
-        });
-
+        $record = $this->getRecordFromContext($context);
+        if (!$record->hasExtension(ElementalAreasExtension::class)) {
+            return parent::createSnapshot($context);
+        }
+        $changedElements = [];
+        /* @var SnapshotPublishable|ElementalAreasExtension $record */
+        foreach ($record->getElementalRelations() as $areaName) {
+            $diffs = $record->$areaName()->getRelationDiffs();
+            $elementDiffs = array_filter($diffs, function (RelationDiffer $diff) {
+                return $diff->getRelationClass() === BaseElement::class;
+            });
+            if (!empty($elementDiffs)) {
+                /* @var RelationDiffer $diff */
+                foreach ($elementDiffs as $diff) {
+                    $changedElements = array_merge($changedElements, $diff->getChanged());
+                }
+            }
+        }
         // Defer to page save
         if (empty($changedElements)) {
-            return null;
+            return parent::createSnapshot($context);
         }
-
+        $elements = BaseElement::get()->byIDs($changedElements);
         if (count($changedElements) === 1) {
-            return Snapshot::singleton()->createSnapshot($changedElements[0]);
+            return Snapshot::singleton()->createSnapshot($elements->first());
         }
 
         $message = _t(
@@ -45,23 +65,13 @@ class PageSaveHandler extends Handler
                 'type' => BaseElement::singleton()->i18n_plural_name(),
             ]
         );
-
-        $extraObjects = [];
-
-        // Build a list of all the elements with distinct parents. In theory, more than one editor
-        // could have been saved.
-        $areas = [];
-        foreach ($changedElements as $e) {
-            $areas[$e->ParentID] = $e;
+        $snapshot = Snapshot::singleton()->createSnapshotEvent($message);
+        foreach ($elements as $e) {
+            $snapshot->addObject($e);
+            foreach ($e->getIntermediaryObjects() as $o) {
+                $snapshot->addObject($o);
+            }
         }
-        /* @var SnapshotPublishable|BaseElement $block */
-        foreach ($areas as $block) {
-            $extraObjects = array_merge($extraObjects, $block->getIntermediaryObjects());
-        }
-        $snapshot = Snapshot::singleton()->createSnapshotEvent(
-            $message,
-            array_merge($changedElements, $extraObjects)
-        );
 
         return $snapshot;
     }

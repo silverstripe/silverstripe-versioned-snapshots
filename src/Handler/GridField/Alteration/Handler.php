@@ -35,8 +35,6 @@ class Handler extends HandlerAbstract
             return null;
         }
 
-        $message = $this->getMessage($action);
-
         /* @var GridField $grid */
         $grid = $context->get('gridField');
         if (!$grid) {

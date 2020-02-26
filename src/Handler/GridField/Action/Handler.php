@@ -24,7 +24,6 @@ class Handler extends HandlerAbstract
             return null;
         }
 
-        $message = $this->getMessage($action);
         /* @var Form $form */
         $form = $context->get('gridField')->getForm();
 

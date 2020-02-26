@@ -24,7 +24,6 @@ class Handler extends HandlerAbstract
             return null;
         }
 
-        $action = static::ACTION_PREFIX . $type;
         $page = $this->getPageFromReferrer();
 
         if ($page === null) {
