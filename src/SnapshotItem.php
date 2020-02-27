@@ -191,7 +191,7 @@ class SnapshotItem extends DataObject
      * @return SnapshotItem
      * @throws Exception
      */
-    public function hydrateFromDataObject(DataObject $object)
+    public function hydrateFromDataObject(DataObject $object): self
     {
         $this->ObjectClass = $object->baseClass();
         $this->ObjectID = (int) $object->ID;

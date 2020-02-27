@@ -73,3 +73,16 @@ SilverStripe\Core\Injector\Injector:
         graphqlMutation:
           on: []
           handler: %$SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler
+---
+Name: snapshots-gridfield
+Only:
+  moduleexists: symbiote/silverstripe-gridfieldextensions
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        reorder:
+          on: [ 'gridFieldAction.handleReorder' ]
+          handler: %$SilverStripe\Snapshots\Handler\GridField\Action\ReorderHandler
+

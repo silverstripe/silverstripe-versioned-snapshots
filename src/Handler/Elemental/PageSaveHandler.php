@@ -67,10 +67,7 @@ class PageSaveHandler extends SaveHandler
         );
         $snapshot = Snapshot::singleton()->createSnapshotEvent($message);
         foreach ($elements as $e) {
-            $snapshot->addObject($e);
-            foreach ($e->getIntermediaryObjects() as $o) {
-                $snapshot->addObject($o);
-            }
+            $snapshot->addOwnershipChain($e);
         }
 
         return $snapshot;

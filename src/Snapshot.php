@@ -232,8 +232,14 @@ class Snapshot extends DataObject
         if (!$origin->hasExtension(SnapshotPublishable::class)) {
             return null;
         }
-        /* @var SnapshotPublishable $origin */
-        $intermediaryObjects = $origin->getIntermediaryObjects();
+
+        $currentUser = Security::getCurrentUser();
+        $snapshot = Snapshot::create();
+        $snapshot->AuthorID = $currentUser
+            ? (int) $currentUser->ID
+            : 0;
+        $snapshot->applyOrigin($origin);
+        $snapshot->addOwnershipChain($origin);
         $implicitModifications = [];
         $messages = [];
         $diffs = $origin->getRelationDiffs();
@@ -242,44 +248,26 @@ class Snapshot extends DataObject
             $messages = array_merge($messages, $this->getMessagesForDiff($diff));
             $implicitModifications = array_merge($implicitModifications, $diff->getModifications());
         }
+
+        // Change of course. This snapshot is about an update to a relationship (e.g. many_many)
+        // and not really about the provided "origin".
         if (!empty($implicitModifications)) {
-            $origin = SnapshotEvent::create([
+            $event = SnapshotEvent::create([
               'Title' => implode("\n", $messages),
             ]);
-            $origin->write();
-        }
-
-        $objectsToAdd = [$origin];
-        $implicitObjects = array_map(function (Modification $mod) {
-                return $mod->getRecord();
-        }, $implicitModifications);
-
-        $objectsToAdd = array_merge($objectsToAdd, $intermediaryObjects, $implicitObjects);
-
-        $currentUser = Security::getCurrentUser();
-        $snapshot = Snapshot::create();
-
-        $snapshot->OriginClass = $origin->baseClass();
-        $snapshot->OriginID = (int) $origin->ID;
-        $snapshot->AuthorID = $currentUser
-            ? (int) $currentUser->ID
-            : 0;
-
-        $objects = array_merge($objectsToAdd, $extraObjects);
-        // the rest of the objects are processed in the provided order
-        foreach ($objects as $object) {
-            if (!$object instanceof DataObject) {
-                continue;
+            $event->write();
+            $snapshot->applyOrigin($event);
+            foreach ($implicitModifications as $mod) {
+                $snapshot->addObject($mod->getRecord());
             }
-            $snapshot->addObject($object);
         }
 
-        if (!empty($implicitModifications)) {
-            $snapshot->applyImplicitObjects($implicitModifications);
+        foreach ($extraObjects as $o) {
+            $snapshot->addObject($o);
         }
 
         $origin->reconcileOwnershipChanges($origin->getPreviousVersion());
-
+        
         return $snapshot;
     }
 
@@ -314,31 +302,32 @@ class Snapshot extends DataObject
     }
 
     /**
-     * When implicit objects are updated (e.g. many_many), assign the ParentID
-     *
-     * @param Modification[] $implicitObjects
-     * @throws ValidationException
+     * @param DataObject $origin
+     * @return $this
+     * @throws Exception
      */
-    public function applyImplicitObjects($implicitObjects = []): void
+    public function applyOrigin(DataObject $origin): self
     {
-        $parentItem = $this->getOriginItem();
-        if (!$parentItem) {
-            return;
+        $this->OriginClass = $origin->baseClass();
+        $this->OriginID = $origin->ID;
+        $this->addObject($origin);
+
+        return $this;
+    }
+
+    /**
+     * @param DataObject $obj
+     * @return $this
+     * @throws Exception
+     */
+    public function addOwnershipChain(DataObject $obj): self
+    {
+        $this->addObject($obj);
+        foreach ($obj->getIntermediaryObjects() as $o) {
+            $this->addObject($o);
         }
 
-        foreach ($implicitObjects as $mod) {
-            $obj = $mod->getRecord();
-            $type = $mod->getActivityType();
-            $item = $this->Items()->filter(
-                'ObjectHash',
-                SnapshotHasher::hashObjectForSnapshot($obj)
-            )->first();
-            if ($item) {
-                $item->ParentID = $parentItem->ID;
-                $item->WasDeleted = $type === ActivityEntry::REMOVED;
-                $item->write();
-            }
-        }
+        return $this;
     }
 
     private function getMessagesForDiff(RelationDiffer $diff): array

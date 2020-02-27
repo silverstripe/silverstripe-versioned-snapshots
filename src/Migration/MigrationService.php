@@ -5,10 +5,12 @@ namespace SilverStripe\Snapshots\Migration;
 
 
 use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\SnapshotItem;
@@ -70,6 +72,30 @@ class MigrationService
         $this->baseID = (int) DB::query("SELECT MAX(\"ID\") FROM \"$this->snapshotsTable\"")->value();
 
         return $rows;
+    }
+
+    /**
+     * For objects that have explicitly opted into relation tracking, we need to provide
+     * a placeholder SnapshotItem that they can refer to (even if it's orphaned),
+     * because implicit changes (checkboxes, elemental editor) don't necessarily
+     * create a new version for the owner
+     *
+     * @throws ReflectionException
+     * @throws ValidationException
+     */
+    public function seedRelationTracking(): void
+    {
+        foreach (ClassInfo::subclassesFor(DataObject::class, false) as $class) {
+            $tracking = $class::config()->uninherited('snapshot_relation_tracking');
+            if (empty($tracking)) {
+                continue;
+            }
+            foreach ($class::get() as $record) {
+                SnapshotItem::create()
+                    ->hydrateFromDataObject($record)
+                    ->write();
+            }
+        }
     }
 
     /**

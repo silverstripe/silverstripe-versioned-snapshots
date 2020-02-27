@@ -45,7 +45,7 @@ class Task extends BuildTask
             $rows = $this->migrator->migrate($class);
             $logger->info("$rows records migrated");
         }
-
+        $this->migrator->seedRelationTracking();
         $this->migrator->tearDown();
     }
 

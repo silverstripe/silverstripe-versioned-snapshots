@@ -72,6 +72,8 @@ class Job extends AbstractQueuedJob
     public function afterComplete(): void
     {
         parent::afterComplete();
+        $this->addMessage('Seeding relation tracking...');
+        $this->getMigrator()->seedRelationTracking();
         $this->addMessage('Tearing down...');
         $this->getMigrator()->tearDown();
     }

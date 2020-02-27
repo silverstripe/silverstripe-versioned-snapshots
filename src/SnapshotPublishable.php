@@ -511,6 +511,9 @@ class SnapshotPublishable extends RecursivePublishable
         }
         $diffs = [];
         $previousTracking = $this->owner->atPreviousSnapshot(function ($date) {
+            if (!$date) {
+                return [];
+            }
            $record = DataObject::get_by_id($this->owner->baseClass(), $this->owner->ID, false);
            if (!$record) {
                return [];
