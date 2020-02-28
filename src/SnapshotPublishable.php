@@ -247,21 +247,12 @@ class SnapshotPublishable extends RecursivePublishable
 
         $items = SnapshotItem::get()
             ->innerJoin($snapshotTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
-            ->leftJoin($itemTable, "\"ChildItem\".\"ParentID\" = \"$itemTable\".\"ID\"", "ChildItem")
-            ->where([
-                $this->getSnapshotsBetweenVersionsFilters($min, $max),
+            ->where(array_merge([
                 // Only get the items that were the subject of a user's action
-                "(
-                    \"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\" AND
-                    \"ChildItem\".\"ID\" IS NULL
-                ) OR (
-                    \"$snapshotTable\" . \"OriginHash\" != \"$itemTable\".\"ObjectHash\" AND
-                    \"$itemTable\".\"ParentID\" != 0
-                )"
-            ])
+                "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
+            ], $this->getSnapshotsBetweenVersionsFilters($min, $max)))
             ->sort([
-                "\"$itemTable\".\"SnapshotID\"" => "ASC",
-                "\"$itemTable\".\"ID\"" => "ASC",
+                "\"$itemTable\".\"SnapshotID\"" => "ASC"
             ]);
 
         return $items;
@@ -281,14 +272,12 @@ class SnapshotPublishable extends RecursivePublishable
                 ->innerJoin($snapshotTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
                 ->filter([
                     // Only relevant snapshots
-                    "\"$itemTable\".\"SnapshotID\"" => $snapShotIDs,
-
+                    'SnapshotID' => $snapShotIDs,
                 ])
-                ->whereAny([
-                    // Only get the items that were the subject of a user's action
-                    "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\"",
-                    "\"$itemTable\".\"ParentID\" != 0",
-                ])
+                ->where(
+                // Only get the items that were the subject of a user's action
+                    "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
+                )
                 ->sort([
                     "\"$snapshotTable\".\"Created\"" => "ASC",
                     "\"$snapshotTable\".\"ID\"" => "ASC"
@@ -607,7 +596,7 @@ class SnapshotPublishable extends RecursivePublishable
             ['"SnapshotID" IN (' . DB::placeholders($snapShotIDs) . ')' => $snapShotIDs],
             ['"WasPublished" = ?' => 0],
             ['"WasDeleted" = ?' => 0],
-            '"ObjectHash" = "OriginHash" OR "ParentID" != 0',
+            '"ObjectHash" = "OriginHash"',
         ])
             ->setGroupBy(['"ObjectHash"', "\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\""])
             ->setOrderBy("\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\"");

@@ -71,8 +71,8 @@ SilverStripe\Core\Injector\Injector:
           on: [ ]
           handler: %$SilverStripe\Snapshots\Handler\GridField\Action\Handler
         graphqlMutation:
-          on: []
-          handler: %$SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler
+          on: [ 'graphqlOperation.rollbackPage' ]
+          handler: %$SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler
 ---
 Name: snapshots-gridfield
 Only:

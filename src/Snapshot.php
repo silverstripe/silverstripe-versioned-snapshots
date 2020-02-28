@@ -267,7 +267,7 @@ class Snapshot extends DataObject
         }
 
         $origin->reconcileOwnershipChanges($origin->getPreviousVersion());
-        
+
         return $snapshot;
     }
 
@@ -355,14 +355,16 @@ class Snapshot extends DataObject
 
             // If singular, be specific with the record
             if ($ct === 1) {
-                $record = DataObject::get_by_id($class, $diff->$getter()[0]);
+                $map = $diff->$getter();
+                $id = $map[0] ?? 0;
+                $record = DataObject::get_by_id($class, $id);
                 if ($record) {
                     $messages[] = _t(
                         __CLASS__ . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_ONE',
-                        $action . ' {type} "{title}"',
+                        $action . ' {type} {title}',
                         [
                             'type' => $sng->singular_name(),
-                            'title' => $record->getTitle(),
+                            'title' => !empty($record->getTitle()) ? '"' . $record->getTitle() . '"' : '',
                         ]
                     );
                 }

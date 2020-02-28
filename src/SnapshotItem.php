@@ -53,7 +53,6 @@ class SnapshotItem extends DataObject
     private static $has_one = [
         'Snapshot' => Snapshot::class,
         'Object' => DataObject::class,
-        'Parent' => SnapshotItem::class,
     ];
 
     /**

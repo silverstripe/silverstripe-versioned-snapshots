@@ -28,8 +28,6 @@ class ActivityEntry extends ArrayData
 
         if ($itemObj !== null && $itemObj instanceof SnapshotEvent) {
             $flag = null;
-        } else if ($item->Parent()->exists()) {
-            $flag = $item->WasDeleted ? self::REMOVED : self::ADDED;
         } elseif ($item->WasDeleted) {
             $flag = self::DELETED;
         } elseif ($item->WasUnpublished) {
