@@ -560,22 +560,6 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @param $snapshot
-     */
-    public function rollbackOwned($snapshot)
-    {
-        $owner = $this->owner;
-        // Rollback recursively
-        foreach ($owner->findOwned(false) as $object) {
-            if ($object->hasExtension(SnapshotVersioned::class)) {
-                $object->doRollbackToSnapshot($snapshot);
-            } else {
-                $object->rollbackOwned($snapshot);
-            }
-        }
-    }
-
-    /**
      * @param array $snapShotIDs
      * @return SQLSelect
      */

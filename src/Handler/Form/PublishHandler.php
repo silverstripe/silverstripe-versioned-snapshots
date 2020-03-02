@@ -8,6 +8,7 @@ use SilverStripe\Forms\Form;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotHasher;
+use SilverStripe\Versioned\ChangeSet;
 
 class PublishHandler extends Handler
 {
@@ -29,12 +30,23 @@ class PublishHandler extends Handler
             return null;
         }
 
-        foreach ($snapshot->Items() as $item) {
-            // If it's the origin item, set published state.
-            if (static::hashSnapshotCompare($item->getItem(), $record)) {
-                $item->WasPublished = true;
-                $item->Version = $record->Version;
+        // Get the most recent change set to find out what was published
+        $changeSet = ChangeSet::get()->filter([
+            'State' => ChangeSet::STATE_PUBLISHED,
+            'IsInferred' => true,
+        ])
+            ->sort('Created', 'DESC')
+            ->first();
+        if ($changeSet) {
+            foreach ($changeSet->Changes() as $item) {
+                foreach ($item->findReferenced() as $obj) {
+                    $snapshot->addObject($obj);
+                }
             }
+        }
+
+        foreach ($snapshot->Items() as $i) {
+            $i->WasPublished = true;
         }
 
         return $snapshot;
