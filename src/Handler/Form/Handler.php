@@ -66,6 +66,11 @@ class Handler extends HandlerAbstract
         /** @var Form $form */
         $form = $context->get('form');
 
-        return $form ? $form->getRecord() : null;
+        $record = $form->getRecord();
+        if (!$record) {
+            return null;
+        }
+
+        return DataObject::get_by_id($record->baseClass(), $record->ID);
     }
 }

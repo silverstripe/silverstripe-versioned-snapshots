@@ -20,16 +20,6 @@ class PublishHandler extends Handler
         if (!$snapshot) {
             return null;
         }
-        $record = $this->getRecordFromContext($context);
-        if (!$record) {
-            return null;
-        }
-        // Refresh the record so we get the new version
-        $record = DataObject::get_by_id(get_class($record), $record->ID, false);
-        if (!$record) {
-            return null;
-        }
-
         // Get the most recent change set to find out what was published
         $changeSet = ChangeSet::get()->filter([
             'State' => ChangeSet::STATE_PUBLISHED,
