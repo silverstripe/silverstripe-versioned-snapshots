@@ -19,6 +19,11 @@ class Task extends BuildTask
     private $migrator;
 
     /**
+     * @var string
+     */
+    protected $description = 'Migrate _versions tables to snapshots';
+
+    /**
      * MigrationTask constructor.
      * @param MigrationService $service
      */

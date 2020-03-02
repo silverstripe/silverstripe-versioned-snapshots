@@ -185,7 +185,6 @@ SQL;
                 \"ObjectHash\",
                 \"Modification\",
                 \"SnapshotID\",
-                \"ParentID\",
                 \"ObjectID\",
                 \"ObjectClass\"
             )
@@ -200,7 +199,6 @@ SQL;
                     MD5(CONCAT($this->baseClassSubquery, ':', \"RecordID\")),
                     1,
                     \"ID\" + $this->baseID,
-                    0,
                     \"RecordID\",
                     $this->baseClassSubquery
                 FROM
