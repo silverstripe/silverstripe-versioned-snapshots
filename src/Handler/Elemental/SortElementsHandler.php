@@ -20,16 +20,16 @@ class SortElementsHandler extends Handler
         if ($action === null) {
             return null;
         }
-        $page = $this->getPageFromReferrer();
-        if (!$page) {
-            return null;
-        }
         $params = $context->get('params');
         if (!$params) {
             return null;
         }
+        $blockID = $params['blockId'] ?? null;
+        if (!$blockID) {
+            return null;
+        }
         /* @var SnapshotPublishable $block */
-        $block = BaseElement::get()->byID($params['blockId']);
+        $block = BaseElement::get()->byID($blockID);
         if (!$block) {
             return null;
         }

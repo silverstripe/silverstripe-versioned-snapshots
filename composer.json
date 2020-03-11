@@ -31,12 +31,12 @@
         "squizlabs/php_codesniffer": "^3"
     },
     "conflict": {
-        "dnadesign/elemental": "< 4.3.1"
+        "dnadesign/elemental": "< 3.2.1 "
     },
     "autoload": {
         "psr-4": {
             "SilverStripe\\Snapshots\\": "src/",
-            "SilverStripe\\Snapshots\\Tests\\": "tests/php/"
+            "SilverStripe\\Snapshots\\Tests\\": "tests/"
         }
     },
     "scripts": {

@@ -82,8 +82,8 @@ class RelationDiffer
         $currentIDs = array_keys($this->currentVersionMapping);
         $previousIDs = array_keys($this->previousVersionMapping);
 
-        $this->added = array_diff($currentIDs, $previousIDs);
-        $this->removed = array_diff($previousIDs, $currentIDs);
+        $this->added = array_values(array_diff($currentIDs, $previousIDs));
+        $this->removed = array_values(array_diff($previousIDs, $currentIDs));
 
         $changed = [];
 
@@ -131,30 +131,6 @@ class RelationDiffer
     }
 
     /**
-     * @return array Modification[]
-     */
-    public function getModifications(): array
-    {
-        $modifications = [];
-        $map = [
-            'added' => ActivityEntry::ADDED,
-            'removed' => ActivityEntry::REMOVED,
-            'changed' => ActivityEntry::MODIFIED,
-        ];
-        foreach ($map as $property => $state) {
-            $ids = $this->$property;
-            if (!empty($ids)) {
-                $records = DataList::create($this->relationClass)->byIDs($ids);
-                foreach($records as $record) {
-                    $modifications[] = new Modification($record, $state);
-                }
-            }
-        }
-
-        return $modifications;
-    }
-
-    /**
      * @return string
      */
     public function getRelationClass(): string
@@ -192,6 +168,33 @@ class RelationDiffer
     public function getChanged(): array
     {
         return $this->changed;
+    }
+
+    /**
+     * @param int $id
+     * @return bool
+     */
+    public function isAdded(int $id): bool
+    {
+        return in_array($id, $this->getAdded());
+    }
+
+    /**
+     * @param int $id
+     * @return bool
+     */
+    public function isRemoved(int $id): bool
+    {
+        return in_array($id, $this->getRemoved());
+    }
+
+    /**
+     * @param int $id
+     * @return bool
+     */
+    public function isChanged(int $id): bool
+    {
+        return in_array($id, $this->getChanged());
     }
 
 }

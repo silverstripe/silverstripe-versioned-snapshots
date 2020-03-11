@@ -9,6 +9,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotHasher;
 use SilverStripe\Versioned\ChangeSet;
+use SilverStripe\Versioned\Versioned;
 
 class PublishHandler extends Handler
 {
@@ -16,10 +17,20 @@ class PublishHandler extends Handler
 
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
-        $snapshot = parent::createSnapshot($context);
-        if (!$snapshot) {
+        $action = $context->getAction();
+        if ($action === null) {
             return null;
         }
+
+        $record = $this->getRecordFromContext($context);
+
+        if ($record === null || !$record->hasExtension(Versioned::class)) {
+            return null;
+        }
+        $snapshot = Snapshot::create();
+        $snapshot->applyOrigin($record);
+        $snapshot->addOwnershipChain($record);
+
         // Get the most recent change set to find out what was published
         $changeSet = ChangeSet::get()->filter([
             'State' => ChangeSet::STATE_PUBLISHED,

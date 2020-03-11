@@ -6,8 +6,6 @@ After:
 SilverStripe\Core\Injector\Injector:
   SilverStripe\Versioned\RecursivePublishable:
     class: SilverStripe\Snapshots\SnapshotPublishable
-  SilverStripe\Versioned\Versioned:
-    class: SilverStripe\Snapshots\SnapshotVersioned
 SilverStripe\Versioned\ChangeSetItem:
   extensions:
     - SilverStripe\Snapshots\SnapshotChangeSetItem
@@ -20,7 +18,7 @@ Name: snapshot-migration
 SilverStripe\Core\Injector\Injector:
   SilverStripe\Snapshots\Migration\Task:
     constructor:
-      migrator: %$SilverStripe\Snapshots\Migration\MigrationService
+      migrator: '%$SilverStripe\Snapshots\Migration\MigrationService'
 ---
 Name: snapshot-queuedjob
 Only:
@@ -29,7 +27,7 @@ Only:
 SilverStripe\Core\Injector\Injector:
   SilverStripe\Snapshots\Migration\Job:
     properties:
-      migrator: %$SilverStripe\Snapshots\Migration\MigrationService
+      migrator: '%$SilverStripe\Snapshots\Migration\MigrationService'
 ---
 Only:
   moduleexists: 'silverstripe/cms'
@@ -49,30 +47,30 @@ SilverStripe\Core\Injector\Injector:
             - 'formSubmitted.doDelete'
             - 'formSubmitted.archive'
             - 'formSubmitted.doArchive'
-          handler: %$SilverStripe\Snapshots\Handler\Form\Handler
+          handler: '%$SilverStripe\Snapshots\Handler\Form\Handler'
         unpublish:
           on:
             - 'formSubmitted.unpublish'
             - 'formSubmitted.doUnpublish'
-          handler: %$SilverStripe\Snapshots\Handler\Form\UnpublishHandler
+          handler: '%$SilverStripe\Snapshots\Handler\Form\UnpublishHandler'
         save:
           on: [ 'formSubmitted.save', 'formSubmitted.doSave' ]
-          handler: %$SilverStripe\Snapshots\Handler\Form\SaveHandler
+          handler: '%$SilverStripe\Snapshots\Handler\Form\SaveHandler'
         publish:
           on: [ 'formSubmitted.publish', 'formSubmitted.doPublish' ]
-          handler: %$SilverStripe\Snapshots\Handler\Form\PublishHandler
+          handler: '%$SilverStripe\Snapshots\Handler\Form\PublishHandler'
         cmsMain:
           on: [ 'cmsAction.savetreenode' ]
-          handler: %$SilverStripe\Snapshots\Handler\CMSMain\Handler
+          handler: '%$SilverStripe\Snapshots\Handler\CMSMain\Handler'
         gridFieldAlteration:
           on: [ 'gridFieldAlteration.deleterecord', 'gridFieldAlteration.archiverecord' ]
-          handler: %$SilverStripe\Snapshots\Handler\GridField\Alteration\Handler
+          handler: '%$SilverStripe\Snapshots\Handler\GridField\Alteration\Handler'
         gridFieldAction:
           on: [ ]
-          handler: %$SilverStripe\Snapshots\Handler\GridField\Action\Handler
+          handler: '%$SilverStripe\Snapshots\Handler\GridField\Action\Handler'
         graphqlMutation:
           on: [ 'graphqlOperation.rollbackPage' ]
-          handler: %$SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler
+          handler: '%$SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler'
 ---
 Name: snapshots-gridfield
 Only:
@@ -84,5 +82,5 @@ SilverStripe\Core\Injector\Injector:
       handlers:
         reorder:
           on: [ 'gridFieldAction.handleReorder' ]
-          handler: %$SilverStripe\Snapshots\Handler\GridField\Action\ReorderHandler
+          handler: '%$SilverStripe\Snapshots\Handler\GridField\Action\ReorderHandler'
 

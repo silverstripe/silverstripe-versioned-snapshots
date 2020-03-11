@@ -24,7 +24,14 @@ class ModifyElementHandler extends Handler
         }
 
         $params = $context->get('params');
-        $blockID = $params['blockId'];
+        if (!$params) {
+            return null;
+        }
+        $blockID = $params['blockId'] ?? null;
+        if (!$blockID) {
+            return null;
+        }
+
         $block = BaseElement::get()->byID($blockID);
 
         if (!$block) {
@@ -32,7 +39,9 @@ class ModifyElementHandler extends Handler
         }
 
         $snapshot = Snapshot::singleton()->createSnapshot($block);
-
+        if (!$snapshot) {
+            return null;
+        }
         foreach ($snapshot->Items() as $item) {
             // If it's the origin item, set published state.
             if (static::hashSnapshotCompare($item->getItem(), $block)) {

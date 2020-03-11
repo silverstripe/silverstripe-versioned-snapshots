@@ -9,6 +9,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
+use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Versioned\Versioned;
 
 class RollbackHandler extends HandlerAbstract
@@ -35,11 +36,15 @@ class RollbackHandler extends HandlerAbstract
         if (!$id || !$toVersion) {
             return null;
         }
+        /* @var SiteTree|SnapshotPublishable $page */
         $page = DataObject::get_by_id(SiteTree::class, $id);
+        if (!$page) {
+            return null;
+        }
         $wasVersion = $page->getPreviousSnapshotVersion();
         $nowVersion = Versioned::get_version(SiteTree::class, $id, $toVersion);
 
-        if (!$page || !$wasVersion || !$nowVersion) {
+        if (!$wasVersion || !$nowVersion) {
             return null;
         }
 

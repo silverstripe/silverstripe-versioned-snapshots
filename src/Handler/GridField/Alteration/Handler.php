@@ -27,7 +27,9 @@ class Handler extends HandlerAbstract
             return null;
         }
         $args = $context->get('args');
-
+        if (!$args) {
+            return null;
+        }
         // Warning: this relies on convention. There's no guarantee an action provider uses
         // "RecordID" as its argument name.
         $recordID = $args['RecordID'] ?? null;
@@ -50,10 +52,10 @@ class Handler extends HandlerAbstract
         }
 
         $record = DataObject::get_by_id($class, $recordID);
+        // @todo Move this to a proper archive handler
         if (!$record) {
-            // Look for an archived version
-            $record = SnapshotPublishable::get_at_last_snapshot($class, $recordID);
-            if (!$record || !$record->isArchived()) {
+            $record = $this->getDeletedVersion($class, $recordID);
+            if (!$record) {
                 return null;
             }
         }

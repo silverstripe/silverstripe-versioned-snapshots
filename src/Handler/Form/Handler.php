@@ -70,6 +70,9 @@ class Handler extends HandlerAbstract
         if (!$record) {
             return null;
         }
+        if ($record->isArchived()) {
+            return $record;
+        }
 
         return DataObject::get_by_id($record->baseClass(), $record->ID);
     }

@@ -53,6 +53,11 @@ class SnapshotItem extends DataObject
     private static $has_one = [
         'Snapshot' => Snapshot::class,
         'Object' => DataObject::class,
+        'Parent' => SnapshotItem::class,
+    ];
+
+    private static $has_many = [
+        'Children' => SnapshotItem::class,
     ];
 
     /**
@@ -194,18 +199,26 @@ class SnapshotItem extends DataObject
     {
         $this->ObjectClass = $object->baseClass();
         $this->ObjectID = (int) $object->ID;
+        $this->WasUnpublished = false;
+
         // Track versioning changes on the record if the owner is versioned
         if ($object->hasExtension(Versioned::class)) {
-            $exists = SnapshotItem::get()->filter([
-                'ObjectHash' => static::hashObjectForSnapshot($object)
-            ]);
+            $numVersions = Versioned::get_all_versions($object->baseClass(), $object->ID)
+                ->count();
+            $this->WasCreated = $numVersions == 1;
+            $this->WasPublished = false;
             $this->WasDraft = $object->isModifiedOnDraft();
             $this->WasDeleted = $object->isOnLiveOnly() || $object->isArchived();
-            $this->WasCreated = !$exists->exists();
             $this->Version = $object->Version;
         } else {
             // Track publish state for non-versioned owners, they're always in a published state.
+            $exists = SnapshotItem::get()->filter([
+                'ObjectHash' => static::hashObjectForSnapshot($object)
+            ]);
+            $this->WasCreated = !$exists->exists();
             $this->WasPublished = true;
+            $this->WasDraft = false;
+            $this->WasDeleted = false;
         }
 
         $object->invokeWithExtensions('updateHydrateFromObject', $this);

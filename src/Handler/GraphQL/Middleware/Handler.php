@@ -22,7 +22,7 @@ class Handler extends HandlerAbstract
             return null;
         }
 
-        $page = $this->getPageFromReferrer();
+        $page = $this->getPageContextProvider()->getPageFromReferrer();
 
         if ($page === null) {
             return null;

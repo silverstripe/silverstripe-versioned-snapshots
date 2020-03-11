@@ -87,6 +87,12 @@ class Snapshot extends DataObject
     ];
 
     /**
+     * @var int Limit the number of snapshot items, for performance reasons
+     * @config
+     */
+    private static $item_limit = 20;
+
+    /**
      * @return SnapshotItem|null
      */
     public function getOriginItem()
@@ -104,16 +110,29 @@ class Snapshot extends DataObject
      */
     public function addObject(DataObject $obj): self
     {
-        // Ensure uniqueness
-        foreach ($this->Items() as $item) {
-            if ($item->ObjectClass === $obj->baseClass() && $item->ObjectID === $obj->ID) {
-                return $this;
-            }
+        if ($this->Items()->count() >= $this->config()->item_limit) {
+            return $this;
         }
-        $item = SnapshotItem::create()
-            ->hydrateFromDataObject($obj);
 
-        $this->Items()->add($item);
+        if ($obj instanceof SnapshotItem) {
+            foreach ($this->Items() as $item) {
+                if ($item->ObjectClass === $obj->ObjectClass && $item->ObjectID === $obj->ObjectID) {
+                    return $this;
+                }
+            }
+            $this->Items()->add($obj);
+        } else {
+            // Ensure uniqueness
+            foreach ($this->Items() as $item) {
+                if ($item->ObjectClass === $obj->baseClass() && $item->ObjectID === $obj->ID) {
+                    return $this;
+                }
+            }
+            $item = SnapshotItem::create()
+                ->hydrateFromDataObject($obj);
+
+            $this->Items()->add($item);
+        }
 
         return $this;
     }
@@ -227,7 +246,8 @@ class Snapshot extends DataObject
      */
     public function createSnapshot(
         DataObject $origin,
-        array $extraObjects = []
+        array $extraObjects = [],
+        $cache = true
     ): ?Snapshot {
         if (!$origin->hasExtension(SnapshotPublishable::class)) {
             return null;
@@ -240,25 +260,27 @@ class Snapshot extends DataObject
             : 0;
         $snapshot->applyOrigin($origin);
         $snapshot->addOwnershipChain($origin);
-        $implicitModifications = [];
-        $messages = [];
-        $diffs = $origin->getRelationDiffs();
-        /* @var RelationDiffer $diff */
-        foreach ($diffs as $diff) {
-            $messages = array_merge($messages, $this->getMessagesForDiff($diff));
-            $implicitModifications = array_merge($implicitModifications, $diff->getModifications());
-        }
 
-        // Change of course. This snapshot is about an update to a relationship (e.g. many_many)
-        // and not really about the provided "origin".
-        if (!empty($implicitModifications)) {
-            $event = SnapshotEvent::create([
-              'Title' => implode("\n", $messages),
-            ]);
+        if ($origin->hasRelationChanges($cache)) {
+            // Change of course. This snapshot is about an update to a relationship (e.g. many_many)
+            // and not really about the provided "origin".
+            $diffs = $origin->getRelationDiffs($cache);
+            $event = ImplicitModification::create()
+                ->hydrateFromDiffs($diffs);
             $event->write();
             $snapshot->applyOrigin($event);
-            foreach ($implicitModifications as $mod) {
-                $snapshot->addObject($mod->getRecord());
+            $eventItem = $snapshot->getOriginItem();
+            /* @var RelationDiffer $diff */
+            foreach ($diffs as $diff) {
+                foreach ($diff->getRecords() as $obj) {
+                    $item = SnapshotItem::create()
+                        ->hydrateFromDataObject($obj);
+                    if ($diff->isRemoved($obj->ID)) {
+                        $item->WasDeleted = true;
+                    }
+                    $eventItem->Children()->add($item);
+                    $snapshot->addObject($item);
+                }
             }
         }
 
@@ -330,57 +352,4 @@ class Snapshot extends DataObject
         return $this;
     }
 
-    private function getMessagesForDiff(RelationDiffer $diff): array
-    {
-        $relationType = $diff->getRelationType();
-        $messages = [];
-        $class = $diff->getRelationClass();
-        $sng = Injector::inst()->get($class);
-        $i18nGraph = [
-            'added' => ['Added', 'Created'],
-            'removed' => ['Removed', 'Deleted'],
-            'changed' => ['Modified', 'Modified'],
-        ];
-        foreach ($i18nGraph as $category => $labels) {
-            $getter = 'get' . ucfirst($category);
-            // Number of records in 'added', or 'removed', etc.
-            $ct = count($diff->$getter());
-            // e.g. MANY_MANY, HAS_MANY
-            $i18nRelationKey = strtoupper($relationType);
-            // e.g. use "Added" for many_many, "Created" for has_many
-            list ($manyManyLabel, $hasManyLabel) = $labels;
-            $action = $relationType === 'many_many' ? $manyManyLabel : $hasManyLabel;
-            // e.g. ADDED, for MANY_MANY_ADDED
-            $i18nActionKey = strtoupper($action);
-
-            // If singular, be specific with the record
-            if ($ct === 1) {
-                $map = $diff->$getter();
-                $id = $map[0] ?? 0;
-                $record = DataObject::get_by_id($class, $id);
-                if ($record) {
-                    $messages[] = _t(
-                        __CLASS__ . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_ONE',
-                        $action . ' {type} {title}',
-                        [
-                            'type' => $sng->singular_name(),
-                            'title' => !empty($record->getTitle()) ? '"' . $record->getTitle() . '"' : '',
-                        ]
-                    );
-                }
-                // Otherwise, just give a count
-            } else if ($ct > 1) {
-                $messages[] = _t(
-                    __CLASS__ . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_MANY',
-                    $action . ' {count} {name}',
-                    [
-                        'count' => $ct,
-                        'name' => $ct > 1 ? $sng->plural_name() : $sng->singular_name()
-                    ]
-                );
-            }
-        }
-
-        return $messages;
-    }
 }

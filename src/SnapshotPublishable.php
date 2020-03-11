@@ -34,7 +34,7 @@ class SnapshotPublishable extends RecursivePublishable
     /**
      * @var array
      */
-    private $relationDiffs = [];
+    private static $relationDiffs = [];
 
     /**
      * @param $class
@@ -185,7 +185,7 @@ class SnapshotPublishable extends RecursivePublishable
      *
      * @return array list of filters for using in ORM APIs
      */
-    public function getSnapshotsBetweenVersionsFilters($min, $max = null, $includeAll = false)
+    private function getSnapshotsBetweenVersionsFilters($min, $max = null, $includeAll = false)
     {
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
@@ -233,107 +233,6 @@ class SnapshotPublishable extends RecursivePublishable
         return [
             sprintf("\"$itemTable\".\"SnapshotID\" IN (%s)", $sql) => $params
         ];
-    }
-
-    /**
-     * @param $min
-     * @param null $max
-     * @return DataList
-     */
-    public function getActivityBetweenVersions($min, $max = null)
-    {
-        $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
-        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
-
-        $items = SnapshotItem::get()
-            ->innerJoin($snapshotTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
-            ->where(array_merge([
-                // Only get the items that were the subject of a user's action
-                "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
-            ], $this->getSnapshotsBetweenVersionsFilters($min, $max)))
-            ->sort([
-                "\"$itemTable\".\"SnapshotID\"" => "ASC"
-            ]);
-
-        return $items;
-    }
-
-    /**
-     * @return DataList|ArrayList
-     */
-    public function getActivity()
-    {
-        $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
-        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
-        $snapShotIDs = $this->owner->getSnapshotsSinceLastPublish()->column('ID');
-
-        if (!empty($snapShotIDs)) {
-            $result = SnapshotItem::get()
-                ->innerJoin($snapshotTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
-                ->filter([
-                    // Only relevant snapshots
-                    'SnapshotID' => $snapShotIDs,
-                ])
-                ->where(
-                // Only get the items that were the subject of a user's action
-                    "\"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\""
-                )
-                ->sort([
-                    "\"$snapshotTable\".\"Created\"" => "ASC",
-                    "\"$snapshotTable\".\"ID\"" => "ASC"
-                ]);
-
-            return $result;
-        }
-
-        return ArrayList::create();
-    }
-
-    /**
-     * Returns a list of ActivityEntry ordered by creation datetime
-     *
-     * @param int|null $minVersion version to start with (or last published if null)
-     * @param int|null $maxVersion version to end with (or till the end, including everything unpublished)
-     *
-     * @return ArrayList list of ActivityEntry
-     */
-    public function getActivityFeed($minVersion = null, $maxVersion = null)
-    {
-        if (is_null($minVersion)) {
-            $class = $this->owner->baseClass();
-            $id = $this->owner->ID;
-            $minVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
-
-            if (is_null($minVersion)) {
-                $minVersion = 1;
-            }
-        }
-
-        $items = $this->getActivityBetweenVersions($minVersion, $maxVersion);
-
-        $list = ArrayList::create();
-        foreach ($items as $item) {
-            $list->push(ActivityEntry::createFromSnapshotItem($item));
-        }
-
-        return $list;
-    }
-
-    /**
-     * @return array
-     */
-    public function getRelationTracking(): array
-    {
-        $owner = $this->owner;
-        $tracking = $owner->config()->get('snapshot_relation_tracking') ?? [];
-        $data = [];
-        foreach ($tracking as $relation) {
-            if ($owner->hasMethod($relation) && $owner->getRelationClass($relation)) {
-                $data[$relation] = $owner->$relation()->map('ID', 'Version')->toArray();
-            }
-        }
-
-        return $data;
     }
 
     /**
@@ -398,6 +297,24 @@ class SnapshotPublishable extends RecursivePublishable
 
         return ArrayList::create(array_values($map));
     }
+
+    /**
+     * @return array
+     */
+    public function getRelationTracking(): array
+    {
+        $owner = $this->owner;
+        $tracking = $owner->config()->get('snapshot_relation_tracking') ?? [];
+        $data = [];
+        foreach ($tracking as $relation) {
+            if ($owner->hasMethod($relation) && $owner->getRelationClass($relation)) {
+                $data[$relation] = $owner->$relation()->map('ID', 'Version')->toArray();
+            }
+        }
+
+        return $data;
+    }
+
 
     /**
      * @param int|string $snapshot A snapshot ID or  date formatted string
@@ -492,12 +409,12 @@ class SnapshotPublishable extends RecursivePublishable
      * @param bool $useCache
      * @return RelationDiffer[]
      */
-    public function getRelationDiffs($useCache = true): array
+    public function getRelationDiffs($useCache = false): array
     {
-        $cached = $this->relationDiffs[static::hashObjectForSnapshot($this->owner)] ?? null;
-        if ($useCache && $cached) {
-            return $cached;
-        }
+        $cached = static::$relationDiffs[static::hashObjectForSnapshot($this->owner)] ?? null;
+//        if ($useCache && $cached) {
+//            return $cached;
+//        }
         $diffs = [];
         $previousTracking = $this->owner->atPreviousSnapshot(function ($date) {
             if (!$date) {
@@ -518,17 +435,18 @@ class SnapshotPublishable extends RecursivePublishable
             $diffs[] = RelationDiffer::create($class, $type, $prevMap, $currentMap);
         }
 
-        $this->relationDiffs[static::hashObjectForSnapshot($this->owner)] = $diffs;
+        static::$relationDiffs[static::hashObjectForSnapshot($this->owner)] = $diffs;
 
         return $diffs;
     }
 
     /**
+     * @param bool $cache
      * @return bool
      */
-    public function hasRelationChanges(): bool
+    public function hasRelationChanges($cache = true): bool
     {
-        foreach ($this->getRelationDiffs() as $diff) {
+        foreach ($this->getRelationDiffs($cache) as $diff) {
             if ($diff->hasChanges()) {
                 return true;
             }
@@ -580,7 +498,7 @@ class SnapshotPublishable extends RecursivePublishable
             ['"SnapshotID" IN (' . DB::placeholders($snapShotIDs) . ')' => $snapShotIDs],
             ['"WasPublished" = ?' => 0],
             ['"WasDeleted" = ?' => 0],
-            '"ObjectHash" = "OriginHash"',
+            '"ObjectHash" = "OriginHash" OR "ParentID" != 0',
         ])
             ->setGroupBy(['"ObjectHash"', "\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\""])
             ->setOrderBy("\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\"");
@@ -709,5 +627,66 @@ class SnapshotPublishable extends RecursivePublishable
         return $extraObjects;
     }
 
+    /**
+     * @param $min
+     * @param null $max
+     * @return DataList
+     */
+    public function getActivityBetweenVersions($min, $max = null)
+    {
+        $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
+        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
+
+        $items = SnapshotItem::get()
+            ->innerJoin($snapshotTable, "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\"")
+            ->leftJoin($itemTable, "\"ChildItem\".\"ParentID\" = \"$itemTable\".\"ID\"", "ChildItem")
+            ->where([
+                $this->getSnapshotsBetweenVersionsFilters($min, $max),
+                // Only get the items that were the subject of a user's action
+                "(
+                    \"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\" AND
+                    \"ChildItem\".\"ID\" IS NULL
+                ) OR (
+                    \"$snapshotTable\" . \"OriginHash\" != \"$itemTable\".\"ObjectHash\" AND
+                    \"$itemTable\".\"ParentID\" != 0
+                )"
+            ])
+            ->sort([
+                "\"$itemTable\".\"SnapshotID\"" => "ASC",
+                "\"$itemTable\".\"ID\"" => "ASC",
+            ]);
+
+        return $items;
+    }
+    /**
+     * Returns a list of ActivityEntry ordered by creation datetime
+     *
+     * @param int|null $minVersion version to start with (or last published if null)
+     * @param int|null $maxVersion version to end with (or till the end, including everything unpublished)
+     *
+     * @return ArrayList list of ActivityEntry
+     * @throws Exception
+     */
+    public function getActivityFeed($minVersion = null, $maxVersion = null)
+    {
+        if (is_null($minVersion)) {
+            $class = $this->owner->baseClass();
+            $id = $this->owner->ID;
+            $minVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
+
+            if (is_null($minVersion)) {
+                $minVersion = 1;
+            }
+        }
+
+        $items = $this->getActivityBetweenVersions($minVersion, $maxVersion);
+
+        $list = ArrayList::create();
+        foreach ($items as $item) {
+            $list->push(ActivityEntry::createFromSnapshotItem($item));
+        }
+
+        return $list;
+    }
 
 }

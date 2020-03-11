@@ -24,7 +24,13 @@ class ArchiveElementHandler extends Handler
         }
 
         $params = $context->get('params');
-        $blockID = $params['blockId'];
+        if (!$params) {
+            return null;
+        }
+        $blockID = $params['blockId'] ?? null;
+        if (!$blockID ) {
+            return null;
+        }
         $block = BaseElement::get()->byID($blockID);
 
         // Ensure the block is gone

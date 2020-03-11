@@ -23,9 +23,13 @@ class Handler extends HandlerAbstract
         if ($action === null) {
             return null;
         }
+        $grid = $context->get('gridField');
+        if (!$grid) {
+            return null;
+        }
 
         /* @var Form $form */
-        $form = $context->get('gridField')->getForm();
+        $form = $grid->getForm();
 
         if (!$form) {
             return null;

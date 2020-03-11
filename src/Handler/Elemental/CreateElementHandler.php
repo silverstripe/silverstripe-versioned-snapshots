@@ -21,7 +21,13 @@ class CreateElementHandler extends Handler
         }
 
         $params = $context->get('params');
-        $areaID = $params['elementalAreaID'];
+        if (!$params) {
+            return null;
+        }
+        $areaID = $params['elementalAreaID'] ?? null;
+        if (!$areaID) {
+            return null;
+        }
         $area = ElementalArea::get()->byID($areaID);
 
         if (!$area) {

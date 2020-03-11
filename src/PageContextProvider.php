@@ -9,17 +9,31 @@ use SilverStripe\CMS\Controllers\CMSPageEditController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Core\Injector\Injectable;
+use SilverStripe\Core\Path;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest;
 use SilverStripe\ORM\DataObject;
 
 /**
- * Trait CurrentPage
+ * Trait PageContextProvider
  *
  * @package SilverStripe\Snapshots\Listener
  */
-trait CurrentPage
+class PageContextProvider
 {
+    use Injectable;
+
+    /**
+     * @var HTTPRequest|null
+     */
+    private $request;
+
+    public function __construct(?HTTPRequest $request = null)
+    {
+        $this->request = $request;
+    }
+
     /**
      * Provides the ability to detect current page from controller
      * note that this can be only used for actions that are aware of the current page
@@ -27,7 +41,7 @@ trait CurrentPage
      * @param mixed $controller
      * @return SiteTree|null
      */
-    protected function getCurrentPageFromController($controller): ?SiteTree
+    public function getCurrentPageFromController($controller): ?DataObject
     {
         while ($controller && ($controller instanceof Form || $controller instanceof GridFieldDetailForm_ItemRequest)) {
             $controller = $controller->getController();
@@ -43,7 +57,7 @@ trait CurrentPage
 
         $page = $controller->currentPage();
 
-        if ($page === null) {
+        if ($page === null || !$page instanceof SiteTree) {
             return null;
         }
 
@@ -55,51 +69,42 @@ trait CurrentPage
      * this is useful for actions that have no explicit awareness of the current page
      *
      * @param string|null $url
-     * @return Page|null
+     * @return SiteTree|null
      */
-    protected function getCurrentPageFromRequestUrl(?string $url): ?Page
+    public function getCurrentPageFromRequestUrl(?string $url): ?SiteTree
     {
-        $url = trim($url);
-
+        $url = trim($url,'/ ');
         if (!$url) {
             return null;
         }
 
         $adminSegment = AdminRootController::get_admin_route();
         $controller = CMSPageEditController::singleton();
-        $controllerSegment = $controller->config()->get('url_segment');
-        $formSegment = 'EditForm';
-        $viewSegment = 'show';
 
-        foreach ([$adminSegment, $controllerSegment, $formSegment, $viewSegment] as $segment) {
-            $segment .= '/';
-
-            if (mb_strpos($url, $segment) !== 0) {
-                continue;
-            }
-
-            $url = str_replace($segment, '', $url);
-        }
-
-        $url = explode('/', $url);
-
-        if (count($url) === 0) {
+        $urlBase = $controller->config()->get('url_segment');
+        $baseURL = Path::join($adminSegment, $urlBase);
+        $pattern = '#^' . $baseURL .'#';
+        if (!preg_match($pattern, $url)) {
             return null;
         }
-
-        $pageId = (int) array_shift($url);
+        $slug = preg_replace($pattern, '', $url);
+        $request = new HTTPRequest('GET', $slug);
+        $params = $request->match($controller->config()->get('url_rule'));
+        $pageId = $params['ID'] ?? null;
 
         if (!$pageId) {
             return null;
         }
 
         // find page by ID
-        $page = DataObject::get_by_id(Page::class, $pageId);
-
+        $page = DataObject::get_by_id(SiteTree::class, (int) $pageId);
+        if (!$page) {
+            return null;
+        }
         // re-fetch the page with proper type
         $page = DataObject::get_by_id($page->ClassName, $pageId);
 
-        if (!$page instanceof Page) {
+        if (!$page instanceof SiteTree) {
             return null;
         }
 
@@ -109,17 +114,32 @@ trait CurrentPage
     /**
      * @return HTTPRequest|null
      */
-    protected function getCurrentRequest(): ?HTTPRequest
+    public function getRequest(): ?HTTPRequest
     {
+        if ($this->request) {
+            return $this->request;
+        }
+
         return Controller::has_curr() ? Controller::curr()->getRequest() : null;
+    }
+
+    /**
+     * @param HTTPRequest $request
+     * @return $this
+     */
+    public function setRequest(HTTPRequest $request): self
+    {
+        $this->request = $request;
+
+        return $this;
     }
 
     /**
      * @return SiteTree|null
      */
-    protected function getPageFromReferrer(): ?SiteTree
+    public function getPageFromReferrer(): ?SiteTree
     {
-        $request = $this->getCurrentRequest();
+        $request = $this->getRequest();
         if (!$request) {
             return null;
         }
