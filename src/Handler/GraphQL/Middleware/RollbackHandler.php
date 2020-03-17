@@ -25,6 +25,9 @@ class RollbackHandler extends HandlerAbstract
         if ($action === null) {
             return null;
         }
+        if (!preg_match('/^rollback/', $action)) {
+            return null;
+        }
         $params = $context->get('params');
         if (!$params) {
             return null;
