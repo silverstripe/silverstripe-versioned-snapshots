@@ -43,6 +43,9 @@
         "lint": "vendor/bin/phpcs src/ tests/",
         "lint-clean": "vendor/bin/phpcbf src/ tests/"
     },
+    "suggest": {
+        "silverstripe/versioned-snapshot-admin": "Provides a version history user interface based on snapshots"
+    },
     "minimum-stability": "dev",
     "prefer-stable": true
 }

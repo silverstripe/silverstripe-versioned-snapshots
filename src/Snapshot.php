@@ -246,8 +246,7 @@ class Snapshot extends DataObject
      */
     public function createSnapshot(
         DataObject $origin,
-        array $extraObjects = [],
-        $cache = true
+        array $extraObjects = []
     ): ?Snapshot {
         if (!$origin->hasExtension(SnapshotPublishable::class)) {
             return null;
@@ -261,10 +260,10 @@ class Snapshot extends DataObject
         $snapshot->applyOrigin($origin);
         $snapshot->addOwnershipChain($origin);
 
-        if ($origin->hasRelationChanges($cache)) {
+        if ($origin->hasRelationChanges()) {
             // Change of course. This snapshot is about an update to a relationship (e.g. many_many)
             // and not really about the provided "origin".
-            $diffs = $origin->getRelationDiffs($cache);
+            $diffs = $origin->getRelationDiffs();
             $event = ImplicitModification::create()
                 ->hydrateFromDiffs($diffs);
             $event->write();

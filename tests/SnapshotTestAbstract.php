@@ -87,7 +87,7 @@ class SnapshotTestAbstract extends SapphireTest
     protected function snapshot(DataObject $obj, array $extraObjects = []): Snapshot
     {
         $obj->write();
-        $snapshot = Snapshot::singleton()->createSnapshot($obj, $extraObjects, false);
+        $snapshot = Snapshot::singleton()->createSnapshot($obj, $extraObjects);
         $snapshot->write();
         $this->sleep(3);
 
@@ -97,7 +97,7 @@ class SnapshotTestAbstract extends SapphireTest
     protected function publish(DataObject $obj, array $extraObjects = []): Snapshot
     {
         $obj->publishRecursive();
-        $snapshot = Snapshot::singleton()->createSnapshot($obj, $extraObjects, false);
+        $snapshot = Snapshot::singleton()->createSnapshot($obj, $extraObjects);
         foreach ($snapshot->Items() as $item) {
             $item->WasPublished = 1;
         }

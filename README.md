@@ -13,7 +13,7 @@ Enables snapshots for enhanced history and modification status for deeply nested
 It's solving an [important UX issue](https://github.com/silverstripe/silverstripe-versioned/issues/195) with versioning,
 which is particularly visible in [content blocks](https://github.com/dnadesign/silverstripe-elemental) implementations.
 
-This module enables the data model. To take full advantage of its core offering, you should install [silverstripe/versioned-snapshot-admin](https://github.com/silverstripe/silverstripe-versioned-snapshot-admin) to expose these snapshots through the "History" tab of the CMS.
+This module enables the data model for snapshots. To take full advantage of its core offering, you should install [silverstripe/versioned-snapshot-admin](https://github.com/silverstripe/silverstripe-versioned-snapshot-admin) to expose these snapshots through the "History" tab of the CMS.
 
 WARNING: This module is experimental, and not considered stable.
 
@@ -51,10 +51,9 @@ Further, comparing owned changes between two versions of a parent is not support
 
 Yes, with few caveats:
 
-* It adds significant overhead to all `DataObject::write()` calls. (Benchmarking TBD)
 * `many_many` relationships **must use "through" objects**. (implicit many_many is not versionable)
-* Snapshot history is *not retroactive*. You will lose all your version history and start new with
-snapshot history. (A migration task would be a great contribution to this project!)
+* You will have to migrate all of your versioned content to snapshots (See [Migrating from versioned](#migrating-from-versioned))
+* Some editing events may not be captured, particularly some provided by thirdparty modules. See ([Adding your own snapshot creator](#adding-your-own-snapshot-creator))
 
 ## API
 
@@ -77,9 +76,6 @@ The snapshot functionality is provided through the `SnapshotPublishable` extensi
 is a drop-in replacement for `RecursivePublishable`. By default, this module will replace
 `RecursivePublishable`, which is added to all dataobjects by `silverstripe-versioned`, with
 this custom subclass.
-
-For CMS views, use the `SnapshotSiteTreeExtension` to provide notifications about
-owned modification state (WORK IN PROGRESS, POC ONLY)
 
 ## How it works
 
@@ -110,12 +106,12 @@ For instance, if you have something custom you with a snapshot when a page is sa
 
 ```php
 use SilverStripe\Snapshots\Handler\Form\SaveHandler;
-use SilverStripe\Snapshots\Listener\EventContext;
+use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\Snapshots\Snapshot;
 
 class MySaveHandler extends SaveHandler
 {
-    protected function createSnapshot(EventContext $context): ?Snapshot
+    protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
         //...
     }
@@ -128,7 +124,7 @@ SilverStripe\Core\Injector\Injector:
     class: MyProject\MySaveHandler
 ```
 
-### Adding snapshot creators
+### Adding your own snapshot creator
 
 If you have custom actions or form handlers you've added to the CMS, you might want to either ensure their tracked
 by the default snapshot creators, or maybe even build your own snapshot creator for them. In this case, you can
@@ -143,7 +139,7 @@ SilverStripe\Core\Injector\Injector:
       handlers:
         myForm:
           on:
-            'formSubmitted.myFormHandler': true
+            - 'formSubmitted.myFormHandler'
           handler: %$MyProject\Handlers\MyHandler
 ```
 
@@ -152,7 +148,7 @@ configuration to disable it. See below.
 
 ### Removing snapshot creators
 
-To remove an event from a handler, simply set its value to `false`.
+To remove an event from a handler, simply add it to the `off` array.
 
 ```yaml
 SilverStripe\Core\Injector\Injector:
@@ -160,8 +156,8 @@ SilverStripe\Core\Injector\Injector:
     properties:
       handlers:
         myForm:
-          on:
-            'formSubmitted.myFormHandler': false
+          off:
+            - 'formSubmitted.myFormHandler'
 ```
 
 ### Procedurally adding event handlers
@@ -178,11 +174,11 @@ SilverStripe\Core\Injector\Injector:
 ```
 
 ```php
-use SilverStripe\Snapshots\Dispatch\EventHandlerLoader;
+use SilverStripe\Snapshots\Dispatch\DispatcherLoaderInterface;
 use SilverStripe\Snapshots\Dispatch\Dispatcher;
 use SilverStripe\Snapshots\Handler\Form\SaveHandler;
 
-class MyEventLoader implements EventHandlerLoader
+class MyEventLoader implements DispatcherLoaderInterface
 {
     public function addToDispatcher(Dispatcher $dispatcher): void
     {
@@ -195,59 +191,83 @@ class MyEventLoader implements EventHandlerLoader
 
 To cover all cases, this module allows you to invoke snapshot creation in any part of your code outside of normal action flow.
 
-When you want to create a snapshot just call `createSnapshotFromAction` function like this:
+When you want to create a snapshot just call `createSnapshot` function like this:
 
+```php
+Snapshot::singleton()->createSnapshot(DataObject $origin, array $extraObjects = []);
 ```
-Snapshot::singleton()->createSnapshotFromAction($owner, $origin, $message, $objects);
-
-```
-
-`$owner` is the top level object which is seen as the owner of the action.
-Most common case is that this object is the page. Owner object is mandatory.
 
 `$origin` is the object which should be matching the action, i.e. the action is changing the origin object.
-Valid values:
 
-**Origin is different from the Owner**
+`$extraObjects` is an array of extra dataobjects you want to be in the snapshot. Every call to `createSnapshot` implicitly includes the following records in addition to the origin:
+  * All of the records the origin is "owned" by, e.g. `BlockImage > BaseElement > ElementalArea > Page`
+  * All of the records the origin has _implicitly modified_. (See [Implicit modifications](#implicit-modifications))
 
-This is the main and most common case. A snapshot will be created which references the changed origin object.
+## When there is no "origin"
 
-**Origin is the same as Owner**
+Some modifications to your content aren't necessarily triggered by editing event to a specific entity. For these cases, you can use the `createSnapshotFromEvent` API.
 
-This means that the changed object is the owner so for example the user edits the page.
-Note that some actions may declare that they are editing the page but they may edit some nested objects (for example block reoreder).
-There is a way to override this behaviour discussed in `Runtime overrides`.
-
-**Origin is `null`**
-
-This will be interpreted as the origin object was't possible to identify or it doesn't make sense to reference it.
-If message is available the snapshot will be created with a special object called `event` which will take place of the missing origin object.
-
-There are two main cases here:
-
-`1` - snapshot module doesn't have enough information to find origin and is using `event` as a placeholder to fill the gap.
-This happens mostly for custom CMS action which have arbitrary effect from the module point of view.
-There is a way to override this behaviour discussed in `Runtime overrides`.
-
-`2` - the changed object is not worth referencing - for example an action which is doing a batch write would reference too many objects (i.e. page import).
-Instead of creating many snapshots for all individual changes you create one batch action with message which explains the details.
-
-`$message` is the a context message which will be shown in the snapshot UI.
-It should be used to provide additional context to the user about the snapshot as sometimes the referenced object may not provide enough information.
-
-`$objects` is a an optional list of other objects that may be related to this action. Consider following example:
-
-
-```
-Snapshot::singleton()->createSnapshotFromAction($page, $block, 'something happened to a block', [$layoutBlock]);
+```php
+Snapshot::singleton()->createSnapshotFromEvent('Description of event');
 ```
 
-Page is the owner, block is the origin and layout block is a related object.
-Passing the layout block through allows the layout block to display it's own version history in the CMS edit form.
-This feature may have marginal use and it's ok to skip it.
+Examples of generic events include reordering the site tree, copying translations, importing content, and more. Think of it as a simple "git commit" message for your content. It creates a marker on your timeline that content editors can refer back to at some point in the future.
 
 
-## Versioning
+## Implicit modifications
+
+Sometimes edits to the record that appears to be the "origin" are implicitly edits to other records. The most common case of this is adding related records. If a user makes a change to a `CheckboxSetField` that manages a `many_many` relation, for instance, the record that displays those checkboxes remains unchanged and does not merit a new version. The addition or removal of new related records, however,
+does merit a new snapshot as the ownership chain has been updated.
+
+The `createSnapshot` API is aware of these kinds of modifications, and attempts to detect them using the `RelationDiffer` service. When a modification includes changes to relationships, `createSnapshot` will fallback to create a generic event that describes what changes happened, for instance: `'Added two categories'`.
+
+This relation diffing is expensive to run on every save for every relationship, however, and therefore, you need to opt-in to it using the `$snapshot_relation_tracking` setting.
+
+```php
+class Product extends DataObject
+{
+    private static $many_many = [
+        'Categories' => Category::class,
+    ];
+
+    private static $snapshot_relation_tracking = ['Categories'];
+
+}
+```
+
+Another common example of implicit modifications is the `ElementalEditor` field in [silverstripe-elemental](https://github.com/dnadesign/silverstripe-elemental) version 4.x. When the page is saved, it actually saves all the blocks in the editor, which are `has_many` relations. Because it is such a common use case,  blocks are tracked in `snapshot_relation_tracking` by default, so that page saves will result in "Modified/added/deleted block" snapshots where appropriate.
+
+
+## Migrating from Versioned
+
+To migrate all your `_versions` tables to snapshots, use the `snapshot-migration` task:
+
+```
+$ vendor/bin/sake dev/tasks/snapshot-migration
+```
+
+Alternatively, this task is available as a [queued job](https://github.com/symbiote/silverstripe-queuedjobs).
+
+The task should be fairly low-impact, as it only writes to the new (and presumably empty) snapshots tables. It should also perform at scale, since it doesn't do any processing of the records in PHP. The migration is pure SQL.
+
+## Thirdparty module support
+
+Some common thirdparty modules are supported out of the box. The most notable is [silverstripe-elemental](https://github.com/dnadesign/silverstripe-elemental), which has several specific snapshot creators installed by default, including:
+
+* Archive element
+* Save individual element
+* Create element (GraphQL query)
+* Edit individual element
+* Save all elements via page save
+* Sort elements
+
+As mentioned above, elements all receive `snapshot_relation_tracking` on their pages by default, as well.
+
+Another module that is supported out of the box is [GridFieldExtensions](https://github.com/symbiote/silverstripe-gridfieldextensions). A handler is provided
+for its `GridFieldOrderableRows` component.
+
+
+## Semantic versioning
 
 This library follows [Semver](http://semver.org). According to Semver,
 you will be able to upgrade to any minor or patch version of this library

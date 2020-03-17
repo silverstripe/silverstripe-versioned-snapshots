@@ -406,15 +406,11 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @param bool $useCache
      * @return RelationDiffer[]
+     * @todo Memoise / cache
      */
-    public function getRelationDiffs($useCache = false): array
+    public function getRelationDiffs(): array
     {
-        $cached = static::$relationDiffs[static::hashObjectForSnapshot($this->owner)] ?? null;
-//        if ($useCache && $cached) {
-//            return $cached;
-//        }
         $diffs = [];
         $previousTracking = $this->owner->atPreviousSnapshot(function ($date) {
             if (!$date) {
