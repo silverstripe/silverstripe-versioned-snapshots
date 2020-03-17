@@ -75,6 +75,4 @@ class ArchiveElementHandlerTest extends SnapshotTestAbstract
         );
         $handler->fire($context);
     }
-
-
 }

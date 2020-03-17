@@ -72,6 +72,4 @@ class CMSActionsHandlerTest extends SnapshotTestAbstract
         );
         $handler->fire($context);
     }
-
-
 }

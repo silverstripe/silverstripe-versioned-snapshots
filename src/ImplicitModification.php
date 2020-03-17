@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots;
 
-
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 
@@ -68,7 +67,7 @@ class ImplicitModification extends SnapshotEvent
                     );
                 }
                 // Otherwise, just give a count
-            } else if ($ct > 1) {
+            } elseif ($ct > 1) {
                 $messages[] = _t(
                     __CLASS__ . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_MANY',
                     $action . ' {count} {name}',
@@ -82,6 +81,4 @@ class ImplicitModification extends SnapshotEvent
 
         return $messages;
     }
-
-
 }

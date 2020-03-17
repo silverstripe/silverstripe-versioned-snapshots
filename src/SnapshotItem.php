@@ -225,5 +225,4 @@ class SnapshotItem extends DataObject
 
         return $this;
     }
-
 }

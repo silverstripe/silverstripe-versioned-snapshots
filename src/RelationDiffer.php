@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots;
 
-
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
@@ -196,5 +195,4 @@ class RelationDiffer
     {
         return in_array($id, $this->getChanged());
     }
-
 }

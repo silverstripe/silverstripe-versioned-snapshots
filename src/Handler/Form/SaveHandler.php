@@ -35,14 +35,14 @@ class SaveHandler extends Handler
             return parent::createSnapshot($context);
         }
 
-       if ($record->isModifiedSinceLastSnapshot()) {
+        if ($record->isModifiedSinceLastSnapshot()) {
             return parent::createSnapshot($context);
-       }
+        }
 
-       if ($record->hasRelationChanges()) {
-           return parent::createSnapshot($context)
+        if ($record->hasRelationChanges()) {
+            return parent::createSnapshot($context)
             ->addObject($record);
-       }
+        }
 
         return null;
     }

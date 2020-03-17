@@ -113,7 +113,6 @@ class RelationDifferTest extends SapphireTest
         $this->assertEquals(['5', '9'], $changed);
         $this->assertTrue($differ->isChanged(5));
         $this->assertFalse($differ->isChanged(16));
-
     }
 
     public function testNoChanges()

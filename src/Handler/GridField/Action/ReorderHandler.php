@@ -1,6 +1,7 @@
 <?php
 
 namespace SilverStripe\Snapshots\Handler\GridField\Action;
+
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Snapshots\Snapshot;

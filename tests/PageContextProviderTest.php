@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots\Tests;
 
-
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Snapshots\Handler\PageContextProvider;

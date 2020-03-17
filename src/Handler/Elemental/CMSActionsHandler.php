@@ -9,6 +9,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\ORM\ValidationException;
+
 /**
  * Handles save, publish on individual blocks
  */

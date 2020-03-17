@@ -88,5 +88,4 @@ class ActivityEntry extends ArrayData
             $this->Subject->getTitle()
         ));
     }
-
 }

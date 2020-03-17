@@ -67,6 +67,4 @@ class CreateElementHandlerTest extends SnapshotTestAbstract
 
         $handler->fire($context);
     }
-
-
 }

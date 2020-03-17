@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots\Tests;
 
-
 use DNADesign\Elemental\Models\ElementalArea;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -143,7 +142,7 @@ class SnapshotTestAbstract extends SapphireTest
     {
         $hashes = array_unique($result->column($column));
         $this->assertCount(count($objects), $hashes);
-        foreach($objects as $o) {
+        foreach ($objects as $o) {
             $hash = SnapshotHasher::hashObjectForSnapshot($o);
             $this->assertTrue(in_array($hash, $hashes));
         }
@@ -177,5 +176,4 @@ class SnapshotTestAbstract extends SapphireTest
 
         $this->assertEquals($hashes1, $hashes2);
     }
-
 }

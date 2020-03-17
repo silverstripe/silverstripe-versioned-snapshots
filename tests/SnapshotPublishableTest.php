@@ -317,6 +317,4 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->assertNotNull($prevVer);
         $this->assertEquals($originalTitle, $prevVer->Title);
     }
-
-
 }

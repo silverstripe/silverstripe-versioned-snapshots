@@ -28,7 +28,7 @@ class ArchiveElementHandler extends Handler
             return null;
         }
         $blockID = $params['blockId'] ?? null;
-        if (!$blockID ) {
+        if (!$blockID) {
             return null;
         }
         $block = BaseElement::get()->byID($blockID);

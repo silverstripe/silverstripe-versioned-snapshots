@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots\Tests;
 
-
 use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\Snapshot;
@@ -263,7 +262,6 @@ class SnapshotTest extends SnapshotTestAbstract
         $origin = $snapshot->getOriginItem()->getItem();
         $this->assertInstanceOf(SnapshotEvent::class, $origin);
         $this->assertRegExp('/Added ' . $name . '/', $origin->Title);
-
     }
 
     public function testCreateSnapshotEvent()
@@ -326,5 +324,4 @@ class SnapshotTest extends SnapshotTestAbstract
         $this->assertNotNull($item);
         $this->assertHashCompare($item, $block);
     }
-
 }

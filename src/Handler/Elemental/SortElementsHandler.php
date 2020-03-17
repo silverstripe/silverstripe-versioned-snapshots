@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots\Handler\Elemental;
 
-
 use DNADesign\Elemental\Models\BaseElement;
 use DNADesign\Elemental\Models\ElementalArea;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;

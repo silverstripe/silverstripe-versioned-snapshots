@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots\Migration;
 
-
 use Psr\Log\LoggerInterface;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Injector\Injector;
@@ -53,5 +52,4 @@ class Task extends BuildTask
         $this->migrator->seedRelationTracking();
         $this->migrator->tearDown();
     }
-
 }

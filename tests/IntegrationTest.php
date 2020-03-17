@@ -1151,7 +1151,6 @@ class IntegrationTest extends SnapshotTestAbstract
                 [ImplicitModification::singleton(), null]
             ]
         );
-
     }
 
     public function testPlainActivityFeed()

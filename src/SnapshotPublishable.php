@@ -69,7 +69,7 @@ class SnapshotPublishable extends RecursivePublishable
     public static function get_at_last_snapshot(string $class, int $id): ?DataObject
     {
         $lastItem = static::get_last_snapshot_item($class, $id);
-        if(!$lastItem) {
+        if (!$lastItem) {
             return null;
         }
 
@@ -387,11 +387,11 @@ class SnapshotPublishable extends RecursivePublishable
     public function getPreviousSnapshotVersion(): ?DataObject
     {
         return $this->atPreviousSnapshot(function ($date) {
-           if (!$date) {
-               return null;
-           }
+            if (!$date) {
+                return null;
+            }
 
-           return DataList::create($this->owner->baseClass())->byID($this->owner->ID);
+            return DataList::create($this->owner->baseClass())->byID($this->owner->ID);
         });
     }
 
@@ -420,12 +420,12 @@ class SnapshotPublishable extends RecursivePublishable
             if (!$date) {
                 return [];
             }
-           $record = DataObject::get_by_id($this->owner->baseClass(), $this->owner->ID, false);
-           if (!$record) {
-               return [];
-           }
+            $record = DataObject::get_by_id($this->owner->baseClass(), $this->owner->ID, false);
+            if (!$record) {
+                return [];
+            }
            /* @var DataObject|SnapshotPublishable $record */
-           return $record->getRelationTracking();
+            return $record->getRelationTracking();
         });
         $currentTracking = $this->owner->getRelationTracking();
         foreach ($currentTracking as $relationName => $currentMap) {
@@ -688,5 +688,4 @@ class SnapshotPublishable extends RecursivePublishable
 
         return $list;
     }
-
 }

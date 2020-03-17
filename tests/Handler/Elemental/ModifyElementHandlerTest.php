@@ -109,6 +109,4 @@ class ModifyElementHandlerTest extends SnapshotTestAbstract
             ['UnpublishBlock', false, true],
         ];
     }
-
-
 }

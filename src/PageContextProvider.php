@@ -73,7 +73,7 @@ class PageContextProvider
      */
     public function getCurrentPageFromRequestUrl(?string $url): ?SiteTree
     {
-        $url = trim($url,'/ ');
+        $url = trim($url, '/ ');
         if (!$url) {
             return null;
         }

@@ -71,6 +71,4 @@ class HandlerTest extends SnapshotTestAbstract
             ]
         ));
     }
-
-
 }

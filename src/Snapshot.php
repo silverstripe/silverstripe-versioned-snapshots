@@ -351,5 +351,4 @@ class Snapshot extends DataObject
 
         return $this;
     }
-
 }

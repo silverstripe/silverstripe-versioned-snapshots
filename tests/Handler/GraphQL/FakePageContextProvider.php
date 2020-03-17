@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots\Tests\Handler\GraphQL;
 
-
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Snapshots\Handler\PageContextProvider;
 

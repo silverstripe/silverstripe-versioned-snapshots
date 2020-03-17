@@ -3,7 +3,6 @@
 
 namespace SilverStripe\Snapshots\Migration;
 
-
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injectable;
@@ -124,7 +123,6 @@ class MigrationService
                             LIMIT 1
                     )
 SQL;
-
     }
 
     public function tearDown(): void
@@ -162,7 +160,8 @@ SQL;
                     \"$versionsTable\"
                 ORDER BY \"ID\" ASC
             )
-            ");
+            "
+        );
 
         return (int) DB::affected_rows();
     }
@@ -205,7 +204,8 @@ SQL;
                     \"$versionsTable\"
                 ORDER BY \"ID\" ASC
             )
-            ");
+            "
+        );
 
         return (int) DB::affected_rows();
     }
