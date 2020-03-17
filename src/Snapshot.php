@@ -175,7 +175,7 @@ class Snapshot extends DataObject
 
     public function getActivityAgo(): string
     {
-        return $this->obj('Created')->Ago(false);
+        return $this->obj('LastEdited')->Ago(false);
     }
 
     /**
