@@ -1,9 +1,0 @@
----
-Name: snapshotssapphiretest
-Before: '#sapphiretest'
----
-SilverStripe\Core\Injector\Injector:
-  SilverStripe\Dev\State\SapphireTestState:
-    properties:
-      States:
-        disablesnapshots: '%$SilverStripe\Snapshots\Dev\State\DisableSnapshots'

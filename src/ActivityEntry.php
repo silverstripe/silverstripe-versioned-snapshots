@@ -4,6 +4,7 @@ namespace SilverStripe\Snapshots;
 
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\View\ArrayData;
+use Exception;
 
 class ActivityEntry extends ArrayData
 {
@@ -19,29 +20,27 @@ class ActivityEntry extends ArrayData
 
     const PUBLISHED = 'PUBLISHED';
 
+    const UNPUBLISHED = 'UNPUBLISHED';
+
     public static function createFromSnapshotItem(SnapshotItem $item)
     {
-        if ($item->LinkedToObjectID > 0 && $item->LinkedToObject()->exists()) {
-            return new static([
-                'Subject' => $item->LinkedToObject(),
-                'Action' => $item->WasDeleted ? self::REMOVED : self::ADDED,
-                'Owner' => $item->LinkedFromObject(),
-                'Date' => $item->obj('Created')->Nice(),
-            ]);
-        }
+        $itemObj = $item->getItem();
 
-        $flag = null;
-        if ($item->WasDeleted) {
-            $flag = self::DELETED;
+        if ($itemObj !== null && $itemObj instanceof SnapshotEvent) {
+            $flag = null;
         } elseif ($item->WasPublished) {
             $flag = self::PUBLISHED;
-        } elseif ($item->Version == 1) {
+        } elseif ($item->Parent()->exists()) {
+            $flag = $item->WasDeleted ? self::REMOVED : self::ADDED;
+        } elseif ($item->WasDeleted) {
+            $flag = self::DELETED;
+        } elseif ($item->WasUnpublished) {
+            $flag = self::UNPUBLISHED;
+        } elseif ($item->WasCreated) {
             $flag = self::CREATED;
         } else {
             $flag = self::MODIFIED;
         }
-
-        $itemObj = $item->getItem();
 
         // If the items been deleted then we want to get the last version of it
         if ($itemObj === null) {
@@ -49,7 +48,7 @@ class ActivityEntry extends ArrayData
             $previousVersion = Versioned::get_all_versions($item->ObjectClass, $item->ObjectID)
                 ->sort('Version', 'DESC')
                 ->first();
-            if ($previousVersion->exists()) {
+            if ($previousVersion && $previousVersion->exists()) {
                 $itemObj = $item->getItem($previousVersion->Version);
             // This is to deal with the case in which there is no previous version
             // it's better to give a faulty snapshot point than break the app
@@ -58,11 +57,35 @@ class ActivityEntry extends ArrayData
             }
         }
 
+        if (!$itemObj) {
+            throw new Exception(sprintf(
+                'Could not resolve SnapshotItem %s to a previous %s version',
+                $item->ID,
+                $item->ObjectClass
+            ));
+        }
+
         return new static([
             'Subject' => $itemObj,
             'Action' => $flag,
             'Owner' => null,
             'Date' => $item->obj('Created')->Nice(),
         ]);
+    }
+
+    /**
+     * @return string
+     */
+    public function getDescription(): string
+    {
+        if ($this->Subject instanceof SnapshotEvent && $this->Subject->Title) {
+            return $this->Subject->Title;
+        }
+
+        return ucfirst(sprintf(
+            '%s "%s"',
+            $this->Subject->singular_name(),
+            $this->Subject->getTitle()
+        ));
     }
 }

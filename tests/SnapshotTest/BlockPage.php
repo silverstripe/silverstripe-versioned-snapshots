@@ -3,6 +3,7 @@
 
 namespace SilverStripe\Snapshots\Tests\SnapshotTest;
 
+use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use SilverStripe\Dev\TestOnly;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
