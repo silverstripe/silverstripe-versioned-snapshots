@@ -54,6 +54,7 @@ Yes, with few caveats:
 * `many_many` relationships **must use "through" objects**. (implicit many_many is not versionable)
 * You will have to migrate all of your versioned content to snapshots (See [Migrating from versioned](#migrating-from-versioned))
 * Some editing events may not be captured, particularly some provided by thirdparty modules. See ([Adding your own snapshot creator](#adding-your-own-snapshot-creator))
+* Does not (yet) fully work with Postgres. Pull requests welcome!
 
 ## API
 
