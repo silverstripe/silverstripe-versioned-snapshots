@@ -35,7 +35,7 @@ before_script:
   - composer validate
   - composer require silverstripe/recipe-core:4.5.x-dev silverstripe/recipe-cms:4.5.x-dev dnadesign/silverstripe-elemental:4.3.x-dev --prefer-dist --no-update
 # silverstripe/recipe-cms requires versioned 1.4.x-dev
-  - composer require silverstripe/versioned:"1.x-dev as 1.4.x-dev" --prefer-dist --no-update
+  - composer require silverstripe/versioned:"1.5.x-dev" --prefer-dist --no-update
   - if [[ $DB == PGSQL ]]; then composer require silverstripe/postgresql:2.1.x-dev --prefer-dist --no-update; fi
   - composer install --prefer-dist
 
