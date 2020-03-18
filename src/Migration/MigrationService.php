@@ -158,6 +158,8 @@ SQL;
                     $this->baseClassSubquery
                 FROM
                     \"$versionsTable\"
+                WHERE
+                    \"WasDeleted\" = 0
                 ORDER BY \"ID\" ASC
             )
             "
@@ -202,6 +204,8 @@ SQL;
                     $this->baseClassSubquery
                 FROM
                     \"$versionsTable\"
+                WHERE
+                    \"WasDeleted\" = 0
                 ORDER BY \"ID\" ASC
             )
             "
