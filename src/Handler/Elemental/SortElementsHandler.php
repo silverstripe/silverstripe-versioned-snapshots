@@ -36,7 +36,7 @@ class SortElementsHandler extends Handler
         $area = $block->Parent();
 
         return Snapshot::singleton()->createSnapshotEvent(
-            _t(__CLASS__ . '.REORDER_BLOCKS', 'Reordered blocks'),
+            _t(__CLASS__ . '.REORDER_BLOCKS', 'Reordered blocks')
         )->addOwnershipChain($area);
     }
 }
