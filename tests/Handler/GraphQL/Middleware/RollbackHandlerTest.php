@@ -65,7 +65,7 @@ class RollbackHandlerTest extends SnapshotTestAbstract
             ->method('createSnapshotEvent')
             ->with($this->equalTo('Rolled back to version ' . $prevVersion));
 
-        $context = Event::create('action', [
+        $context = Event::create('rollbackBlock', [
             'params' => [
                 'id' => $page->ID,
                 'toVersion' => $prevVersion,
