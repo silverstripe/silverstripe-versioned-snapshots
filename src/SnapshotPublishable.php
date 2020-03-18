@@ -220,7 +220,7 @@ class SnapshotPublishable extends RecursivePublishable
             'NOT ("Version" = ? AND "WasPublished" = 1)' => $min,
         ];
         if (!$includeAll) {
-            $condtionStatement[] = 'Modification = 1';
+            $condtionStatement[] = '"Modification" = 1';
         }
 
         $query = SQLSelect::create(

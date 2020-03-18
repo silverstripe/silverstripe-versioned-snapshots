@@ -67,7 +67,6 @@ class SnapshotItem extends DataObject
         'Version' => true,
         'ObjectHash' => true,
         'Object' => [
-            'type' => 'unique',
             'columns' => ['ObjectHash', 'SnapshotID']
         ]
     ];
