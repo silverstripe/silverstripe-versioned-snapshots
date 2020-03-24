@@ -10,7 +10,6 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Versioned\Versioned;
 
-require_once(__DIR__ . '/SnapshotTestAbstract.php');
 class SnapshotPublishableTest extends SnapshotTestAbstract
 {
     public function testGetAtSnapshot()

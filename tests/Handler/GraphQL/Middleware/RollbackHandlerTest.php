@@ -7,8 +7,6 @@ use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
-require_once(__DIR__ . '/../../../SnapshotTestAbstract.php');
-
 class RollbackHandlerTest extends SnapshotTestAbstract
 {
     public function testHandlerDoesntFire()

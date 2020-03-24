@@ -13,9 +13,10 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Gallery;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImage;
 
-require_once(__DIR__ . '/SnapshotTestAbstract.php');
 class SnapshotTest extends SnapshotTestAbstract
 {
+    protected $usesTransactions = false;
+
     public function testGetOriginItem()
     {
         $snapshot = Snapshot::create();
@@ -323,5 +324,29 @@ class SnapshotTest extends SnapshotTestAbstract
         $item = $snapshot->getOriginItem()->getItem();
         $this->assertNotNull($item);
         $this->assertHashCompare($item, $block);
+    }
+
+    public function testIsLiveSnapshot()
+    {
+        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        Snapshot::get()->removeAll();
+        SnapshotItem::get()->removeAll();
+        $this->assertCount(0, Snapshot::get());
+        $a1Block1->Title = 'changed';
+        $this->snapshot($a1Block1);
+        $this->publish($a1);
+        $this->publish($a1);
+        $this->publish($a1);
+
+        $this->assertCount(4, Snapshot::get());
+        $liveSnapshots = [];
+        foreach (Snapshot::get() as $s) {
+            if ($s->getIsLiveSnapshot()) {
+                $liveSnapshots[] = $s;
+            }
+        }
+        $this->assertCount(1, $liveSnapshots);
+
+        $this->assertEquals(Snapshot::get()->max('ID'), $liveSnapshots[0]->ID);
     }
 }

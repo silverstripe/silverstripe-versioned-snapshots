@@ -11,7 +11,6 @@ use SilverStripe\Snapshots\Handler\GridField\Action\Handler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
-require_once(__DIR__ . '/../../../SnapshotTestAbstract.php');
 class HandlerTest extends SnapshotTestAbstract
 {
     public function testHandlerDoesntFire()

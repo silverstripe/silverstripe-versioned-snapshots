@@ -29,8 +29,6 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImageJoin;
 use SilverStripe\Versioned\ChangeSetItem;
 use SilverStripe\Versioned\Versioned;
 
-require_once(__DIR__ . '/SnapshotTestAbstract.php');
-
 class IntegrationTest extends SnapshotTestAbstract
 {
     protected $usesDatabase = true;

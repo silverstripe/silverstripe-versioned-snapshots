@@ -12,7 +12,6 @@ use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
-require_once(__DIR__ . '/../../../SnapshotTestAbstract.php');
 class ReorderHandlerTest extends SnapshotTestAbstract
 {
     public function testHandlerDoesFire()

@@ -8,8 +8,6 @@ use SilverStripe\Snapshots\Handler\CMSMain\Handler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
-require_once(__DIR__ . '/../../SnapshotTestAbstract.php');
-
 class HandlerTest extends SnapshotTestAbstract
 {
     public function testHandlerDoesntFire()

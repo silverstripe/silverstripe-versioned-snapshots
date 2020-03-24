@@ -17,7 +17,6 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 use SilverStripe\Versioned\RecursivePublishable;
 
-require_once(__DIR__ . '/../../SnapshotTestAbstract.php');
 class PageSaveHandlerTest extends SnapshotTestAbstract
 {
 

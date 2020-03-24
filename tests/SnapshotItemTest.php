@@ -6,7 +6,6 @@ use SilverStripe\Snapshots\SnapshotHasher;
 use SilverStripe\Snapshots\SnapshotItem;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 
-require_once(__DIR__ . '/SnapshotTestAbstract.php');
 class SnapshotItemTest extends SnapshotTestAbstract
 {
     public function testGetItem()

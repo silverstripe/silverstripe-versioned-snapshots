@@ -10,8 +10,6 @@ use SilverStripe\Snapshots\Handler\PageContextProvider;
 use SilverStripe\Snapshots\Tests\Handler\GraphQL\FakePageContextProvider;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
-require_once(__DIR__ . '/../../../SnapshotTestAbstract.php');
-
 class HandlerTest extends SnapshotTestAbstract
 {
     protected function setUp()

@@ -9,7 +9,6 @@ use SilverStripe\Snapshots\Handler\Elemental\ArchiveElementHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
-require_once(__DIR__ . '/../../SnapshotTestAbstract.php');
 class ArchiveElementHandlerTest extends SnapshotTestAbstract
 {
     protected function setUp()

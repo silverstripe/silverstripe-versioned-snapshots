@@ -18,8 +18,8 @@ matrix:
     - php: *min-version
       env: DB=MYSQL PHPUNIT_COVERAGE_TEST=1 PHPCS_TEST=1
 
-    - php: *min-version
-      env: DB=PGSQL PHPUNIT_TEST=1
+#    - php: *min-version
+#      env: DB=PGSQL PHPUNIT_TEST=1
 
     - php: *min-version
       env: DB=MYSQL PDO=1 PHPUNIT_TEST=1

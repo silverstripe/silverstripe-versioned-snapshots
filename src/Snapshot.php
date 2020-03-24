@@ -2,9 +2,9 @@
 
 namespace SilverStripe\Snapshots;
 
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\HasManyList;
+use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
@@ -176,6 +176,37 @@ class Snapshot extends DataObject
     public function getActivityAgo(): string
     {
         return $this->obj('LastEdited')->Ago(false);
+    }
+
+    /**
+     * @return bool
+     */
+    public function getIsLiveSnapshot(): bool
+    {
+        $table = DataObject::getSchema()->tableName(SnapshotItem::class);
+        /* @var Versioned|DataObject $originVersion */
+        $originVersion = $this->getOriginVersion();
+        if (!$originVersion) {
+            return false;
+        }
+        if (!$originVersion->isLiveVersion()) {
+            return false;
+        }
+        $liveVersionNumber = Versioned::get_versionnumber_by_stage(
+            $originVersion->baseClass(),
+            Versioned::LIVE,
+            $originVersion->ID
+        );
+        $latestPublishID = SQLSelect::create()
+            ->setSelect('MAX("SnapshotID")')
+            ->setFrom($table)
+            ->addWhere([
+                '"Version" = ?' => $liveVersionNumber,
+            ])
+            ->execute()
+            ->value();
+
+        return $this->ID === $latestPublishID;
     }
 
     /**

@@ -7,7 +7,6 @@ use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Snapshots\Handler\PageContextProvider;
 
-require_once(__DIR__ . '/SnapshotTest/BlockPage.php');
 class PageContextProviderTest extends SapphireTest
 {
     private $page;

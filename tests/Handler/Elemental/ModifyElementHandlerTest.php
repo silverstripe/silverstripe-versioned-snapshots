@@ -10,7 +10,6 @@ use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
-require_once(__DIR__ . '/../../SnapshotTestAbstract.php');
 class ModifyElementHandlerTest extends SnapshotTestAbstract
 {
 
