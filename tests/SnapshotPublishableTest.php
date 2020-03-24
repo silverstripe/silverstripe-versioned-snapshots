@@ -112,6 +112,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->assertOrigins(
             $result,
             [
+                $a1,
                 $a1Block1,
                 $a1Block2,
                 $gallery1,
