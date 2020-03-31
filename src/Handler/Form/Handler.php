@@ -70,7 +70,7 @@ class Handler extends HandlerAbstract
         if (!$record) {
             return null;
         }
-        if ($record->isArchived()) {
+        if ($record->hasExtension(Versioned::class) && $record->isArchived()) {
             return $record;
         }
 
