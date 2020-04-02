@@ -37,6 +37,30 @@ class SnapshotPublishable extends RecursivePublishable
     private static $relationDiffs = [];
 
     /**
+     * A more resillient wrapper for the Versioned function that holds up against unstaged versioned
+     * implementations
+     * @param string $class
+     * @param int $id
+     * @return int
+     */
+    public static function get_published_version_number(string $class, int $id): int
+    {
+        $inst = $class::singleton();
+        if (!$inst->hasExtension(Versioned::class)) {
+            throw new InvalidArgumentException(sprintf(
+                'Class %s does not have the %s extension',
+                $class,
+                Versioned::class
+            ));
+        }
+
+        /* @var Versioned|DataObject $inst */
+        $stage = $inst->hasStages() ? Versioned::LIVE : Versioned::DRAFT;
+
+        return Versioned::get_versionnumber_by_stage($class, $stage, $id);
+    }
+
+    /**
      * @param $class
      * @param $id
      * @param string|int $snapshot A snapshot ID or a Y-m-d h:i:s date formatted string
@@ -169,7 +193,7 @@ class SnapshotPublishable extends RecursivePublishable
     {
         $class = $this->owner->baseClass();
         $id = $this->owner->ID;
-        $publishedVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
+        $publishedVersion = static::get_published_version_number($class, $id);
         $snapshots = $this->owner->getSnapshotsSinceVersion($publishedVersion);
 
         return $snapshots;
@@ -246,7 +270,7 @@ class SnapshotPublishable extends RecursivePublishable
 
         $class = $this->owner->baseClass();
         $id = $this->owner->ID;
-        $minVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
+        $minVersion = static::get_published_version_number($class, $id);
 
         if (is_null($minVersion)) {
             $minVersion = 1;
@@ -668,7 +692,7 @@ class SnapshotPublishable extends RecursivePublishable
         if (is_null($minVersion)) {
             $class = $this->owner->baseClass();
             $id = $this->owner->ID;
-            $minVersion = Versioned::get_versionnumber_by_stage($class, Versioned::LIVE, $id);
+            $minVersion = static::get_published_version_number($class, $id);
 
             if (is_null($minVersion)) {
                 $minVersion = 1;
@@ -684,4 +708,5 @@ class SnapshotPublishable extends RecursivePublishable
 
         return $list;
     }
+    
 }

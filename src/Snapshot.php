@@ -189,12 +189,12 @@ class Snapshot extends DataObject
         if (!$originVersion) {
             return false;
         }
-        if (!$originVersion->isLiveVersion()) {
+
+        if ($originVersion->hasStages() && $originVersion->isLiveVersion()) {
             return false;
         }
-        $liveVersionNumber = Versioned::get_versionnumber_by_stage(
+        $liveVersionNumber = SnapshotPublishable::get_published_version_number(
             $originVersion->baseClass(),
-            Versioned::LIVE,
             $originVersion->ID
         );
         $latestPublishID = SQLSelect::create()
