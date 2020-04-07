@@ -43,7 +43,7 @@ class SnapshotPublishable extends RecursivePublishable
      * @param int $id
      * @return int
      */
-    public static function get_published_version_number(string $class, int $id): int
+    public static function get_published_version_number(string $class, int $id): ?int
     {
         $inst = $class::singleton();
         if (!$inst->hasExtension(Versioned::class)) {
