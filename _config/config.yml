@@ -84,3 +84,13 @@ SilverStripe\Core\Injector\Injector:
           on: [ 'gridFieldAction.handleReorder' ]
           handler: '%$SilverStripe\Snapshots\Handler\GridField\Action\ReorderHandler'
 
+---
+Name: snapshots-populate
+Only:
+  moduleexists: dnadesign/silverstripe-populate
+---
+DNADesign\Populate\Populate:
+  truncate_objects:
+    - SilverStripe\Snapshots\Snapshot
+    - SilverStripe\Snapshots\SnapshotItem
+    - SilverStripe\Snapshots\SnapshotEvent
