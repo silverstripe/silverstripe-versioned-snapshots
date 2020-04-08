@@ -3,7 +3,6 @@
 namespace SilverStripe\Snapshots;
 
 use Exception;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
@@ -13,7 +12,6 @@ use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Versioned\RecursivePublishable;
 use SilverStripe\Versioned\Versioned;
 use InvalidArgumentException;
-use SilverStripe\View\ArrayData;
 
 /**
  * Class SnapshotPublishable
@@ -41,7 +39,7 @@ class SnapshotPublishable extends RecursivePublishable
      * implementations
      * @param string $class
      * @param int $id
-     * @return int
+     * @return int|null
      */
     public static function get_published_version_number(string $class, int $id): ?int
     {
@@ -708,5 +706,5 @@ class SnapshotPublishable extends RecursivePublishable
 
         return $list;
     }
-    
+
 }

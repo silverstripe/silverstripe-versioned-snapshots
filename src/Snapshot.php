@@ -190,7 +190,7 @@ class Snapshot extends DataObject
             return false;
         }
 
-        if ($originVersion->hasStages() && $originVersion->isLiveVersion()) {
+        if ($originVersion->hasStages() && !$originVersion->isLiveVersion()) {
             return false;
         }
         $liveVersionNumber = SnapshotPublishable::get_published_version_number(
@@ -202,6 +202,7 @@ class Snapshot extends DataObject
             ->setFrom($table)
             ->addWhere([
                 '"Version" = ?' => $liveVersionNumber,
+                '"ObjectHash" = ?' => static::hashObjectForSnapshot($originVersion),
             ])
             ->execute()
             ->value();
