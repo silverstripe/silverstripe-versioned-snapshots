@@ -68,26 +68,3 @@ SilverStripe\Core\Injector\Injector:
         graphqlMutation:
           on: [ 'graphqlOperation' ]
           handler: '%$SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler'
----
-Name: snapshots-gridfield
-Only:
-  moduleexists: symbiote/silverstripe-gridfieldextensions
----
-SilverStripe\Core\Injector\Injector:
-  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
-    properties:
-      handlers:
-        reorder:
-          on: [ 'gridFieldAction.handleReorder' ]
-          handler: '%$SilverStripe\Snapshots\Handler\GridField\Action\ReorderHandler'
-
----
-Name: snapshots-populate
-Only:
-  moduleexists: dnadesign/silverstripe-populate
----
-DNADesign\Populate\Populate:
-  truncate_objects:
-    - SilverStripe\Snapshots\Snapshot
-    - SilverStripe\Snapshots\SnapshotItem
-    - SilverStripe\Snapshots\SnapshotEvent

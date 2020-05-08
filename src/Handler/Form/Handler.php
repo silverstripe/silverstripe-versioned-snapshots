@@ -35,6 +35,8 @@ class Handler extends HandlerAbstract
         return Snapshot::singleton()->createSnapshot($record);
     }
 
+
+
     /**
      * @param EventContextInterface $context
      * @return DataObject|null
@@ -63,6 +65,11 @@ class Handler extends HandlerAbstract
      */
     protected function getRecordFromContext(EventContextInterface $context): ?DataObject
     {
+        $record = $context->get('record');
+        if ($record) {
+            return $record;
+        }
+
         /** @var Form $form */
         $form = $context->get('form');
 

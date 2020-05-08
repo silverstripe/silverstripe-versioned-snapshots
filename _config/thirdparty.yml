@@ -1,0 +1,51 @@
+# This config file should be used for thirdparty integrations. All blocks should be in
+# a `moduleexists` guard
+
+# silverstripe-gridfieldextensions
+---
+Name: snapshots-gridfield
+Only:
+  moduleexists: symbiote/silverstripe-gridfieldextensions
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        reorder:
+          on: [ 'gridFieldAction.handleReorder' ]
+          handler: '%$SilverStripe\Snapshots\Handler\GridField\Action\ReorderHandler'
+
+
+# silverstripe-populate
+---
+Name: snapshots-populate
+Only:
+  moduleexists: dnadesign/silverstripe-populate
+---
+DNADesign\Populate\Populate:
+  truncate_objects:
+    - SilverStripe\Snapshots\Snapshot
+    - SilverStripe\Snapshots\SnapshotItem
+    - SilverStripe\Snapshots\SnapshotEvent
+
+
+# embargo-expiry
+---
+Name: snapshots-embargoexpiry
+Only:
+  moduleexists: silverstripe-terraformers/embargo-expiry
+---
+SilverStripe\ORM\DataObject:
+  extensions:
+    - SilverStripe\Snapshots\Thirdparty\EmbargoExpiryExtension
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        unpublish:
+          on:
+            - 'embargoExpiryJob.unpublish'
+          handler: '%$SilverStripe\Snapshots\Handler\Form\UnpublishHandler'
+        publish:
+          on: [ 'embargoExpiryJob.publish' ]
+          handler: '%$SilverStripe\Snapshots\Handler\Form\PublishHandler'
