@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Snapshots\Tests\Handler\GraphQL\Middleware;
 
+use GraphQL\Executor\ExecutionResult;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler;
@@ -67,7 +68,14 @@ class RollbackHandlerTest extends SnapshotTestAbstract
             'params' => [
                 'id' => $page->ID,
                 'toVersion' => $prevVersion,
-            ]
+            ],
+            'result' => new ExecutionResult(
+                [
+                    'rollbackBlock' => [
+                        'ClassName' => $page->ClassName,
+                    ],
+                ]
+            ),
         ]);
 
         $handler->fire($context);
