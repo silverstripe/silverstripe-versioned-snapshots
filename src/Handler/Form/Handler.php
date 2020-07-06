@@ -74,13 +74,18 @@ class Handler extends HandlerAbstract
         $form = $context->get('form');
 
         $record = $form->getRecord();
+
         if (!$record) {
             return null;
         }
-        if ($record->hasExtension(Versioned::class) && $record->isArchived()) {
+
+        $refetched = DataObject::get_by_id($record->baseClass(), $record->ID);
+
+        // If the record was deleted, return the version still linked to the form
+        if (!$refetched && $record->hasExtension(Versioned::class)) {
             return $record;
         }
 
-        return DataObject::get_by_id($record->baseClass(), $record->ID);
+        return $refetched;
     }
 }
