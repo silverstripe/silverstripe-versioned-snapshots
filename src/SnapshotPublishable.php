@@ -706,5 +706,4 @@ class SnapshotPublishable extends RecursivePublishable
 
         return $list;
     }
-
 }

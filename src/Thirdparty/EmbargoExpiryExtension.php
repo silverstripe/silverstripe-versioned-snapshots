@@ -23,7 +23,6 @@ class EmbargoExpiryExtension extends DataExtension
                 ]
             )
         );
-
     }
 
     public function afterUnPublishTargetJob(array $options): void
