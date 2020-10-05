@@ -531,13 +531,24 @@ class SnapshotPublishable extends RecursivePublishable
     private function getChangedOwnership(DataObject $previous): array
     {
         $owner = $this->owner;
-        $hasOne = $owner->hasOne();
-        $fields = array_map(function ($field) {
-            return $field . 'ID';
-        }, array_keys($hasOne));
-        $map = array_combine($fields, array_values($hasOne));
+
+        // Build map of owned has-one relations
+        $map = [];
+        $lookup = $this->lookupReverseOwners();
+
+        if (!isset($lookup[get_class($owner)])) {
+            return [];
+        }
+
+        $hasOneLookup = array_flip($owner->hasOne());
+        foreach ($lookup[get_class($owner)] as $info) {
+            if (isset($hasOneLookup[$info['class']])) {
+                $map[$hasOneLookup[$info['class']] . 'ID'] = $info['class'];
+            }
+        }
+
         $result = [];
-        foreach ($fields as $field) {
+        foreach ($map as $field => $class) {
             $previousValue = (int) $previous->$field;
             $currentValue = (int) $owner->$field;
             if ($previousValue === $currentValue) {
