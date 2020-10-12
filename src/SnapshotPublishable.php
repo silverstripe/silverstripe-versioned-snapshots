@@ -271,7 +271,7 @@ class SnapshotPublishable extends RecursivePublishable
         $minVersion = static::get_published_version_number($class, $id);
 
         if (is_null($minVersion)) {
-            $minVersion = 1;
+            return false; //Draft page.
         }
 
         $result = SnapshotItem::get()
