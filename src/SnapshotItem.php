@@ -196,13 +196,15 @@ class SnapshotItem extends DataObject
      */
     public function hydrateFromDataObject(DataObject $object): self
     {
+        $objectID = (int)($object->ID ?: $object->OldID);
+
         $this->ObjectClass = $object->baseClass();
-        $this->ObjectID = (int) $object->ID;
+        $this->ObjectID = $objectID;
         $this->WasUnpublished = false;
 
         // Track versioning changes on the record if the owner is versioned
         if ($object->hasExtension(Versioned::class)) {
-            $numVersions = Versioned::get_all_versions($object->baseClass(), $object->ID)
+            $numVersions = Versioned::get_all_versions($object->baseClass(), $objectID)
                 ->count();
             $this->WasCreated = $numVersions == 1;
             $this->WasPublished = false;

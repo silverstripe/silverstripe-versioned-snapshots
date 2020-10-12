@@ -124,7 +124,7 @@ class Snapshot extends DataObject
         } else {
             // Ensure uniqueness
             foreach ($this->Items() as $item) {
-                if ($item->ObjectClass === $obj->baseClass() && $item->ObjectID === $obj->ID) {
+                if ($item->ObjectClass === $obj->baseClass() && $item->ObjectID === ($obj->ID ?: $obj->OldID)) {
                     return $this;
                 }
             }
@@ -306,7 +306,7 @@ class Snapshot extends DataObject
                 foreach ($diff->getRecords() as $obj) {
                     $item = SnapshotItem::create()
                         ->hydrateFromDataObject($obj);
-                    if ($diff->isRemoved($obj->ID)) {
+                    if ($diff->isRemoved($obj->ID ?: $obj->OldID)) {
                         $item->WasDeleted = true;
                     }
                     $eventItem->Children()->add($item);
@@ -362,7 +362,8 @@ class Snapshot extends DataObject
     public function applyOrigin(DataObject $origin): self
     {
         $this->OriginClass = $origin->baseClass();
-        $this->OriginID = $origin->ID;
+        // Handler for deleted records
+        $this->OriginID = $origin->ID ?: $origin->OldID;
         $this->addObject($origin);
 
         return $this;
