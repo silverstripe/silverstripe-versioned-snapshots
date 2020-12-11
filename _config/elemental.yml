@@ -18,16 +18,16 @@ SilverStripe\Core\Injector\Injector:
       handlers:
         elementalEditorCreate:
           on: [ 'graphqlOperation.AddElementToArea' ]
-          handler: %$SilverStripe\Snapshots\Handler\Elemental\CreateElementHandler
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\CreateElementHandler'
         elementalEditorSort:
           on: [ 'graphqlOperation.SortBlockMutation' ]
-          handler: %$SilverStripe\Snapshots\Handler\Elemental\SortElementsHandler
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\SortElementsHandler'
         elementalEditorArchive:
           on: [ 'graphqlOperation.ArchiveBlock' ]
-          handler: %$SilverStripe\Snapshots\Handler\Elemental\ArchiveElementHandler
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\ArchiveElementHandler'
         elementalEditorModify:
           on: [ 'graphqlOperation.UnpublishBlock', 'graphqlOperation.PublishBlock' ]
-          handler: %$SilverStripe\Snapshots\Handler\Elemental\ModifyElementHandler
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\ModifyElementHandler'
         elementalEditorCMS:
           on: [ 'cmsAction.apiSaveForm' ]
-          handler: %$SilverStripe\Snapshots\Handler\Elemental\CMSActionsHandler
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\CMSActionsHandler'
