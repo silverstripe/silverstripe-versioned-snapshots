@@ -27,9 +27,7 @@ class PublishHandler extends Handler
         if ($record === null || !$record->hasExtension(Versioned::class)) {
             return null;
         }
-        $snapshot = Snapshot::create();
-        $snapshot->applyOrigin($record);
-        $snapshot->addOwnershipChain($record);
+        $snapshot = Snapshot::singleton()->createSnapshot($record);
 
         // Get the most recent change set to find out what was published
         $changeSet = ChangeSet::get()->filter([
