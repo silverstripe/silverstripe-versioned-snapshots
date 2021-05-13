@@ -9,6 +9,9 @@ SilverStripe\Core\Injector\Injector:
 SilverStripe\Versioned\ChangeSetItem:
   extensions:
     - SilverStripe\Snapshots\SnapshotChangeSetItem
+SilverStripe\Dev\CsvBulkLoader:
+  extensions:
+    - SilverStripe\Snapshots\CsvBulkLoader\SaveListener
 ---
 Name: snapshot-migration
 ---
@@ -68,3 +71,6 @@ SilverStripe\Core\Injector\Injector:
         graphqlMutation:
           on: [ 'graphqlOperation' ]
           handler: '%$SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler'
+        csvBulkLoaderImport:
+          on: [ 'csvBulkLoaderImport' ]
+          handler: '%$SilverStripe\Snapshots\Handler\CsvBulkLoader\Handler'
