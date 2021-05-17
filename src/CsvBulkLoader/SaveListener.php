@@ -25,7 +25,7 @@ class SaveListener extends DataExtension
 
         Dispatcher::singleton()->trigger(
             'csvBulkLoaderImport',
-            Event::create('import', ['obj' => $obj])
+            Event::create(get_class($obj), ['record' => $obj])
         );
     }
 }
