@@ -19,7 +19,7 @@ class Handler extends HandlerAbstract
         $obj = $context->get('record');
 
         if (!$obj) {
-            throw new \InvalidArgumentException('Requires "obj" in context');
+            throw new \InvalidArgumentException('Requires "record" in context');
         }
 
         // Create an individual snapshot for each object to ensure they're all captured.
