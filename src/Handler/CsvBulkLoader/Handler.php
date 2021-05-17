@@ -16,7 +16,7 @@ class Handler extends HandlerAbstract
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
-        $obj = $context->get('obj');
+        $obj = $context->get('record');
 
         if (!$obj) {
             throw new \InvalidArgumentException('Requires "obj" in context');
