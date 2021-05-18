@@ -261,6 +261,7 @@ Some common thirdparty modules are supported out of the box. The most notable is
 * Edit individual element
 * Save all elements via page save
 * Sort elements
+* ModelAdmin and GridField CSV imports
 
 As mentioned above, elements all receive `snapshot_relation_tracking` on their pages by default, as well.
 
