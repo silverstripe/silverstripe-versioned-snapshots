@@ -9,6 +9,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotHasher;
 use SilverStripe\Versioned\ChangeSet;
+use SilverStripe\Versioned\ChangeSetItem;
 use SilverStripe\Versioned\Versioned;
 
 class PublishHandler extends Handler
@@ -28,19 +29,27 @@ class PublishHandler extends Handler
             return null;
         }
         $snapshot = Snapshot::singleton()->createSnapshot($record);
-
+        $changeSetTable = DataObject::getSchema()->tableName(ChangeSet::class);
+        $changeSetItemTable = DataObject::getSchema()->tableName(ChangeSetItem::class);
         // Get the most recent change set to find out what was published
-        $changeSet = ChangeSet::get()->filter([
+        $changeSetItem = ChangeSetItem::get()->filter([
             'State' => ChangeSet::STATE_PUBLISHED,
             'IsInferred' => true,
+            'ObjectID' => $record->ID,
+            'ObjectClass' => $record->baseClass(),
         ])
+            ->innerJoin($changeSetTable, "\"$changeSetTable\".\"ID\" = \"$changeSetItemTable\".\"ChangeSetID\"")
             ->sort('Created', 'DESC')
             ->first();
-        if ($changeSet) {
-            foreach ($changeSet->Changes() as $item) {
-                foreach ($item->findReferenced() as $obj) {
-                    $snapshot->addObject($obj);
-                }
+
+        // Ensure this publish event contained real changes
+        if (!$changeSetItem || !($changeSetItem->VersionBefore < $changeSetItem->VersionAfter)) {
+            return null;
+        }
+
+        foreach ($changeSetItem->ChangeSet()->Changes() as $item) {
+            foreach ($item->findReferenced() as $obj) {
+                $snapshot->addObject($obj);
             }
         }
 
