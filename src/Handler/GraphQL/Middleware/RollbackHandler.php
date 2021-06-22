@@ -30,7 +30,8 @@ class RollbackHandler extends HandlerAbstract
             return null;
         }
 
-        $params = $context->get('params');
+        // GraphQL 4 ?? GraphQL 3
+        $params = $context->get('variables') ?? $context->get('params');
         if (!$params) {
             return null;
         }

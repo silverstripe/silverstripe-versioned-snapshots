@@ -1,0 +1,39 @@
+---
+Name: snapshot-events
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        formGeneric:
+          on:
+            - 'formSubmitted.doDelete'
+            - 'formSubmitted.archive'
+            - 'formSubmitted.doArchive'
+          handler: '%$SilverStripe\Snapshots\Handler\Form\Handler'
+        unpublish:
+          on:
+            - 'formSubmitted.unpublish'
+            - 'formSubmitted.doUnpublish'
+          handler: '%$SilverStripe\Snapshots\Handler\Form\UnpublishHandler'
+        save:
+          on: [ 'formSubmitted.save', 'formSubmitted.doSave' ]
+          handler: '%$SilverStripe\Snapshots\Handler\Form\SaveHandler'
+        publish:
+          on: [ 'formSubmitted.publish', 'formSubmitted.doPublish' ]
+          handler: '%$SilverStripe\Snapshots\Handler\Form\PublishHandler'
+        cmsMain:
+          on: [ 'cmsAction.savetreenode' ]
+          handler: '%$SilverStripe\Snapshots\Handler\CMSMain\Handler'
+        gridFieldAlteration:
+          on: [ 'gridFieldAlteration.deleterecord', 'gridFieldAlteration.archiverecord' ]
+          handler: '%$SilverStripe\Snapshots\Handler\GridField\Alteration\Handler'
+        gridFieldAction:
+          on: [ ]
+          handler: '%$SilverStripe\Snapshots\Handler\GridField\Action\Handler'
+        graphqlMutation:
+          on: [ 'graphqlOperation' ]
+          handler: '%$SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler'
+        csvBulkLoaderImport:
+          on: [ 'csvBulkLoaderImport' ]
+          handler: '%$SilverStripe\Snapshots\Handler\CsvBulkLoader\Handler'

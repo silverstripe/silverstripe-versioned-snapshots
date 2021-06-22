@@ -1,0 +1,35 @@
+---
+Name: snapshot-events-graphql-legacy
+Only:
+  classexists: SilverStripe\GraphQL\Manager
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        graphqlMutation:
+          on: [ 'graphqlOperation' ]
+          handler: '%$SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler'
+---
+Name: snapshot-events-graphql-elemental-legacy
+Only:
+  moduleexists: 'dnadesign/silverstripe-elemental'
+  classexists: SilverStripe\GraphQL\Manager
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        elementalEditorCreate:
+          on: ['graphqlOperation.AddElementToArea']
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\CreateElementHandler'
+        elementalEditorSort:
+          on: ['graphqlOperation.SortBlockMutation']
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\SortElementsHandler'
+        elementalEditorArchive:
+          on: ['graphqlOperation.ArchiveBlock']
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\ArchiveElementHandler'
+        elementalEditorModify:
+          on: ['graphqlOperation.PublishBlock']
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\ModifyElementHandler'
+

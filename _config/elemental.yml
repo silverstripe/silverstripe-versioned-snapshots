@@ -16,18 +16,6 @@ SilverStripe\Core\Injector\Injector:
   SilverStripe\EventDispatcher\Dispatch\Dispatcher:
     properties:
       handlers:
-        elementalEditorCreate:
-          on: [ 'graphqlOperation.AddElementToArea' ]
-          handler: '%$SilverStripe\Snapshots\Handler\Elemental\CreateElementHandler'
-        elementalEditorSort:
-          on: [ 'graphqlOperation.SortBlockMutation' ]
-          handler: '%$SilverStripe\Snapshots\Handler\Elemental\SortElementsHandler'
-        elementalEditorArchive:
-          on: [ 'graphqlOperation.ArchiveBlock' ]
-          handler: '%$SilverStripe\Snapshots\Handler\Elemental\ArchiveElementHandler'
-        elementalEditorModify:
-          on: [ 'graphqlOperation.UnpublishBlock', 'graphqlOperation.PublishBlock' ]
-          handler: '%$SilverStripe\Snapshots\Handler\Elemental\ModifyElementHandler'
         elementalEditorCMS:
           on: [ 'cmsAction.apiSaveForm' ]
           handler: '%$SilverStripe\Snapshots\Handler\Elemental\CMSActionsHandler'
