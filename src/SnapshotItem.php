@@ -178,7 +178,8 @@ class SnapshotItem extends DataObject
     {
         $version = $version ?? $this->Version;
 
-        return Versioned::get_version($this->ObjectClass, $this->ObjectID, $version);
+        return Versioned::get_all_versions($this->ObjectClass, $this->ObjectID)
+            ->find('Version', $version);
     }
 
     /**
