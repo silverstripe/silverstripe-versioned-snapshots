@@ -32,6 +32,9 @@ class PageSaveHandler extends SaveHandler
         }
 
         $record = $this->getRecordFromContext($context);
+        if (!$record) {
+            return null;
+        }
         if (!$record->hasExtension(ElementalAreasExtension::class)) {
             return parent::createSnapshot($context);
         }

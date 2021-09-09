@@ -1,0 +1,22 @@
+---
+Name: 'snapshots-workflow'
+Only:
+  moduleexists: 'symbiote/silverstripe-advancedworkflow'
+---
+Symbiote\AdvancedWorkflow\Actions\PublishItemWorkflowAction:
+  extensions:
+    - SilverStripe\Snapshots\Workflow\WorkflowExtension
+Symbiote\AdvancedWorkflow\Jobs\WorkflowPublishTargetJob:
+   extensions:
+     - SilverStripe\Snapshots\Workflow\WorkflowExtension
+
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        unpublish:
+          on: [ 'workflowComplete.unpublish' ]
+          handler: '%$SilverStripe\Snapshots\Handler\Form\UnpublishHandler'
+        publish:
+          on: [ 'workflowComplete.publish' ]
+          handler: '%$SilverStripe\Snapshots\Handler\Form\PublishHandler'
