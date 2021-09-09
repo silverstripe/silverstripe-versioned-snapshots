@@ -43,9 +43,10 @@ class ActivityEntry extends ArrayData
         }
 
         // If the items been deleted then we want to get the last version of it
-        if ($itemObj === null) {
+        if ($itemObj === null || $itemObj->WasDeleted) {
             // This gets all versions except for the deleted version so we just get the latest one
             $previousVersion = Versioned::get_all_versions($item->ObjectClass, $item->ObjectID)
+                ->filter(['WasDeleted' => 0])
                 ->sort('Version', 'DESC')
                 ->first();
             if ($previousVersion && $previousVersion->exists()) {
