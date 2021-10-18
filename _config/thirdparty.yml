@@ -49,3 +49,12 @@ SilverStripe\Core\Injector\Injector:
         publish:
           on: [ 'embargoExpiryJob.publish' ]
           handler: '%$SilverStripe\Snapshots\Handler\Form\PublishHandler'
+# silverstripe-admin
+---
+Name: snapshots-cms-admin
+Only:
+  moduleexists: silverstripe/admin
+---
+SilverStripe\Admin\Forms\UsedOnTable:
+  extensions:
+    - SilverStripe\Snapshots\Thirdparty\UsedOnTableExtension
