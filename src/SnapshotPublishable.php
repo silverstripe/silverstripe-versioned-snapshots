@@ -207,7 +207,7 @@ class SnapshotPublishable extends RecursivePublishable
      *
      * @return array list of filters for using in ORM APIs
      */
-    private function getSnapshotsBetweenVersionsFilters($min, $max = null, $includeAll = false)
+    protected function getSnapshotsBetweenVersionsFilters($min, $max = null, $includeAll = false)
     {
         $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
 
@@ -528,7 +528,7 @@ class SnapshotPublishable extends RecursivePublishable
      * @param DataObject $previous
      * @return array
      */
-    private function getChangedOwnership(DataObject $previous): array
+    protected function getChangedOwnership(DataObject $previous): array
     {
         $owner = $this->owner;
 
