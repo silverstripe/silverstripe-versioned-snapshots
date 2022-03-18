@@ -19,8 +19,14 @@
             "homepage": "http://silverstripe.org"
         }
     ],
+    "extra": {
+        "branch-alias": {
+            "dev-master": "2.x-dev",
+            "dev-1": "1.x-dev"
+        }
+    },
     "require": {
-        "php": ">=7.1.0",
+        "php": "^7.4",
         "silverstripe/framework": "^4.5.1",
         "silverstripe/versioned": "^1",
         "silverstripe/vendor-plugin": "^1",
