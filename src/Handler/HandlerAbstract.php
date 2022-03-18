@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Handler;
 
 use SilverStripe\Core\Config\Configurable;
@@ -8,11 +7,13 @@ use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\EventDispatcher\Event\EventHandlerInterface;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Versioned\Versioned;
 
 abstract class HandlerAbstract implements EventHandlerInterface
 {
+
     use Configurable;
     use Injectable;
 
@@ -41,11 +42,13 @@ abstract class HandlerAbstract implements EventHandlerInterface
     protected function getMessage(string $action): string
     {
         $messages = $this->config()->get('messages');
+
         if (isset($messages[$action])) {
             return $messages[$action];
         }
 
         $key = static::class . '.HANDLER_' . $action;
+
         return _t($key, $action);
     }
 
@@ -60,12 +63,19 @@ abstract class HandlerAbstract implements EventHandlerInterface
             ->byID($id);
     }
 
+    /**
+     * @param EventContextInterface $context
+     * @throws ValidationException
+     */
     public function fire(EventContextInterface $context): void
     {
         $snapshot = $this->createSnapshot($context);
-        if ($snapshot) {
-            $snapshot->write();
+
+        if (!$snapshot) {
+            return;
         }
+
+        $snapshot->write();
     }
 
     /**
@@ -86,7 +96,6 @@ abstract class HandlerAbstract implements EventHandlerInterface
     {
         return $this->pageContextProvider;
     }
-
 
     /**
      * @param EventContextInterface $context

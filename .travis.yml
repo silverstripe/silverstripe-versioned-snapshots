@@ -1,51 +1,9 @@
-language: php
-
-dist: trusty
+version: ~> 1.0
 
 env:
   global:
-    - COMPOSER_ROOT_VERSION=dev-master
+    - COMPOSER_ROOT_VERSION="4.x-dev"
+    - REQUIRE_RECIPE="4.x-dev"
 
-matrix:
-  fast_finish: true
-  include:
-    - php: '7.2'
-      env: DB=MYSQL PHPUNIT_TEST=1
-
-    - php: '7.3'
-      env: DB=MYSQL PHPUNIT_TEST=1
-
-    - php: '7.4'
-      env: DB=MYSQL PHPUNIT_TEST=1
-
-    - php: *min-version
-      env: DB=MYSQL PHPUNIT_COVERAGE_TEST=1 PHPCS_TEST=1
-
-#    - php: *min-version
-#      env: DB=PGSQL PHPUNIT_TEST=1
-
-    - php: *min-version
-      env: DB=MYSQL PDO=1 PHPUNIT_TEST=1
-
-before_script:
-# Init PHP
-  - printf "\n" | pecl install imagick
-  - phpenv rehash
-  - phpenv config-rm xdebug.ini
-  - echo 'memory_limit = 2048M' >> ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/travis.ini
-
-# Install composer
-  - composer validate
-  - composer require silverstripe/recipe-core:4.5.x-dev silverstripe/recipe-cms:4.5.x-dev dnadesign/silverstripe-elemental:4.3.x-dev --prefer-dist --no-update
-# silverstripe/recipe-cms requires versioned 1.4.x-dev
-  - composer require silverstripe/versioned:"1.5.x-dev" --prefer-dist --no-update
-  - if [[ $DB == PGSQL ]]; then composer require silverstripe/postgresql:2.1.x-dev --prefer-dist --no-update; fi
-  - composer install --prefer-dist
-
-script:
-  - if [[ $PHPUNIT_TEST ]]; then vendor/bin/phpunit; fi
-  - if [[ $PHPCS_TEST ]]; then composer run-script lint; fi
-  - if [[ $PHPUNIT_COVERAGE_TEST ]]; then phpdbg -qrr vendor/bin/phpunit --coverage-clover=coverage.xml; fi
-
-after_success:
-  - if [[ $PHPUNIT_COVERAGE_TEST ]]; then bash <(curl -s https://codecov.io/bash) -f coverage.xml; fi
+import:
+  - silverstripe/silverstripe-travis-shared:config/provision/standard-jobs-fixed.yml

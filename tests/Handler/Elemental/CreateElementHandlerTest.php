@@ -5,22 +5,28 @@ namespace SilverStripe\Snapshots\Tests\Handler\Elemental;
 use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use DNADesign\Elemental\Models\ElementalArea;
 use SilverStripe\EventDispatcher\Symfony\Event;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\CreateElementHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class CreateElementHandlerTest extends SnapshotTestAbstract
 {
+    /**
+     * @var array
+     */
+    protected static $required_extensions = [
+        BlockPage::class => [
+            ElementalPageExtension::class,
+        ],
+    ];
 
-    protected function setUp()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesntFire(): void
     {
-        parent::setUp();
-        BlockPage::add_extension(ElementalPageExtension::class);
-    }
-
-    public function testHandlerDoesntFire()
-    {
-        $handler = new CreateElementHandler();
+        $handler = CreateElementHandler::create();
         $this->mockSnapshot()
             ->expects($this->never())
             ->method('createSnapshot');
@@ -42,15 +48,18 @@ class CreateElementHandlerTest extends SnapshotTestAbstract
         $context = Event::create(
             'action',
             [
-                'params' => ['elementalAreaID' => 5]
+                'params' => ['elementalAreaID' => 5],
             ]
         );
         $handler->fire($context);
     }
 
-    public function testHandlerDoesFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFire(): void
     {
-        $handler = new CreateElementHandler();
+        $handler = CreateElementHandler::create();
         $this->mockSnapshot()
             ->expects($this->once())
             ->method('createSnapshot');

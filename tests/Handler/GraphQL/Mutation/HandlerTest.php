@@ -12,7 +12,7 @@ use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class HandlerTest extends SnapshotTestAbstract
 {
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         Injector::inst()->registerService(

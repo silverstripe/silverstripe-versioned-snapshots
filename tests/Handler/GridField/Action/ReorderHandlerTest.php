@@ -14,7 +14,7 @@ use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class ReorderHandlerTest extends SnapshotTestAbstract
 {
-    public function testHandlerDoesFire()
+    public function testHandlerDoesFire(): void
     {
         $handler = ReorderHandler::create();
         $block = Block::create();
@@ -25,9 +25,9 @@ class ReorderHandlerTest extends SnapshotTestAbstract
         $mock
             ->expects($this->once())
             ->method('applyOrigin')
-            ->with($this->callback(function ($arg) use ($block) {
+            ->with($this->callback(static function ($arg) use ($block) {
                 return $arg instanceof SnapshotEvent &&
-                    $arg->Title == 'Reordered ' . $block->i18n_plural_name();
+                    $arg->Title === 'Reordered ' . $block->i18n_plural_name();
             }));
 
         $form = Form::create(Controller::create(), 'TestForm', FieldList::create(), FieldList::create())

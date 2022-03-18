@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Handler\GraphQL\Middleware;
 
 use GraphQL\Executor\ExecutionResult;
@@ -18,10 +17,12 @@ class RollbackHandler extends HandlerAbstract
      * @param EventContextInterface $context
      * @return Snapshot|null
      * @throws ValidationException
+     * @throws \Exception
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
         $action = $context->getAction();
+
         if ($action === null) {
             return null;
         }
@@ -32,6 +33,7 @@ class RollbackHandler extends HandlerAbstract
 
         // GraphQL 4 ?? GraphQL 3
         $params = $context->get('variables') ?? $context->get('params');
+
         if (!$params) {
             return null;
         }
@@ -44,23 +46,29 @@ class RollbackHandler extends HandlerAbstract
         }
 
         $result = $context->get('result');
+
         if (!$result instanceof ExecutionResult) {
             return null;
         }
-        if (!empty($result->errors)) {
+
+        if (count($result->errors) > 0) {
             return null;
         }
+
         $data = $result->data;
         $className = $data[$action]['ClassName'] ?? null;
+
         if (!$className) {
             return null;
         }
 
-        /* @var DataObject|SnapshotPublishable $obj */
+        /** @var DataObject|SnapshotPublishable $obj */
         $obj = DataObject::get_by_id($className, $id);
+
         if (!$obj) {
             return null;
         }
+
         $wasVersion = $obj->getPreviousSnapshotVersion();
         $nowVersion = Versioned::get_version($className, $id, $toVersion);
 
@@ -70,7 +78,7 @@ class RollbackHandler extends HandlerAbstract
 
         $snapshot = Snapshot::singleton()->createSnapshotEvent(
             _t(
-                __CLASS__ . '.ROLLBACK_TO_VERSION',
+                self::class . '.ROLLBACK_TO_VERSION',
                 'Rolled back to version {version}',
                 [
                     'version' => $toVersion,

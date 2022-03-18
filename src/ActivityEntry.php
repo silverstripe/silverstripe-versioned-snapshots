@@ -2,10 +2,14 @@
 
 namespace SilverStripe\Snapshots;
 
+use Exception;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\View\ArrayData;
-use Exception;
 
+/**
+ * @property DataObject $Subject
+ */
 class ActivityEntry extends ArrayData
 {
     const MODIFIED = 'MODIFIED';
@@ -22,16 +26,19 @@ class ActivityEntry extends ArrayData
 
     const UNPUBLISHED = 'UNPUBLISHED';
 
-    public static function createFromSnapshotItem(SnapshotItem $item)
+    public static function createFromSnapshotItem(SnapshotItem $item): self
     {
+        /** @var DataObject|Versioned $itemObj */
         $itemObj = $item->getItem();
 
-        if ($itemObj !== null && $itemObj instanceof SnapshotEvent) {
+        if ($itemObj instanceof SnapshotEvent) {
             $flag = null;
         } elseif ($item->WasPublished) {
             $flag = self::PUBLISHED;
         } elseif ($item->Parent()->exists()) {
-            $flag = $item->WasDeleted ? self::REMOVED : self::ADDED;
+            $flag = $item->WasDeleted
+                ? self::REMOVED
+                : self::ADDED;
         } elseif ($item->WasDeleted) {
             $flag = self::DELETED;
         } elseif ($item->WasUnpublished) {
@@ -45,10 +52,12 @@ class ActivityEntry extends ArrayData
         // If the items been deleted then we want to get the last version of it
         if ($itemObj === null || $itemObj->WasDeleted) {
             // This gets all versions except for the deleted version so we just get the latest one
+            /** @var DataObject|Versioned $previousVersion */
             $previousVersion = Versioned::get_all_versions($item->ObjectClass, $item->ObjectID)
                 ->filter(['WasDeleted' => 0])
                 ->sort('Version', 'DESC')
                 ->first();
+
             if ($previousVersion && $previousVersion->exists()) {
                 $itemObj = $item->getItem($previousVersion->Version);
             // This is to deal with the case in which there is no previous version
@@ -66,7 +75,7 @@ class ActivityEntry extends ArrayData
             ));
         }
 
-        return new static([
+        return static::create([
             'Subject' => $itemObj,
             'Action' => $flag,
             'Owner' => null,

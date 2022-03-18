@@ -2,7 +2,6 @@
 
 namespace SilverStripe\Snapshots;
 
-use SilverStripe\Core\ClassInfo;
 use SilverStripe\ORM\DataObject;
 
 /**
@@ -13,11 +12,11 @@ trait SnapshotHasher
     /**
      * Generates a hash for versioned snapshots
      *
-     * @param $class
-     * @param $id
+     * @param string|null $class
+     * @param int|null $id
      * @return string
      */
-    public static function hashForSnapshot($class, $id): string
+    public static function hashForSnapshot(?string $class, ?int $id): string
     {
         return md5(sprintf('%s:%s', $class, $id));
     }

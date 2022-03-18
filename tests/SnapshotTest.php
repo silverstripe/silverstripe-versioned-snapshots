@@ -1,10 +1,10 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Tests;
 
+use Exception;
 use SilverStripe\Core\Config\Config;
-use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\SnapshotItem;
@@ -12,27 +12,35 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Gallery;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImage;
+use SilverStripe\Versioned\Versioned;
 
 class SnapshotTest extends SnapshotTestAbstract
 {
+    /**
+     * @var bool
+     */
     protected $usesTransactions = false;
 
-    public function testGetOriginItem()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetOriginItem(): void
     {
         $snapshot = Snapshot::create();
         $snapshot->write();
-        $item = SnapshotItem::create([
-            'ObjectClass' => Block::class,
-            'ObjectID' => 5,
-            'SnapshotID' => $snapshot->ID,
-        ]);
+
+        $item = SnapshotItem::create();
+        $item->ObjectClass = Block::class;
+        $item->ObjectID = 5;
+        $item->SnapshotID = $snapshot->ID;
         $item->write();
-        $item = SnapshotItem::create([
-            'ObjectClass' => Block::class,
-            'ObjectID' => 7,
-            'SnapshotID' => $snapshot->ID,
-        ]);
+
+        $item = SnapshotItem::create();
+        $item->ObjectClass = Block::class;
+        $item->ObjectID = 7;
+        $item->SnapshotID = $snapshot->ID;
         $item->write();
+
         $snapshot->OriginClass = $item->ObjectClass;
         $snapshot->OriginID = $item->ObjectID;
         $snapshot->write();
@@ -44,19 +52,29 @@ class SnapshotTest extends SnapshotTestAbstract
         $this->assertEquals($item->ObjectID, $origin->ObjectID);
     }
 
-    public function testAddObjectLimit()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testAddObjectLimit(): void
     {
         Config::modify()->set(Snapshot::class, 'item_limit', 5);
         $snapshot = Snapshot::create();
-        for ($i = 0; $i < 10; $i++) {
+
+        for ($i = 0; $i < 10; $i += 1) {
             $b = Block::create();
             $b->write();
             $snapshot->addObject($b);
         }
+
         $this->assertCount(5, $snapshot->Items());
     }
 
-    public function testAddObjectDuplication()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testAddObjectDuplication(): void
     {
         $snapshot = Snapshot::create();
         $block1 = Block::create();
@@ -81,7 +99,11 @@ class SnapshotTest extends SnapshotTestAbstract
         $this->assertEquals($expected, $ids);
     }
 
-    public function testAddObjectAsSnapshotItem()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testAddObjectAsSnapshotItem(): void
     {
         $snapshot = Snapshot::create();
         $block1 = Block::create();
@@ -109,32 +131,41 @@ class SnapshotTest extends SnapshotTestAbstract
         $this->assertEquals($expected, $ids);
     }
 
-    public function testGetOriginVersion()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetOriginVersion(): void
     {
         $snapshot = Snapshot::create();
         $snapshot->write();
+
+        /** @var Block|Versioned $block1 */
         $block1 = Block::create();
         $block1->write();
-        $item = SnapshotItem::create([
-            'ObjectClass' => $block1->baseClass(),
-            'ObjectID' => $block1->ID,
-            'SnapshotID' => $snapshot->ID,
-            'Version' => $block1->Version,
-        ]);
+
+        $item = SnapshotItem::create();
+        $item->ObjectClass = $block1->baseClass();
+        $item->ObjectID = $block1->ID;
+        $item->SnapshotID = $snapshot->ID;
+        $item->Version = $block1->Version;
         $item->write();
-        $block2 = Block::create(['Title' => 'Original title']);
+
+        /** @var Block|Versioned $block2 */
+        $block2 = Block::create();
+        $block2->Title = 'Original title';
         $block2->write();
+
         $expectedVersion = $block2->Version;
         $block2->Title = 'changed title';
         $block2->write();
 
-        $item = SnapshotItem::create([
-            'ObjectClass' => $block2->baseClass(),
-            'ObjectID' => $block2->ID,
-            'SnapshotID' => $snapshot->ID,
-            'Version' => $expectedVersion,
-        ]);
+        $item = SnapshotItem::create();
+        $item->ObjectClass = $block2->baseClass();
+        $item->ObjectID = $block2->ID;
+        $item->SnapshotID = $snapshot->ID;
+        $item->Version = $expectedVersion;
         $item->write();
+
         $snapshot->OriginClass = $item->ObjectClass;
         $snapshot->OriginID = $item->ObjectID;
         $snapshot->write();
@@ -145,9 +176,16 @@ class SnapshotTest extends SnapshotTestAbstract
         $this->assertEquals('Original title', $v->Title);
     }
 
-    public function testCreateSnapshotNoRelations()
+    /**
+     * @throws ValidationException
+     */
+    public function testCreateSnapshotNoRelations(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        /** @var BlockPage $a1 */
+        /** @var Block $a1Block1 */
+        /** @var Block $a2Block1 */
+        /** @var Gallery $gallery1 */
+        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
         $gallery1->Title = 'changed';
         $snapshot = $this->snapshot($gallery1);
         $this->assertCount(3, $snapshot->Items());
@@ -196,9 +234,15 @@ class SnapshotTest extends SnapshotTestAbstract
         );
     }
 
-    public function testCreateSnapshotWithImplicitModifications()
+    /**
+     * @throws ValidationException
+     */
+    public function testCreateSnapshotWithImplicitModifications(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        /** @var BlockPage $a1 */
+        /** @var Block $a1Block1 */
+        /** @var Gallery $gallery1 */
+        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
         $image = GalleryImage::create();
         $image->write();
 
@@ -265,7 +309,10 @@ class SnapshotTest extends SnapshotTestAbstract
         $this->assertRegExp('/Added ' . $name . '/', $origin->Title);
     }
 
-    public function testCreateSnapshotEvent()
+    /**
+     * @throws ValidationException
+     */
+    public function testCreateSnapshotEvent(): void
     {
         $snapshot = Snapshot::singleton()->createSnapshotEvent('test event');
         $snapshot->write();
@@ -290,14 +337,21 @@ class SnapshotTest extends SnapshotTestAbstract
             [
                 $event,
                 $block1,
-                $block2
+                $block2,
             ]
         );
     }
 
-    public function testAddOwnershipChain()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testAddOwnershipChain(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        /** @var BlockPage $a1 */
+        /** @var Block $a1Block1 */
+        /** @var Gallery $gallery1 */
+        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
         $snapshot = Snapshot::create();
         $this->assertEmpty($snapshot->Items());
         $snapshot->addOwnershipChain($gallery1);
@@ -313,22 +367,28 @@ class SnapshotTest extends SnapshotTestAbstract
         );
     }
 
-    public function testApplyOrigin()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testApplyOrigin(): void
     {
         $snapshot = Snapshot::create();
-        $this->assertFalse($snapshot->getOriginItem());
+        $this->assertNull($snapshot->getOriginItem());
         $block = Block::create();
         $block->write();
         $snapshot->applyOrigin($block);
-        $this->assertNotFalse($snapshot->getOriginItem());
+        $this->assertNotNull($snapshot->getOriginItem());
         $item = $snapshot->getOriginItem()->getItem();
         $this->assertNotNull($item);
         $this->assertHashCompare($item, $block);
     }
 
-    public function testIsLiveSnapshot()
+    public function testIsLiveSnapshot(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        /** @var BlockPage $a1 */
+        /** @var Block $a1Block1 */
+        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
         Snapshot::get()->removeAll();
         SnapshotItem::get()->removeAll();
         $this->assertCount(0, Snapshot::get());
@@ -340,13 +400,16 @@ class SnapshotTest extends SnapshotTestAbstract
 
         $this->assertCount(4, Snapshot::get());
         $liveSnapshots = [];
-        foreach (Snapshot::get() as $s) {
-            if ($s->getIsLiveSnapshot()) {
-                $liveSnapshots[] = $s;
-            }
-        }
-        $this->assertCount(1, $liveSnapshots);
 
+        foreach (Snapshot::get() as $s) {
+            if (!$s->getIsLiveSnapshot()) {
+                continue;
+            }
+
+            $liveSnapshots[] = $s;
+        }
+
+        $this->assertCount(1, $liveSnapshots);
         $this->assertEquals(Snapshot::get()->max('ID'), $liveSnapshots[0]->ID);
     }
 }

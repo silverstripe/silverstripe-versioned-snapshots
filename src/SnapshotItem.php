@@ -24,8 +24,10 @@ use SilverStripe\View\ArrayData;
  * @property int $SnapshotID
  * @property int $ObjectID
  * @property string $ObjectClass
+ * @property string $Modification
  * @method Snapshot Snapshot()
  * @method DataObject Object()
+ * @method SnapshotItem Parent()
  * @package SilverStripe\Snapshots
  */
 class SnapshotItem extends DataObject

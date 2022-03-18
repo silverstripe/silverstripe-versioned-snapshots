@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Handler\CMSMain;
 
 use SilverStripe\CMS\Model\SiteTree;
@@ -10,7 +9,6 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
-use SilverStripe\Snapshots\SnapshotEvent;
 
 class Handler extends HandlerAbstract
 {
@@ -22,15 +20,18 @@ class Handler extends HandlerAbstract
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
         $action = $context->getAction();
+
         if ($action === null) {
             return null;
         }
 
-        /* @var HTTPResponse $result */
+        /** @var HTTPResponse $result */
         $result = $context->get('result');
+
         if (!$result instanceof HTTPResponse) {
             return null;
         }
+
         if ((int) $result->getStatusCode() !== 200) {
             return null;
         }

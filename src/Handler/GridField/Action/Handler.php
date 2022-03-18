@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Handler\GridField\Action;
 
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
@@ -20,15 +19,18 @@ class Handler extends HandlerAbstract
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
         $action = $context->getAction();
+
         if ($action === null) {
             return null;
         }
+
         $grid = $context->get('gridField');
+
         if (!$grid) {
             return null;
         }
 
-        /* @var Form $form */
+        /** @var Form $form */
         $form = $grid->getForm();
 
         if (!$form) {

@@ -1,15 +1,18 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Migration;
 
 use Psr\Log\LoggerInterface;
-use SilverStripe\Control\HTTPRequest;
+use ReflectionException;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
+use SilverStripe\ORM\ValidationException;
 
 class Task extends BuildTask
 {
+    /**
+     * @var string
+     */
     private static $segment = 'snapshot-migration';
 
     /**
@@ -24,6 +27,7 @@ class Task extends BuildTask
 
     /**
      * MigrationTask constructor.
+     *
      * @param MigrationService $service
      */
     public function __construct(MigrationService $service)
@@ -33,9 +37,11 @@ class Task extends BuildTask
     }
 
     /**
-     * @param HTTPRequest $request
+     * @param mixed $request
+     * @throws ReflectionException
+     * @throws ValidationException
      */
-    public function run($request)
+    public function run($request): void
     {
         $logger = Injector::inst()->get(LoggerInterface::class);
 
@@ -45,10 +51,11 @@ class Task extends BuildTask
         $logger->info('Migrating ' . sizeof($classes) . ' classes');
 
         foreach ($classes as $class) {
-            $logger->info("Migrating $class");
+            $logger->info('Migrating ' . $class);
             $rows = $this->migrator->migrate($class);
-            $logger->info("$rows records migrated");
+            $logger->info($rows . ' records migrated');
         }
+
         $this->migrator->seedRelationTracking();
         $this->migrator->tearDown();
     }

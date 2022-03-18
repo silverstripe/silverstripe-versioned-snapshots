@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Handler\Elemental;
 
 use DNADesign\Elemental\Models\BaseElement;
@@ -14,21 +13,26 @@ use SilverStripe\Snapshots\SnapshotHasher;
  */
 class ModifyElementHandler extends Handler
 {
+
     use SnapshotHasher;
 
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
         $action = $context->getAction();
+
         if ($action === null) {
             return null;
         }
 
         // GraphQL 4 ?? GraphQL 3
         $params = $context->get('variables') ?? $context->get('params');
+
         if (!$params) {
             return null;
         }
+
         $blockID = $params['blockId'] ?? null;
+
         if (!$blockID) {
             return null;
         }
@@ -40,15 +44,19 @@ class ModifyElementHandler extends Handler
         }
 
         $snapshot = Snapshot::singleton()->createSnapshot($block);
+
         if (!$snapshot) {
             return null;
         }
+
         foreach ($snapshot->Items() as $item) {
-            // If it's the origin item, set published state.
-            if (static::hashSnapshotCompare($item->getItem(), $block)) {
-                $item->WasPublished = $action === 'PublishBlock';
-                $item->WasUnpublished = $action === 'UnpublishBlock';
+            if (!static::hashSnapshotCompare($item->getItem(), $block)) {
+                continue;
             }
+
+            // If it's the origin item, set published state.
+            $item->WasPublished = $action === 'PublishBlock';
+            $item->WasUnpublished = $action === 'UnpublishBlock';
         }
 
         return $snapshot;

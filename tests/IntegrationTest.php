@@ -1,10 +1,8 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Tests;
 
-use DNADesign\Elemental\Extensions\ElementalAreasExtension;
-use DNADesign\Elemental\Extensions\ElementalPageExtension;
+use Exception;
 use SilverStripe\CMS\Controllers\CMSPageEditController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\CMSEvents\Listener\Form\Listener;
@@ -16,6 +14,7 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\ActivityEntry;
 use SilverStripe\Snapshots\ImplicitModification;
 use SilverStripe\Snapshots\SnapshotEvent;
@@ -27,14 +26,24 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\Gallery;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImageJoin;
 use SilverStripe\Versioned\ChangeSetItem;
+use SilverStripe\Versioned\RecursivePublishable;
 use SilverStripe\Versioned\Versioned;
 
 class IntegrationTest extends SnapshotTestAbstract
 {
+    /**
+     * @var bool
+     */
     protected $usesDatabase = true;
 
+    /**
+     * @var bool
+     */
     protected $usesTransactions = false;
 
+    /**
+     * @var array
+     */
     protected static $extra_dataobjects = [
         BlockPage::class,
         Block::class,
@@ -46,11 +55,11 @@ class IntegrationTest extends SnapshotTestAbstract
     ];
 
     /**
-     * @var SiteTree
+     * @var SiteTree|null
      */
     private $currentPage;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         Config::modify()->set(
@@ -70,7 +79,11 @@ class IntegrationTest extends SnapshotTestAbstract
         );
     }
 
-    public function testFundamentals()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testFundamentals(): void
     {
         // Model:
         // BlockPage
@@ -78,14 +91,16 @@ class IntegrationTest extends SnapshotTestAbstract
         //      -> (has_many/owns) -> Gallery
         //          -> (many_many/owns) -> GalleryImage
 
-        /* @var DataObject|SnapshotPublishable $a1 */
-        $a1 = new BlockPage(['Title' => 'A1 Block Page']);
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = BlockPage::create();
+        $a1->Title = 'A1 Block Page';
         $this->editingPage($a1);
         $this->formSaveObject($a1);
         $this->formPublishObject($a1);
 
-        /* @var DataObject|SnapshotPublishable $a2 */
-        $a2 = new BlockPage(['Title' => 'A2 Block Page']);
+        /** @var DataObject|SnapshotPublishable $a2 */
+        $a2 = BlockPage::create();
+        $a2->Title = 'A2 Block Page';
         $this->editingPage($a2);
         $this->formSaveObject($a2);
         $this->formPublishObject($a2);
@@ -93,11 +108,16 @@ class IntegrationTest extends SnapshotTestAbstract
         // A1 Block page edits
         $this->editingPage($a1);
 
-        /* @var DataObject|SnapshotPublishable $a1Block1 */
-        $a1Block1 = new Block(['Title' => 'Block 1 on A1', 'ParentID' => $a1->ID]);
-
+        /** @var Block|SnapshotPublishable $a1Block1 */
+        $a1Block1 = Block::create();
+        $a1Block1->Title = 'Block 1 on A1';
+        $a1Block1->ParentID = $a1->ID;
         $this->formSaveObject($a1Block1);
-        $a1Block2 = new Block(['Title' => 'Block 2 on A1', 'ParentID' => $a1->ID]);
+
+        /** @var Block|SnapshotPublishable $a1Block2 */
+        $a1Block2 = Block::create();
+        $a1Block2->Title = 'Block 2 on A1';
+        $a1Block2->ParentID = $a1->ID;
         $this->formSaveObject($a1Block2);
 
         // A1
@@ -106,8 +126,10 @@ class IntegrationTest extends SnapshotTestAbstract
 
         $this->editingPage($a2);
 
-        /* @var DataObject|SnapshotPublishable $a2Block1 */
-        $a2Block1 = new Block(['Title' => 'Block 1 on A2', 'ParentID' => $a2->ID]);
+        /** @var Block|SnapshotPublishable $a2Block1 */
+        $a2Block1 = Block::create();
+        $a2Block1->Title = 'Block 1 on A2';
+        $a2Block1->ParentID = $a2->ID;
         $this->formSaveObject($a2Block1);
 
         // A1
@@ -160,15 +182,17 @@ class IntegrationTest extends SnapshotTestAbstract
             [
                 $a1Block1,
                 $a1Block2,
-                $a1
+                $a1,
             ]
         );
 
         $this->editingPage($a1);
 
         // Testing third level
-        /* @var DataObject|SnapshotPublishable|Versioned $gallery1 */
-        $gallery1 = new Gallery(['Title' => 'Gallery 1 on Block 1 on A1', 'BlockID' => $a1Block1->ID]);
+        /** @var Gallery|SnapshotPublishable|Versioned $gallery1 */
+        $gallery1 = Gallery::create();
+        $gallery1->Title = 'Gallery 1 on Block 1 on A1';
+        $gallery1->BlockID = $a1Block1->ID;
         $this->formSaveObject($gallery1);
 
         // A1 (draft, modified)
@@ -253,10 +277,13 @@ class IntegrationTest extends SnapshotTestAbstract
         );
 
         // Testing many_many
-        /* @var DataObject|SnapshotPublishable $galleryItem1 */
-        $galleryItem1 = new GalleryImage(['URL' => '/gallery/image/1']);
-        /* @var DataObject|SnapshotPublishable $galleryItem2 */
-        $galleryItem2 = new GalleryImage(['URL' => '/gallery/image/2']);
+        /** @var GalleryImage|SnapshotPublishable $galleryItem1 */
+        $galleryItem1 = GalleryImage::create();
+        $galleryItem1->URL = '/gallery/image/1';
+
+        /** @var GalleryImage|SnapshotPublishable $galleryItem2 */
+        $galleryItem2 = GalleryImage::create();
+        $galleryItem2->URL = '/gallery/image/2';
 
         $this->formSaveRelations($gallery1, 'Images', [$galleryItem1, $galleryItem2]);
 
@@ -283,7 +310,8 @@ class IntegrationTest extends SnapshotTestAbstract
                 [$gallery1, ActivityEntry::MODIFIED],
                 [$galleryItem1, ActivityEntry::ADDED],
                 [$galleryItem2, ActivityEntry::ADDED],
-                [ImplicitModification::singleton(), null],            ]
+                [ImplicitModification::singleton(), null],
+            ],
         );
 
         $this->assertPublishableObjectsContains(
@@ -300,8 +328,10 @@ class IntegrationTest extends SnapshotTestAbstract
 
         $this->editingPage($a2);
 
-        /* @var DataObject|SnapshotPublishable $gallery1a */
-        $gallery1a = new Gallery(['Title' => 'Gallery 1 on Block 1 on A2', 'BlockID' => $a2Block1->ID]);
+        /** @var Gallery|SnapshotPublishable $gallery1a */
+        $gallery1a = Gallery::create();
+        $gallery1a->Title = 'Gallery 1 on Block 1 on A2';
+        $gallery1a->BlockID = $a2Block1->ID;
         $this->formSaveObject($gallery1a);
 
         $this->formSaveRelations($gallery1a, 'Images', [$galleryItem1]);
@@ -454,11 +484,15 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertEmpty($a2->getPublishableObjects());
     }
 
-    public function testRevertChanges()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testRevertChanges(): void
     {
-        /* @var DataObject|SnapshotPublishable $a1 */
-        /* @var DataObject|SnapshotPublishable $gallery1 */
-        list ($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        /** @var DataObject|SnapshotPublishable $a1 */
+        /** @var DataObject|SnapshotPublishable|Versioned $gallery1 */
+        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
 
         $this->editingPage($a1);
         $this->formPublishObject($a1);
@@ -493,14 +527,18 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertEmpty($a1->getActivityFeed());
     }
 
-    public function testIntermediaryObjects()
+    /**
+     * @throws ValidationException
+     */
+    public function testIntermediaryObjects(): void
     {
-        /* @var DataObject|SnapshotPublishable $a1 */
-        /* @var DataObject|SnapshotPublishable $a2 */
-        /* @var DataObject|SnapshotPublishable $a1Block1 */
-        /* @var DataObject|SnapshotPublishable $gallery1 */
-        list ($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        /** @var DataObject|SnapshotPublishable $a1 */
+        /** @var DataObject|SnapshotPublishable $a2 */
+        /** @var DataObject|SnapshotPublishable $a1Block1 */
+        /** @var DataObject|SnapshotPublishable $gallery1 */
+        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
 
+        $this->publish($a1);
         $this->editingPage($a1);
 
         $gallery1->Title = 'Gallery 1 changed';
@@ -558,7 +596,7 @@ class IntegrationTest extends SnapshotTestAbstract
 
         $this->assertFalse($a1->hasOwnedModifications());
 
-        $a1Block1->Title = "A1 is changed again";
+        $a1Block1->Title = 'A1 is changed again';
         $this->formSaveObject($a1Block1);
 
         // A1 (draft, modified) *
@@ -571,14 +609,18 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertTrue($a1->hasOwnedModifications());
     }
 
-    public function testChangeOwnershipStructure()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testChangeOwnershipStructure(): void
     {
-        /* @var DataObject|SnapshotPublishable $a1 */
-        /* @var DataObject|SnapshotPublishable $a2 */
-        /* @var DataObject|SnapshotPublishable $a1Block1 */
-        /* @var DataObject|SnapshotPublishable $gallery1 */
-        /* @var DataObject|SnapshotPublishable $gallery2 */
-        list ($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        /** @var DataObject|SnapshotPublishable $a1 */
+        /** @var DataObject|SnapshotPublishable $a2 */
+        /** @var Block|SnapshotPublishable $a1Block1 */
+        /** @var DataObject|SnapshotPublishable $gallery1 */
+        /** @var DataObject|SnapshotPublishable $gallery2 */
+        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
 
         $this->editingPage($a1);
         $this->formPublishObject($a1);
@@ -671,13 +713,14 @@ class IntegrationTest extends SnapshotTestAbstract
 
         $this->editingPage($a2);
 
-        $blockMoved->Title = "The moved block is modified";
+        $blockMoved->Title = 'The moved block is modified';
         $this->formSaveObject($blockMoved);
 
-        $gallery1->Title = "The gallery that belongs to the moved block is modified";
+        $gallery1->Title = 'The gallery that belongs to the moved block is modified';
         $this->formSaveObject($gallery1);
 
-        $item = new GalleryImage(['URL' => '/belongs/to/moved/block']);
+        $item = GalleryImage::create();
+        $item->URL = '/belongs/to/moved/block';
         $item->write();
 
         $this->formSaveRelations($gallery1, 'Images', [$item]);
@@ -706,6 +749,7 @@ class IntegrationTest extends SnapshotTestAbstract
 
         // Move the block back to A1
         // Refresh the block so that changed fields flushes
+        /** @var Block $blockMoved */
         $blockMoved = DataObject::get_by_id(Block::class, $blockMoved->ID, false);
         $blockMoved->ParentID = $a1->ID;
 
@@ -795,13 +839,17 @@ class IntegrationTest extends SnapshotTestAbstract
         ]);
     }
 
-    public function testPartialActivityMigration()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testPartialActivityMigration(): void
     {
-        /* @var DataObject|SnapshotPublishable $a1 */
-        /* @var DataObject|SnapshotPublishable $a2 */
-        /* @var DataObject|SnapshotPublishable $a1Block1 */
-        /* @var DataObject|SnapshotPublishable $a1Block2 */
-        list ($a1, $a2, $a1Block1, $a1Block2) = $this->buildState();
+        /** @var DataObject|SnapshotPublishable $a1 */
+        /** @var DataObject|SnapshotPublishable $a2 */
+        /** @var Block|SnapshotPublishable $a1Block1 */
+        /** @var Block|SnapshotPublishable $a1Block2 */
+        [$a1, $a2, $a1Block1, $a1Block2] = $this->buildState();
 
         // Test that we can transplant a node and relevant activity will be migrated
         // but unrelated activity will be preserved.
@@ -815,7 +863,9 @@ class IntegrationTest extends SnapshotTestAbstract
         $a1Block2->Title = 'You got this';
         $this->formSaveObject($a1Block2);
 
-        $gallery = new Gallery(['Title' => 'A new gallery for block 2', 'BlockID' => $a1Block2->ID]);
+        $gallery = Gallery::create();
+        $gallery->Title = 'A new gallery for block 2';
+        $gallery->BlockID = $a1Block2->ID;
         $this->formSaveObject($gallery);
 
         // A1 (published)
@@ -866,15 +916,19 @@ class IntegrationTest extends SnapshotTestAbstract
         ]);
     }
 
-    public function testDeletions()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testDeletions(): void
     {
-        /* @var DataObject|SnapshotPublishable $a1 */
-        /* @var DataObject|SnapshotPublishable $a2 */
-        /* @var DataObject|SnapshotPublishable $a1Block1 */
-        /* @var DataObject|SnapshotPublishable $a1Block2 */
-        /* @var DataObject|SnapshotPublishable $a2Block1 */
-        /* @var DataObject|SnapshotPublishable $gallery2 */
-        list ($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        /** @var DataObject|SnapshotPublishable $a1 */
+        /** @var DataObject|SnapshotPublishable $a2 */
+        /** @var DataObject|SnapshotPublishable $a1Block1 */
+        /** @var DataObject|SnapshotPublishable $a1Block2 */
+        /** @var DataObject|SnapshotPublishable $a2Block1 */
+        /** @var DataObject|SnapshotPublishable $gallery2 */
+        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
 
         $this->editingPage($a1);
         $this->formPublishObject($a1);
@@ -940,17 +994,21 @@ class IntegrationTest extends SnapshotTestAbstract
         ]);
     }
 
-    public function testGetAtSnapshot()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testGetAtSnapshot(): void
     {
         $stamp0 = $this->sleep(1);
 
-        /* @var DataObject|SnapshotPublishable $a1 */
-        /* @var DataObject|SnapshotPublishable $a2 */
-        /* @var DataObject|SnapshotPublishable $a1Block1 */
-        /* @var DataObject|SnapshotPublishable $a1Block2 */
-        /* @var DataObject|SnapshotPublishable $a2Block1 */
-        /* @var DataObject|SnapshotPublishable $gallery2 */
-        list ($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        /** @var BlockPage|SnapshotPublishable $a2 */
+        /** @var Block|SnapshotPublishable $a1Block1 */
+        /** @var Block|SnapshotPublishable $a1Block2 */
+        /** @var Block|SnapshotPublishable $a2Block1 */
+        /** @var DataObject|SnapshotPublishable $gallery2 */
+        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
 
         $this->editingPage($a1);
         $this->formPublishObject($a1);
@@ -986,10 +1044,9 @@ class IntegrationTest extends SnapshotTestAbstract
 
         $this->editingPage($a2);
 
-        $a2Block2 = new Block([
-            'Title' => 'Block 2 on A2',
-            'ParentID' => $a2->ID,
-        ]);
+        $a2Block2 = Block::create();
+        $a2Block2->Title = 'Block 2 on A2';
+        $a2Block2->ParentID = $a2->ID;
 
         $this->formSaveObject($a2Block2);
 
@@ -1064,9 +1121,15 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertCount(1, $oldA2->Blocks());
     }
 
-    public function testWonkyOwner()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testWonkyOwner(): void
     {
-        $page = new BlockPage(['Title' => 'The Page']);
+        /** @var BlockPage|SnapshotPublishable $page */
+        $page = BlockPage::create();
+        $page->Title = 'The Page';
         $this->editingPage($page);
         $this->formSaveObject($page);
         $this->formPublishObject($page);
@@ -1074,7 +1137,9 @@ class IntegrationTest extends SnapshotTestAbstract
         // This block is saved in isolation
         $this->editingPage(null);
 
-        $block = new Block(['Title' => 'The Block', 'ParentID' => 0]);
+        $block = Block::create();
+        $block->Title = 'The Block';
+        $block->ParentID = 0;
         $block->write();
 
         $block->ParentID = $page->ID;
@@ -1086,21 +1151,28 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$block, ActivityEntry::MODIFIED]
+                [$block, ActivityEntry::MODIFIED],
             ]
         );
     }
 
-    public function testChangeToUnpublishedOwner()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testChangeToUnpublishedOwner(): void
     {
-        $page = new BlockPage(['Title' => 'The Page']);
+        /** @var BlockPage|SnapshotPublishable $page */
+        $page = BlockPage::create();
+        $page->Title = 'The Page';
         $this->editingPage($page);
 
         $this->formSaveObject($page);
 
         $this->editingPage(null);
 
-        $block = new Block(['Title' => 'The Block']);
+        $block = Block::create(['Title' => 'The Block']);
+        $block->Title = 'The Block';
         $block->write();
 
         $this->editingPage($page);
@@ -1114,21 +1186,31 @@ class IntegrationTest extends SnapshotTestAbstract
             $activity,
             [
                 [$page, ActivityEntry::CREATED],
-                [$block, ActivityEntry::MODIFIED]
+                [$block, ActivityEntry::MODIFIED],
             ]
         );
     }
 
-    public function testMany()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testMany(): void
     {
-        $p = new BlockPage(['Title' => 'The Page']);
+        /** @var BlockPage|SnapshotPublishable $p */
+        $p = BlockPage::create();
+        $p->Title = 'The Page';
         $this->editingPage($p);
         $this->formSaveObject($p);
 
-        $b = new Block(['Title' => 'The Block on The Page', 'ParentID' => $p->ID]);
+        $b = Block::create();
+        $b->Title = 'The Block on The Page';
+        $b->ParentID = $p->ID;
         $this->formSaveObject($b);
 
-        $g = new Gallery(['Title' => 'The Gallery on The Block on The Page', 'BlockID' => $b->ID]);
+        $g = Gallery::create();
+        $g->Title = 'The Gallery on The Block on The Page';
+        $g->BlockID = $b->ID;
         $this->formSaveObject($g);
 
         $this->formPublishObject($p);
@@ -1137,7 +1219,8 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertCount(0, $p->getActivityFeed());
         $this->assertCount(0, $p->getPublishableObjects());
 
-        $i = new GalleryImage(['URL' => '/gallery/image/1']);
+        $i = GalleryImage::create();
+        $i->URL = '/gallery/image/1';
         $this->formSaveRelations($g, 'Images', [$i]);
 
         $activity = $p->getActivityFeed();
@@ -1146,14 +1229,19 @@ class IntegrationTest extends SnapshotTestAbstract
             $activity,
             [
                 [$i, ActivityEntry::ADDED, $g],
-                [ImplicitModification::singleton(), null]
+                [ImplicitModification::singleton(), null],
             ]
         );
     }
 
-    public function testPlainActivityFeed()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testPlainActivityFeed(): void
     {
-        $page = new BlockPage();
+        /** @var BlockPage|SnapshotPublishable $page */
+        $page = BlockPage::create();
         $this->editingPage($page);
         $page->Title = 'The Page -- version 1';
         $this->formSaveObject($page);
@@ -1232,7 +1320,7 @@ class IntegrationTest extends SnapshotTestAbstract
                 [$page, ActivityEntry::MODIFIED],
                 [$page, ActivityEntry::PUBLISHED],
                 [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::MODIFIED]
+                [$page, ActivityEntry::MODIFIED],
             ]
         );
 
@@ -1263,16 +1351,26 @@ class IntegrationTest extends SnapshotTestAbstract
         );
     }
 
-    public function testNestedActivityFeed()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testNestedActivityFeed(): void
     {
-        $p = new BlockPage(['Title' => 'Page -- v01']);
+        /** @var BlockPage|SnapshotPublishable $p */
+        $p = BlockPage::create();
+        $p->Title = 'Page -- v01';
         $this->editingPage($p);
         $this->formSaveObject($p);
 
-        $b = new Block(['Title' => 'Block -- v01', 'ParentID' => $p->ID]);
+        $b = Block::create();
+        $b->Title = 'Block -- v01';
+        $b->ParentID = $p->ID;
         $this->formSaveObject($b);
 
-        $g = new Gallery(['Title' => 'Gallery -- v01', 'BlockID' => $b->ID]);
+        $g = Gallery::create();
+        $g->Title = 'Gallery -- v01';
+        $g->BlockID = $b->ID;
         $this->formSaveObject($g);
 
         $this->formPublishObject($p);
@@ -1281,7 +1379,8 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertCount(0, $p->getActivityFeed());
         $this->assertCount(0, $p->getPublishableObjects());
 
-        $i = new GalleryImage(['URL' => '/gallery/image/1']);
+        $i = GalleryImage::create();
+        $i->URL = '/gallery/image/1';
         $this->formSaveRelations($g, 'Images', [$i]);
 
         $activity = $p->getActivityFeed();
@@ -1307,42 +1406,48 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$i, ActivityEntry::MODIFIED]
+                [$i, ActivityEntry::MODIFIED],
             ]
         );
 
         $this->formPublishObject($p);
 
         $a = $p->getActivityFeed(2);
-        $this->assertCount(6, $a);
+        $this->assertCount(8, $a);
         $this->assertActivityContains($a, [
             [$i, ActivityEntry::ADDED],
             [ImplicitModification::singleton(), null],
             [$b, ActivityEntry::MODIFIED],
-            [$p, ActivityEntry::PUBLISHED],
+            [$b, ActivityEntry::PUBLISHED],
+            [ImplicitModification::singleton(), null],
             [$i, ActivityEntry::MODIFIED],
-            [$p, ActivityEntry::PUBLISHED],
+            [$b, ActivityEntry::PUBLISHED],
+            [ImplicitModification::singleton(), null],
         ]);
 
         $a = $p->getActivityFeed(2, 4);
+        $this->assertCount(8, $a);
+
+        $this->assertActivityContains($a, [
+            [$i, ActivityEntry::ADDED, $g],
+            [ImplicitModification::singleton(), null],
+            [$b, ActivityEntry::MODIFIED],
+            [$b, ActivityEntry::PUBLISHED],
+            [ImplicitModification::singleton(), null],
+            [$i, ActivityEntry::MODIFIED],
+            [$b, ActivityEntry::PUBLISHED],
+            [ImplicitModification::singleton(), null],
+        ]);
+
+        $a = $p->getActivityFeed(2, 3);
         $this->assertCount(6, $a);
         $this->assertActivityContains($a, [
             [$i, ActivityEntry::ADDED, $g],
             [ImplicitModification::singleton(), null],
             [$b, ActivityEntry::MODIFIED],
-            [$p, ActivityEntry::PUBLISHED],
-            [$i, ActivityEntry::MODIFIED],
-            [$p, ActivityEntry::PUBLISHED],
-        ]);
-
-        $a = $p->getActivityFeed(2, 3);
-        $this->assertCount(5, $a);
-        $this->assertActivityContains($a, [
-            [$i, ActivityEntry::ADDED, $g],
+            [$b, ActivityEntry::PUBLISHED],
             [ImplicitModification::singleton(), null],
-            [$b, ActivityEntry::MODIFIED],
-            [$p, ActivityEntry::PUBLISHED],
-            [$i, ActivityEntry::MODIFIED]
+            [$i, ActivityEntry::MODIFIED],
         ]);
     }
 
@@ -1350,14 +1455,16 @@ class IntegrationTest extends SnapshotTestAbstract
      * @param ArrayList $activity
      * @param array $objs
      */
-    private function assertActivityContains(ArrayList $activity, $objs = [])
+    private function assertActivityContains(ArrayList $activity, array $objs = []): void
     {
         foreach ($activity as $i => $entry) {
-            /* @var DataObject|SnapshotPublishable $obj */
-            list ($obj, $action) = $objs[$i];
+            /** @var DataObject|SnapshotPublishable $obj */
+            [$obj, $action] = $objs[$i];
+
             if ($obj instanceof SnapshotEvent) {
                 continue;
             }
+
             $expectedHash = $obj->isInDB()
                 ? SnapshotPublishable::hashObjectForSnapshot($obj)
                 : SnapshotPublishable::hashForSnapshot($obj->ClassName, $obj->OldID);
@@ -1373,12 +1480,13 @@ class IntegrationTest extends SnapshotTestAbstract
      * @param ArrayList $items
      * @param array $objs
      */
-    private function assertPublishableObjectsContains(ArrayList $items, $objs = [])
+    private function assertPublishableObjectsContains(ArrayList $items, array $objs = []): void
     {
         foreach ($items as $i => $dataObject) {
             if ($dataObject instanceof SnapshotEvent) {
                 continue;
             }
+
             $obj= $objs[$i];
             $expectedHash = $obj->isInDB()
                 ? SnapshotPublishable::hashObjectForSnapshot($obj)
@@ -1390,9 +1498,10 @@ class IntegrationTest extends SnapshotTestAbstract
         }
     }
 
-    private function debugActivity($activity)
+    private function debugActivity($activity): string
     {
         $list = [];
+
         foreach ($activity as $entry) {
             $list[] = sprintf(
                 '[%s] %s #%s (%s)',
@@ -1403,12 +1512,13 @@ class IntegrationTest extends SnapshotTestAbstract
             );
         }
 
-        return implode("\n", $list);
+        return implode(PHP_EOL, $list);
     }
 
-    private function debugPublishable($items)
+    private function debugPublishable($items): string
     {
         $list = [];
+
         foreach ($items as $item) {
             $list[] = sprintf(
                 '%s #%s (%s)',
@@ -1418,19 +1528,29 @@ class IntegrationTest extends SnapshotTestAbstract
             );
         }
 
-        return implode("\n", $list);
+        return implode(PHP_EOL, $list);
     }
 
-    private function formSaveObject(DataObject $object)
+    /**
+     * @param DataObject $object
+     * @throws ValidationException
+     */
+    private function formSaveObject(DataObject $object): void
     {
         $object->write();
-        $actionName = $object instanceof SiteTree ? 'save' : 'doSave';
+        $actionName = $object instanceof SiteTree
+            ? 'save'
+            : 'doSave';
         $event = $this->createEvent($object, $actionName);
         $this->dispatch($event);
         $this->sleep(3);
     }
 
-    private function formPublishObject(DataObject $object)
+    /**
+     * @param DataObject|RecursivePublishable $object
+     * @throws ValidationException
+     */
+    private function formPublishObject(DataObject $object): void
     {
         $object->write();
         $object->publishRecursive();
@@ -1439,7 +1559,10 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->sleep(3);
     }
 
-    private function formUnpublishObject(DataObject $object)
+    /**
+     * @param DataObject|Versioned $object
+     */
+    private function formUnpublishObject(DataObject $object): void
     {
         $object->doUnpublish();
         $event = $this->createEvent($object, 'unpublish');
@@ -1447,7 +1570,10 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->sleep(3);
     }
 
-    private function formDeleteObject(DataObject $object)
+    /**
+     * @param DataObject|Versioned $object
+     */
+    private function formDeleteObject(DataObject $object): void
     {
         $object->doArchive();
         $event = $this->createEvent($object, 'doDelete');
@@ -1458,24 +1584,33 @@ class IntegrationTest extends SnapshotTestAbstract
     /**
      * Relation saves need to be wrapped in NOW() increments because they rely on
      * timestamp driven history
+     *
      * @param DataObject $object
      * @param string $component
      * @param DataObject[] $items
      * @param string $type
      */
-    private function formSaveRelations(DataObject $object, $component, array $items, $type = ActivityEntry::ADDED)
-    {
+    private function formSaveRelations(
+        DataObject $object,
+        string $component,
+        array $items,
+        string $type = ActivityEntry::ADDED
+    ): void {
         $this->sleep(2);
-        $method = $type === ActivityEntry::ADDED ? 'add' : 'remove';
+        $method = $type === ActivityEntry::ADDED
+            ? 'add'
+            : 'remove';
+
         foreach ($items as $item) {
             $object->$component()->$method($item);
         }
+
         $event = $this->createEvent($object, 'doSave');
         $this->dispatch($event);
         $this->sleep(2);
     }
 
-    private function dispatch(EventContextInterface $event)
+    private function dispatch(EventContextInterface $event): void
     {
         Dispatcher::singleton()->trigger(Listener::EVENT_NAME, $event);
     }
@@ -1485,6 +1620,7 @@ class IntegrationTest extends SnapshotTestAbstract
         if (!$this->currentPage) {
             return Event::create($actionName);
         }
+
         $form = Form::create(
             CMSPageEditController::singleton(),
             'EditForm',
@@ -1506,7 +1642,7 @@ class IntegrationTest extends SnapshotTestAbstract
         );
     }
 
-    private function editingPage(?DataObject $page = null)
+    private function editingPage(?DataObject $page = null): void
     {
         $this->currentPage = $page;
     }

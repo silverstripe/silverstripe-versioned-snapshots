@@ -2,20 +2,27 @@
 
 namespace SilverStripe\Snapshots\Tests;
 
+use Exception;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\SnapshotHasher;
 use SilverStripe\Snapshots\SnapshotItem;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
+use SilverStripe\Versioned\Versioned;
 
 class SnapshotItemTest extends SnapshotTestAbstract
 {
-    public function testGetItem()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetItem(): void
     {
+        /** @var Block|Versioned $block */
         $block = Block::create();
         $block->write();
         $item = SnapshotItem::create([
             'ObjectClass' => Block::class,
             'ObjectID' => $block->ID,
-            'Version' => $block->Version * 100
+            'Version' => $block->Version * 100,
         ]);
 
         $this->assertNull($item->getItem());
@@ -27,8 +34,13 @@ class SnapshotItemTest extends SnapshotTestAbstract
         $this->assertEquals($block->Version, $item->getItem()->Version);
     }
 
-    public function testHydration()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testHydration(): void
     {
+        /** @var Block|Versioned $block */
         $block = Block::create();
         $block->write();
 
