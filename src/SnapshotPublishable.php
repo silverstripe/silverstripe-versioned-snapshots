@@ -8,8 +8,7 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\DB;
-use SilverStripe\ORM\Queries\SQLSelect;
+use SilverStripe\ORM\DataQuery;
 use SilverStripe\Versioned\RecursivePublishable;
 use SilverStripe\Versioned\Versioned;
 
@@ -111,9 +110,10 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public static function get_last_snapshot_item(string $class, int $id): ?DataObject
     {
-        return SnapshotItem::get()->filter([
-            'ObjectHash' => static::hashForSnapshot($class, $id)
-        ])
+        return SnapshotItem::get()
+            ->filter([
+                'ObjectHash' => static::hashForSnapshot($class, $id)
+            ])
             ->sort('Created', 'DESC')
             ->first();
     }
@@ -135,7 +135,8 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getRelevantSnapshots(): DataList
     {
-        $snapshots = $this->owner->getSnapshots()
+        $snapshots = $this->owner
+            ->getSnapshots()
             ->filter([
                 'Items.ObjectHash' => static::hashObjectForSnapshot($this->owner),
             ]);
@@ -146,11 +147,12 @@ class SnapshotPublishable extends RecursivePublishable
     }
 
     /**
-     * @param int $sinceVersion
+     * @param int|null $sinceVersion
      * @return DataList
      */
-    public function getSnapshotsSinceVersion(int $sinceVersion): DataList
+    public function getSnapshotsSinceVersion(?int $sinceVersion): DataList
     {
+        $sinceVersion = (int) $sinceVersion;
         $lastPublishedSnapshotID = (int) SnapshotItem::get()
             ->filter([
                 'ObjectHash' => static::hashObjectForSnapshot($this->owner),
@@ -159,12 +161,13 @@ class SnapshotPublishable extends RecursivePublishable
             ])
             ->max('SnapshotID');
 
-        return $this->owner->getRelevantSnapshots()
+        return $this->owner
+            ->getRelevantSnapshots()
             ->filter([
                 // last published version
-                'Version:GreaterThanOrEqual' => $sinceVersion,
+                'Items.Version:GreaterThanOrEqual' => $sinceVersion,
                 // is not a snapshot of the last publishing
-                'SnapshotID:GreaterThan' => $lastPublishedSnapshotID,
+                'ID:GreaterThan' => $lastPublishedSnapshotID,
             ]);
     }
 
@@ -258,6 +261,7 @@ class SnapshotPublishable extends RecursivePublishable
 
     /**
      * @return int
+     * @throws Exception
      */
     public function getPublishableItemsCount(): int
     {
@@ -267,11 +271,12 @@ class SnapshotPublishable extends RecursivePublishable
             return 0;
         }
 
-        return $this->publishableItemsQuery($snapShotIDs)->execute()->numRecords();
+        return $this->publishableItemsList($snapShotIDs)->count();
     }
 
     /**
      * @return ArrayList
+     * @throws Exception
      */
     public function getPublishableObjects(): ArrayList
     {
@@ -281,16 +286,13 @@ class SnapshotPublishable extends RecursivePublishable
             return ArrayList::create();
         }
 
-        $query = $this->publishableItemsQuery($snapShotIDs);
-        $query->addSelect($groupByFields = ['"ObjectClass"', '"ObjectID"']);
-        $query->addGroupBy($groupByFields);
-
-        $items = $query->execute();
+        $items = $this->publishableItemsList($snapShotIDs);
         $map = [];
 
-        foreach ($items as $row) {
-            $class = $row['ObjectClass'];
-            $id = $row['ObjectID'];
+        /** @var SnapshotItem $item */
+        foreach ($items as $item) {
+            $class = $item->ObjectClass;
+            $id = $item->ObjectID;
             /* @var DataObject|SnapshotPublishable $obj */
             $obj = DataObject::get_by_id($class, $id);
             $map[static::hashObjectForSnapshot($obj)] = $obj;
@@ -414,7 +416,7 @@ class SnapshotPublishable extends RecursivePublishable
 
     /**
      * @return RelationDiffer[]
-     * @todo Memoise / cache
+     * @todo Memorise / cache
      */
     public function getRelationDiffs(): array
     {
@@ -486,32 +488,34 @@ class SnapshotPublishable extends RecursivePublishable
 
     /**
      * @param array $snapShotIDs
-     * @return SQLSelect
-     * TODO can we ger rid of this raw query?
+     * @return DataList
+     * @throws Exception
      */
-    protected function publishableItemsQuery($snapShotIDs)
+    protected function publishableItemsList(array $snapShotIDs): DataList
     {
-        $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
-        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
-
-        $query = SQLSelect::create(
-            ['MaxID' => "MAX(\"$itemTable\".\"ID\")"],
-            "\"$itemTable\""
-        );
-        $query->addInnerJoin(
-            $snapshotTable,
-            "\"$snapshotTable\".\"ID\" = \"$itemTable\".\"SnapshotID\""
-        );
-        $query->setWhere([
-            ['"SnapshotID" IN (' . DB::placeholders($snapShotIDs) . ')' => $snapShotIDs],
-            ['"WasPublished" = ?' => 0],
-            ['"WasDeleted" = ?' => 0],
-            '"ObjectHash" = "OriginHash" OR "ParentID" != 0',
-        ])
-            ->setGroupBy(['"ObjectHash"', "\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\""])
-            ->setOrderBy("\"$itemTable\".\"Created\",  \"$itemTable\".\"ID\"");
-
-        return $query;
+        return SnapshotItem::get()
+            ->filter([
+                'Snapshot.ID' => $snapShotIDs,
+                'WasPublished' => 0,
+                'WasDeleted' => 0,
+            ])
+            ->applyRelation('Snapshot.OriginHash', $snapshotOriginHashColumn)
+            ->whereAny([
+                sprintf('"ObjectHash" = %s', $snapshotOriginHashColumn),
+                '"ParentID" != 0'
+            ])
+            ->alterDataQuery(static function (DataQuery $dataQuery): void {
+                $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
+                $dataQuery->groupby([
+                    '"ObjectHash"',
+                    sprintf('%s."Created"', $itemTable),
+                    sprintf('%s."ID"', $itemTable),
+                ]);
+            })
+            ->sort([
+                'Created' => 'ASC',
+                'ID' => 'ASC',
+            ]);
     }
 
     /**
@@ -572,6 +576,7 @@ class SnapshotPublishable extends RecursivePublishable
      * is nothing the user can do about it. Recursive publishing the old owner
      * will not affect this record, as it is no longer in its ownership graph.
      *
+     * @throws Exception
      */
     public function reconcileOwnershipChanges(?DataObject $previous = null): void
     {
@@ -659,29 +664,24 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getActivityBetweenVersions(int $min, $max = null): DataList
     {
-        $snapshotTable = DataObject::getSchema()->tableName(Snapshot::class);
-        $itemTable = DataObject::getSchema()->tableName(SnapshotItem::class);
-
         return SnapshotItem::get()
             ->byIDs($this->getSnapshotsBetweenVersionsItemIds($min, $max))
             ->filter([
                 'Snapshot.ID:Not' => null,
             ])
-            ->leftJoin($itemTable, "\"ChildItem\".\"ParentID\" = \"$itemTable\".\"ID\"", "ChildItem")
-            // TODO use applyRelation on all the stuff below
+            ->applyRelation('Snapshot.OriginHash', $snapshotOriginHashColumn)
+            ->applyRelation('Children.ID', $childIdColumn)
             ->where([
                 // Only get the items that were the subject of a user's action
-                "(
-                    \"$snapshotTable\" . \"OriginHash\" = \"$itemTable\".\"ObjectHash\" AND
-                    \"ChildItem\".\"ID\" IS NULL
-                ) OR (
-                    \"$snapshotTable\" . \"OriginHash\" != \"$itemTable\".\"ObjectHash\" AND
-                    \"$itemTable\".\"ParentID\" != 0
-                )"
+                sprintf(
+                    '(%1$s = "ObjectHash" AND %2$s IS NULL) OR (%1$s != "ObjectHash" AND "ParentID" != 0)',
+                    $snapshotOriginHashColumn,
+                    $childIdColumn
+                ),
             ])
             ->sort([
-                "\"$itemTable\".\"SnapshotID\"" => "ASC",
-                "\"$itemTable\".\"ID\"" => "ASC",
+                'SnapshotID' => 'ASC',
+                'ID' => 'ASC',
             ]);
     }
 
