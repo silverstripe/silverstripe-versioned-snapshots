@@ -4,8 +4,8 @@ namespace SilverStripe\Snapshots\Tests;
 
 use Exception;
 use SilverStripe\ORM\ValidationException;
-use SilverStripe\Snapshots\SnapshotHasher;
 use SilverStripe\Snapshots\SnapshotItem;
+use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Versioned\Versioned;
 
@@ -49,7 +49,7 @@ class SnapshotItemTest extends SnapshotTestAbstract
         $this->assertEquals(Block::class, $item->ObjectClass);
         $this->assertEquals($block->ID, $item->ObjectID);
         $this->assertEquals($block->Version, $item->Version);
-        $this->assertEquals(SnapshotHasher::hashObjectForSnapshot($block), $item->ObjectHash);
+        $this->assertEquals(SnapshotPublishable::singleton()->hashObjectForSnapshot($block), $item->ObjectHash);
 
         $this->assertTrue($item->WasDraft);
         $this->assertFalse($item->WasDeleted);

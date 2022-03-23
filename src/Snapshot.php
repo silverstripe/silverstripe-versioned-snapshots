@@ -207,7 +207,7 @@ class Snapshot extends DataObject
             return false;
         }
 
-        $liveVersionNumber = SnapshotPublishable::get_published_version_number(
+        $liveVersionNumber = SnapshotPublishable::singleton()->getPublishedVersionNumber(
             $originVersion->baseClass(),
             $originVersion->ID
         );
@@ -217,7 +217,7 @@ class Snapshot extends DataObject
             ->setFrom("\"$table\"")
             ->addWhere([
                 "\"$table\".\"Version\" = ?" => $liveVersionNumber,
-                "\"$table\".\"ObjectHash\" = ?" => static::hashObjectForSnapshot($originVersion),
+                "\"$table\".\"ObjectHash\" = ?" => $this->hashObjectForSnapshot($originVersion),
             ])
             ->execute()
             ->value();
@@ -283,7 +283,7 @@ class Snapshot extends DataObject
     {
         parent::onBeforeWrite();
 
-        $this->OriginHash = static::hashForSnapshot($this->OriginClass, $this->OriginID);
+        $this->OriginHash = $this->hashForSnapshot($this->OriginClass, $this->OriginID);
     }
 
     /**

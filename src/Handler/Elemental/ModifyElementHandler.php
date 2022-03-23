@@ -50,7 +50,7 @@ class ModifyElementHandler extends Handler
         }
 
         foreach ($snapshot->Items() as $item) {
-            if (!static::hashSnapshotCompare($item->getItem(), $block)) {
+            if (!$this->hashSnapshotCompare($item->getItem(), $block)) {
                 continue;
             }
 
