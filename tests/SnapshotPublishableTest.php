@@ -25,7 +25,8 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $a1 = $state['a1'];
 
         $firstSnapshot = Snapshot::get()->sort('Created ASC')->first();
-        $result = SnapshotPublishable::get_at_snapshot(BlockPage::class, $a1->ID, $firstSnapshot->Created);
+        $result = SnapshotPublishable::singleton()
+            ->getAtSnapshotByClassAndId(BlockPage::class, $a1->ID, $firstSnapshot->Created);
 
         $param = $result->getSourceQueryParam('Versioned.date');
         $this->assertNotNull($param);
@@ -44,7 +45,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $a1->Title = 'changed';
         $a1->write();
 
-        $result = SnapshotPublishable::get_at_last_snapshot(BlockPage::class, $a1->ID);
+        $result = SnapshotPublishable::singleton()->getAtLastSnapshotByClassAndId(BlockPage::class, $a1->ID);
         $this->assertNotNull($result);
         $this->assertEquals('A1 Block Page', $result->Title);
     }
@@ -61,7 +62,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->snapshot($a1);
 
         /** @var DataObject|Versioned $result */
-        $result = SnapshotPublishable::get_last_snapshot_item(BlockPage::class, $a1->ID);
+        $result = SnapshotPublishable::singleton()->getLastSnapshotItemByClassAndId(BlockPage::class, $a1->ID);
         $this->assertNotNull($result);
         $this->assertEquals($a1->Version, $result->Version);
     }
@@ -72,7 +73,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
     public function testGetSnapshots(): void
     {
         $state = $this->buildState();
-        $snapshots = SnapshotPublishable::getSnapshots();
+        $snapshots = SnapshotPublishable::singleton()->getSnapshots();
         $this->assertOrigins($snapshots, $state);
     }
 
