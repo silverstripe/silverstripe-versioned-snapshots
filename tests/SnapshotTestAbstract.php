@@ -14,7 +14,6 @@ use SilverStripe\ORM\SS_List;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
-use SilverStripe\Snapshots\SnapshotHasher;
 use SilverStripe\Snapshots\SnapshotItem;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BaseJoin;
@@ -203,7 +202,7 @@ class SnapshotTestAbstract extends SapphireTest
         $this->assertCount(count($objects), $hashes);
 
         foreach ($objects as $o) {
-            $hash = SnapshotHasher::hashObjectForSnapshot($o);
+            $hash = SnapshotPublishable::singleton()->hashObjectForSnapshot($o);
             $this->assertTrue(in_array($hash, $hashes));
         }
     }
@@ -220,16 +219,16 @@ class SnapshotTestAbstract extends SapphireTest
 
     protected function assertHashCompare(DataObject $obj1, DataObject $obj2): void
     {
-        $this->assertTrue(SnapshotHasher::hashSnapshotCompare($obj1, $obj2));
+        $this->assertTrue(SnapshotPublishable::singleton()->hashSnapshotCompare($obj1, $obj2));
     }
 
     protected function assertHashCompareList(array $objs1, array $objs2): void
     {
         $hashes1 = array_map(static function ($o) {
-            return SnapshotHasher::hashObjectForSnapshot($o);
+            return SnapshotPublishable::singleton()->hashObjectForSnapshot($o);
         }, $objs1);
         $hashes2 = array_map(static function ($o) {
-            return SnapshotHasher::hashObjectForSnapshot($o);
+            return SnapshotPublishable::singleton()->hashObjectForSnapshot($o);
         }, $objs2);
         sort($hashes1);
         sort($hashes2);

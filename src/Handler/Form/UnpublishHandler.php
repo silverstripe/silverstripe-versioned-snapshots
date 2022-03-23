@@ -26,7 +26,7 @@ class UnpublishHandler extends Handler
         }
 
         foreach ($snapshot->Items() as $item) {
-            if (!static::hashSnapshotCompare($item->getItem(), $record)) {
+            if (!$this->hashSnapshotCompare($item->getItem(), $record)) {
                 continue;
             }
 

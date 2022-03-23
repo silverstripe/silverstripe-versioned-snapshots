@@ -16,7 +16,7 @@ trait SnapshotHasher
      * @param int|null $id
      * @return string
      */
-    public static function hashForSnapshot(?string $class, ?int $id): string
+    public function hashForSnapshot(?string $class, ?int $id): string
     {
         return md5(sprintf('%s:%s', $class, $id));
     }
@@ -27,9 +27,9 @@ trait SnapshotHasher
      * @param DataObject $obj
      * @return string
      */
-    public static function hashObjectForSnapshot(DataObject $obj): string
+    public function hashObjectForSnapshot(DataObject $obj): string
     {
-        return static::hashForSnapshot($obj->baseClass(), $obj->ID);
+        return $this->hashForSnapshot($obj->baseClass(), $obj->ID);
     }
 
     /**
@@ -37,8 +37,8 @@ trait SnapshotHasher
      * @param DataObject $obj2
      * @return bool
      */
-    public static function hashSnapshotCompare(DataObject $obj1, DataObject $obj2): bool
+    public function hashSnapshotCompare(DataObject $obj1, DataObject $obj2): bool
     {
-        return static::hashObjectForSnapshot($obj1) === static::hashObjectForSnapshot($obj2);
+        return $this->hashObjectForSnapshot($obj1) === $this->hashObjectForSnapshot($obj2);
     }
 }

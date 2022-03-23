@@ -42,7 +42,7 @@ class ArchiveElementHandler extends Handler
             return null;
         }
 
-        $archivedBlock = SnapshotPublishable::get_at_last_snapshot(BaseElement::class, $blockID);
+        $archivedBlock = SnapshotPublishable::singleton()->getAtLastSnapshotByClassAndId(BaseElement::class, $blockID);
 
         if (!$archivedBlock) {
             return null;

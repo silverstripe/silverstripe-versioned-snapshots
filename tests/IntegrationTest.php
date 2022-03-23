@@ -82,6 +82,7 @@ class IntegrationTest extends SnapshotTestAbstract
     /**
      * @throws ValidationException
      * @throws Exception
+     * @group ttt
      */
     public function testFundamentals(): void
     {
@@ -1489,11 +1490,11 @@ class IntegrationTest extends SnapshotTestAbstract
             }
 
             $expectedHash = $obj->isInDB()
-                ? SnapshotPublishable::hashObjectForSnapshot($obj)
-                : SnapshotPublishable::hashForSnapshot($obj->ClassName, $obj->OldID);
+                ? SnapshotPublishable::singleton()->hashObjectForSnapshot($obj)
+                : SnapshotPublishable::singleton()->hashForSnapshot($obj->ClassName, $obj->OldID);
             $this->assertEquals(
                 $expectedHash,
-                SnapshotPublishable::hashObjectForSnapshot($entry->Subject)
+                SnapshotPublishable::singleton()->hashObjectForSnapshot($entry->Subject)
             );
             $this->assertEquals($action, $entry->Action);
         }
@@ -1512,11 +1513,11 @@ class IntegrationTest extends SnapshotTestAbstract
 
             $obj= $objs[$i];
             $expectedHash = $obj->isInDB()
-                ? SnapshotPublishable::hashObjectForSnapshot($obj)
-                : SnapshotPublishable::hashForSnapshot($obj->ClassName, $obj->OldID);
+                ? SnapshotPublishable::singleton()->hashObjectForSnapshot($obj)
+                : SnapshotPublishable::singleton()->hashForSnapshot($obj->ClassName, $obj->OldID);
             $this->assertEquals(
                 $expectedHash,
-                SnapshotPublishable::hashObjectForSnapshot($dataObject)
+                SnapshotPublishable::singleton()->hashObjectForSnapshot($dataObject)
             );
         }
     }

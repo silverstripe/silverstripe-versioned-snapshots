@@ -166,7 +166,7 @@ class SnapshotItem extends DataObject
     {
         parent::onBeforeWrite();
 
-        $this->ObjectHash = static::hashForSnapshot($this->ObjectClass, $this->ObjectID);
+        $this->ObjectHash = $this->hashForSnapshot($this->ObjectClass, $this->ObjectID);
     }
 
     /**
@@ -217,7 +217,7 @@ class SnapshotItem extends DataObject
         } else {
             // Track publish state for non-versioned owners, they're always in a published state.
             $exists = SnapshotItem::get()->filter([
-                'ObjectHash' => static::hashObjectForSnapshot($object)
+                'ObjectHash' => $this->hashObjectForSnapshot($object)
             ]);
             $this->WasCreated = !$exists->exists();
             $this->WasPublished = true;
