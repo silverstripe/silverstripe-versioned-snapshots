@@ -186,7 +186,15 @@ class SnapshotTestAbstract extends SapphireTest
         $gallery2->BlockID = $a2Block1->ID;
         $this->snapshot($gallery2);
 
-        return [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2];
+        return [
+            'a1' => $a1,
+            'a2' => $a2,
+            'a1Block1' => $a1Block1,
+            'a1Block2' => $a1Block2,
+            'a2Block1' => $a2Block1,
+            'gallery1' => $gallery1,
+            'gallery2' => $gallery2,
+        ];
     }
 
     protected function assertItems(SS_List $result, array $objects, string $column = 'ObjectHash'): void

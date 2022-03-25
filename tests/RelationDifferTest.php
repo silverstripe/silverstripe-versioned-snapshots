@@ -6,6 +6,7 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\RelationDiffer;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
+use SilverStripe\Versioned\Versioned;
 
 class RelationDifferTest extends SapphireTest
 {
@@ -155,10 +156,13 @@ class RelationDifferTest extends SapphireTest
      */
     public function testGetRecords(): void
     {
+        /** @var Block|Versioned $block1 */
         $block1 = Block::create();
         $block1->write();
+        /** @var Block|Versioned $block2 */
         $block2 = Block::create();
         $block2->write();
+        /** @var Block|Versioned $block3 */
         $block3 = Block::create();
         $block3->write();
 

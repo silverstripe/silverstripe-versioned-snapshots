@@ -21,7 +21,7 @@ class HandlerTest extends SnapshotTestAbstract
         );
     }
 
-    public function testHandlerDoesntFire()
+    public function testHandlerDoesntFire(): void
     {
         $handler = Handler::create();
         $this->mockSnapshot()
@@ -35,7 +35,7 @@ class HandlerTest extends SnapshotTestAbstract
         $handler->fire($context);
     }
 
-    public function testHandlerDoesFire()
+    public function testHandlerDoesFire(): void
     {
         $handler = Handler::create();
         $blockPage = SiteTree::create();
@@ -46,7 +46,7 @@ class HandlerTest extends SnapshotTestAbstract
         $this->mockSnapshot()
             ->expects($this->once())
             ->method('createSnapshot')
-            ->with($this->callback(function ($arg) use ($blockPage) {
+            ->with($this->callback(static function ($arg) use ($blockPage) {
                 return $arg instanceof SiteTree && $arg->ID == $blockPage->ID;
             }));
 

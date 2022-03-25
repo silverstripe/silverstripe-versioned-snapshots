@@ -490,9 +490,11 @@ class IntegrationTest extends SnapshotTestAbstract
      */
     public function testRevertChanges(): void
     {
-        /** @var DataObject|SnapshotPublishable $a1 */
-        /** @var DataObject|SnapshotPublishable|Versioned $gallery1 */
-        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var Gallery|SnapshotPublishable|Versioned $gallery1 */
+        $gallery1 = $state['gallery1'];
 
         $this->editingPage($a1);
         $this->formPublishObject($a1);
@@ -532,11 +534,13 @@ class IntegrationTest extends SnapshotTestAbstract
      */
     public function testIntermediaryObjects(): void
     {
-        /** @var DataObject|SnapshotPublishable $a1 */
-        /** @var DataObject|SnapshotPublishable $a2 */
-        /** @var DataObject|SnapshotPublishable $a1Block1 */
-        /** @var DataObject|SnapshotPublishable $gallery1 */
-        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var Block|SnapshotPublishable $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
+        /** @var Gallery|SnapshotPublishable $gallery1 */
+        $gallery1 = $state['gallery1'];
 
         $this->publish($a1);
         $this->editingPage($a1);
@@ -615,12 +619,17 @@ class IntegrationTest extends SnapshotTestAbstract
      */
     public function testChangeOwnershipStructure(): void
     {
-        /** @var DataObject|SnapshotPublishable $a1 */
-        /** @var DataObject|SnapshotPublishable $a2 */
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var BlockPage|SnapshotPublishable $a2 */
+        $a2 = $state['a2'];
         /** @var Block|SnapshotPublishable $a1Block1 */
-        /** @var DataObject|SnapshotPublishable $gallery1 */
-        /** @var DataObject|SnapshotPublishable $gallery2 */
-        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
+        $a1Block1 = $state['a1Block1'];
+        /** @var Gallery|SnapshotPublishable $gallery1 */
+        $gallery1 = $state['gallery1'];
+        /** @var Gallery|SnapshotPublishable $gallery2 */
+        $gallery2 = $state['gallery2'];
 
         $this->editingPage($a1);
         $this->formPublishObject($a1);
@@ -845,11 +854,15 @@ class IntegrationTest extends SnapshotTestAbstract
      */
     public function testPartialActivityMigration(): void
     {
-        /** @var DataObject|SnapshotPublishable $a1 */
-        /** @var DataObject|SnapshotPublishable $a2 */
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var BlockPage|SnapshotPublishable $a2 */
+        $a2 = $state['a2'];
         /** @var Block|SnapshotPublishable $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
         /** @var Block|SnapshotPublishable $a1Block2 */
-        [$a1, $a2, $a1Block1, $a1Block2] = $this->buildState();
+        $a1Block2 = $state['a1Block2'];
 
         // Test that we can transplant a node and relevant activity will be migrated
         // but unrelated activity will be preserved.
@@ -922,13 +935,17 @@ class IntegrationTest extends SnapshotTestAbstract
      */
     public function testDeletions(): void
     {
-        /** @var DataObject|SnapshotPublishable $a1 */
-        /** @var DataObject|SnapshotPublishable $a2 */
-        /** @var DataObject|SnapshotPublishable $a1Block1 */
-        /** @var DataObject|SnapshotPublishable $a1Block2 */
-        /** @var DataObject|SnapshotPublishable $a2Block1 */
-        /** @var DataObject|SnapshotPublishable $gallery2 */
-        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var BlockPage|SnapshotPublishable $a2 */
+        $a2 = $state['a2'];
+        /** @var Block|SnapshotPublishable $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
+        /** @var Block|SnapshotPublishable $a2Block1 */
+        $a2Block1 = $state['a2Block1'];
+        /** @var Gallery|SnapshotPublishable $gallery2 */
+        $gallery2 = $state['gallery2'];
 
         $this->editingPage($a1);
         $this->formPublishObject($a1);
@@ -1000,15 +1017,21 @@ class IntegrationTest extends SnapshotTestAbstract
      */
     public function testGetAtSnapshot(): void
     {
-        $stamp0 = $this->sleep(1);
+         $this->sleep(1);
 
+        $state = $this->buildState();
         /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
         /** @var BlockPage|SnapshotPublishable $a2 */
+        $a2 = $state['a2'];
         /** @var Block|SnapshotPublishable $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
         /** @var Block|SnapshotPublishable $a1Block2 */
+        $a1Block2 = $state['a1Block2'];
         /** @var Block|SnapshotPublishable $a2Block1 */
-        /** @var DataObject|SnapshotPublishable $gallery2 */
-        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
+        $a2Block1 = $state['a2Block1'];
+        /** @var Gallery|SnapshotPublishable $gallery1 */
+        $gallery1 = $state['gallery1'];
 
         $this->editingPage($a1);
         $this->formPublishObject($a1);
@@ -1050,12 +1073,12 @@ class IntegrationTest extends SnapshotTestAbstract
 
         $this->formSaveObject($a2Block2);
 
-        $stamp6 = $this->sleep(1);
+        $this->sleep(1);
 
         $a2Block1->Title = 'A2 Block 1 changed';
         $this->formSaveObject($a2Block1);
 
-        $stamp7 = $this->sleep(1);
+        $this->sleep(1);
         $a2->Title = 'The new A2';
         $this->formSaveObject($a2);
 
@@ -1534,6 +1557,7 @@ class IntegrationTest extends SnapshotTestAbstract
     /**
      * @param DataObject $object
      * @throws ValidationException
+     * @throws Exception
      */
     private function formSaveObject(DataObject $object): void
     {
@@ -1561,6 +1585,7 @@ class IntegrationTest extends SnapshotTestAbstract
 
     /**
      * @param DataObject|Versioned $object
+     * @throws Exception
      */
     private function formUnpublishObject(DataObject $object): void
     {
@@ -1572,6 +1597,7 @@ class IntegrationTest extends SnapshotTestAbstract
 
     /**
      * @param DataObject|Versioned $object
+     * @throws Exception
      */
     private function formDeleteObject(DataObject $object): void
     {
@@ -1589,6 +1615,7 @@ class IntegrationTest extends SnapshotTestAbstract
      * @param string $component
      * @param DataObject[] $items
      * @param string $type
+     * @throws Exception
      */
     private function formSaveRelations(
         DataObject $object,

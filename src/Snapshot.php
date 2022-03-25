@@ -97,11 +97,7 @@ class Snapshot extends DataObject
      */
     public function getOriginItem(): ?DataObject
     {
-        $item = $this->Items()
-            ->filter([
-                'ObjectHash' => $this->OriginHash,
-            ])
-            ->first();
+        $item = $this->Items()->find('ObjectHash', $this->OriginHash);
 
         if ($item instanceof DataObject) {
             return $item;

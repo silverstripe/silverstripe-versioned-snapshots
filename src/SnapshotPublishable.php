@@ -114,11 +114,8 @@ class SnapshotPublishable extends RecursivePublishable
     public static function get_last_snapshot_item(string $class, int $id): ?DataObject
     {
         return SnapshotItem::get()
-            ->filter([
-                'ObjectHash' => static::hashForSnapshot($class, $id),
-            ])
             ->sort('Created', 'DESC')
-            ->first();
+            ->find('ObjectHash', static::hashForSnapshot($class, $id));
     }
 
     /**
@@ -392,11 +389,8 @@ class SnapshotPublishable extends RecursivePublishable
     public function getPreviousSnapshotItem(): ?DataObject
     {
         return SnapshotItem::get()
-            ->filter([
-                'ObjectHash' => static::hashObjectForSnapshot($this->owner),
-            ])
             ->sort('Created', 'DESC')
-            ->first();
+            ->find('ObjectHash', static::hashObjectForSnapshot($this->owner));
     }
 
     /**
@@ -447,7 +441,8 @@ class SnapshotPublishable extends RecursivePublishable
 
     /**
      * @return RelationDiffer[]
-     * @todo Memorise / cache
+     * @throws Exception
+     * TODO Memoise / cache / enable cache once it's confirmed that this feature is needed
      */
     public function getRelationDiffs(): array
     {

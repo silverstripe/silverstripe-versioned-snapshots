@@ -37,10 +37,11 @@ class PublishHandler extends Handler
 
         // Get the most recent change set to find out what was published
         /** @var ChangeSet $changeSet */
-        $changeSet = ChangeSet::get()->filter([
-            'State' => ChangeSet::STATE_PUBLISHED,
-            'IsInferred' => true,
-        ])
+        $changeSet = ChangeSet::get()
+            ->filter([
+                'State' => ChangeSet::STATE_PUBLISHED,
+                'IsInferred' => true,
+            ])
             ->sort('Created', 'DESC')
             ->first();
 

@@ -181,11 +181,15 @@ class SnapshotTest extends SnapshotTestAbstract
      */
     public function testCreateSnapshotNoRelations(): void
     {
+        $state = $this->buildState();
         /** @var BlockPage $a1 */
+        $a1 = $state['a1'];
         /** @var Block $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
         /** @var Block $a2Block1 */
+        $a2Block1 = $state['a2Block1'];
         /** @var Gallery $gallery1 */
-        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
+        $gallery1 = $state['gallery1'];
         $gallery1->Title = 'changed';
         $snapshot = $this->snapshot($gallery1);
         $this->assertCount(3, $snapshot->Items());
@@ -239,10 +243,13 @@ class SnapshotTest extends SnapshotTestAbstract
      */
     public function testCreateSnapshotWithImplicitModifications(): void
     {
+        $state = $this->buildState();
         /** @var BlockPage $a1 */
+        $a1 = $state['a1'];
         /** @var Block $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
         /** @var Gallery $gallery1 */
-        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
+        $gallery1 = $state['gallery1'];
         $image = GalleryImage::create();
         $image->write();
 
@@ -348,10 +355,13 @@ class SnapshotTest extends SnapshotTestAbstract
      */
     public function testAddOwnershipChain(): void
     {
+        $state = $this->buildState();
         /** @var BlockPage $a1 */
+        $a1 = $state['a1'];
         /** @var Block $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
         /** @var Gallery $gallery1 */
-        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
+        $gallery1 = $state['gallery1'];
         $snapshot = Snapshot::create();
         $this->assertEmpty($snapshot->Items());
         $snapshot->addOwnershipChain($gallery1);
@@ -384,11 +394,16 @@ class SnapshotTest extends SnapshotTestAbstract
         $this->assertHashCompare($item, $block);
     }
 
+    /**
+     * @throws ValidationException
+     */
     public function testIsLiveSnapshot(): void
     {
+        $state = $this->buildState();
         /** @var BlockPage $a1 */
+        $a1 = $state['a1'];
         /** @var Block $a1Block1 */
-        [$a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2] = $this->buildState();
+        $a1Block1 = $state['a1Block1'];
         Snapshot::get()->removeAll();
         SnapshotItem::get()->removeAll();
         $this->assertCount(0, Snapshot::get());
