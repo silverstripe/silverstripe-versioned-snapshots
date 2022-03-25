@@ -11,6 +11,9 @@ use SilverStripe\Versioned\Versioned;
  */
 class BaseJoin extends DataObject implements TestOnly
 {
+    /**
+     * @var array
+     */
     private static $extensions = [
         Versioned::class,
     ];

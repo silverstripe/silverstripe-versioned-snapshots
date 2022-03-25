@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Snapshots\Thirdparty;
 
+use SilverStripe\Admin\Forms\UsedOnTable;
 use SilverStripe\ORM\DataExtension;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
@@ -11,6 +12,7 @@ class UsedOnTableExtension extends DataExtension
 {
     /**
      * Exclude snapshot data objects from appearing in Used On tab in Files section
+     * Extension point in @see UsedOnTable::usage()
      *
      * @param array $excludedClasses
      */

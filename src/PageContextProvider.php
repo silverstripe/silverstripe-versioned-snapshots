@@ -2,7 +2,6 @@
 
 namespace SilverStripe\Snapshots\Handler;
 
-use Page;
 use SilverStripe\Admin\AdminRootController;
 use SilverStripe\CMS\Controllers\CMSMain;
 use SilverStripe\CMS\Controllers\CMSPageEditController;
@@ -22,6 +21,7 @@ use SilverStripe\ORM\DataObject;
  */
 class PageContextProvider
 {
+
     use Injectable;
 
     /**
@@ -43,7 +43,7 @@ class PageContextProvider
      */
     public function getCurrentPageFromController($controller): ?DataObject
     {
-        while ($controller && ($controller instanceof Form || $controller instanceof GridFieldDetailForm_ItemRequest)) {
+        while ($controller instanceof Form || $controller instanceof GridFieldDetailForm_ItemRequest) {
             $controller = $controller->getController();
         }
 
@@ -57,7 +57,7 @@ class PageContextProvider
 
         $page = $controller->currentPage();
 
-        if ($page === null || !$page instanceof SiteTree) {
+        if (!$page instanceof SiteTree) {
             return null;
         }
 
@@ -74,6 +74,7 @@ class PageContextProvider
     public function getCurrentPageFromRequestUrl(?string $url): ?SiteTree
     {
         $url = trim($url, '/ ');
+
         if (!$url) {
             return null;
         }
@@ -84,9 +85,11 @@ class PageContextProvider
         $urlBase = $controller->config()->get('url_segment');
         $baseURL = Path::join($adminSegment, $urlBase);
         $pattern = '#^' . $baseURL .'#';
+
         if (!preg_match($pattern, $url)) {
             return null;
         }
+
         $slug = preg_replace($pattern, '', $url);
         $request = new HTTPRequest('GET', $slug);
         $params = $request->match($controller->config()->get('url_rule'));
@@ -98,9 +101,11 @@ class PageContextProvider
 
         // find page by ID
         $page = DataObject::get_by_id(SiteTree::class, (int) $pageId);
+
         if (!$page) {
             return null;
         }
+
         // re-fetch the page with proper type
         $page = DataObject::get_by_id($page->ClassName, $pageId);
 
@@ -120,7 +125,9 @@ class PageContextProvider
             return $this->request;
         }
 
-        return Controller::has_curr() ? Controller::curr()->getRequest() : null;
+        return Controller::has_curr()
+            ? Controller::curr()->getRequest()
+            : null;
     }
 
     /**
@@ -140,12 +147,15 @@ class PageContextProvider
     public function getPageFromReferrer(): ?SiteTree
     {
         $request = $this->getRequest();
+
         if (!$request) {
             return null;
         }
+
         $url = $request->getHeader('referer');
         $url = parse_url($url, PHP_URL_PATH);
         $url = ltrim($url, '/');
+
         return $this->getCurrentPageFromRequestUrl($url);
     }
 }

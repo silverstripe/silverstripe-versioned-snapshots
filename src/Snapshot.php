@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Snapshots;
 
+use Exception;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\ORM\Queries\SQLSelect;
@@ -10,7 +11,6 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
-use Exception;
 
 /**
  * Class Snapshot
@@ -95,22 +95,27 @@ class Snapshot extends DataObject
     /**
      * @return SnapshotItem|null
      */
-    public function getOriginItem()
+    public function getOriginItem(): ?DataObject
     {
-        return $this->Items()->filter([
-            'ObjectHash' => $this->OriginHash,
-        ])->first();
+        $item = $this->Items()->find('ObjectHash', $this->OriginHash);
+
+        if ($item instanceof DataObject) {
+            return $item;
+        }
+
+        return null;
     }
 
     /**
-     * Shortcut for adding items by their associated dataobjects
+     * Shortcut for adding items by their associated data objects
+     *
      * @param DataObject $obj
      * @return $this
      * @throws Exception
      */
     public function addObject(DataObject $obj): self
     {
-        if ($this->Items()->count() >= $this->config()->item_limit) {
+        if ($this->Items()->count() >= $this->config()->get('item_limit')) {
             return $this;
         }
 
@@ -120,6 +125,7 @@ class Snapshot extends DataObject
                     return $this;
                 }
             }
+
             $this->Items()->add($obj);
         } else {
             // Ensure uniqueness
@@ -128,6 +134,7 @@ class Snapshot extends DataObject
                     return $this;
                 }
             }
+
             $item = SnapshotItem::create()
                 ->hydrateFromDataObject($obj);
 
@@ -138,11 +145,12 @@ class Snapshot extends DataObject
     }
 
     /**
-     * @return SnapshotItem|null
+     * @return DataObject|null
      */
-    public function getOriginVersion()
+    public function getOriginVersion(): ?DataObject
     {
         $originItem = $this->getOriginItem();
+
         if ($originItem) {
             return Versioned::get_version(
                 $originItem->ObjectClass,
@@ -157,20 +165,23 @@ class Snapshot extends DataObject
     /**
      * @return string
      */
-    public function getDate()
+    public function getDate(): string
     {
         return $this->LastEdited;
     }
 
     /**
      * @return string
+     * @throws Exception
      */
     public function getActivityDescription(): string
     {
+        /** @var SnapshotItem $item */
         $item = $this->getOriginItem();
+
         return $item
             ? ActivityEntry::createFromSnapshotItem($item)->getDescription()
-            : _t(__CLASS__ . 'ACTIVITY_NONE', 'none');
+            : _t(self::class . 'ACTIVITY_NONE', 'none');
     }
 
     public function getActivityAgo(): string
@@ -184,8 +195,10 @@ class Snapshot extends DataObject
     public function getIsLiveSnapshot(): bool
     {
         $table = DataObject::getSchema()->tableName(SnapshotItem::class);
-        /* @var Versioned|DataObject $originVersion */
+
+        /** @var Versioned|DataObject $originVersion */
         $originVersion = $this->getOriginVersion();
+
         if (!$originVersion) {
             return false;
         }
@@ -193,16 +206,18 @@ class Snapshot extends DataObject
         if ($originVersion->hasStages() && !$originVersion->isLiveVersion()) {
             return false;
         }
+
         $liveVersionNumber = SnapshotPublishable::get_published_version_number(
             $originVersion->baseClass(),
             $originVersion->ID
         );
+
         $latestPublishID = SQLSelect::create()
             ->setSelect('MAX("SnapshotID")')
-            ->setFrom($table)
+            ->setFrom("\"$table\"")
             ->addWhere([
-                '"Version" = ?' => $liveVersionNumber,
-                '"ObjectHash" = ?' => static::hashObjectForSnapshot($originVersion),
+                "\"$table\".\"Version\" = ?" => $liveVersionNumber,
+                "\"$table\".\"ObjectHash\" = ?" => static::hashObjectForSnapshot($originVersion),
             ])
             ->execute()
             ->value();
@@ -216,7 +231,9 @@ class Snapshot extends DataObject
      */
     public function getActivityType(): ?string
     {
+        /** @var SnapshotItem $item */
         $item = $this->getOriginItem();
+
         return $item
             ? ActivityEntry::createFromSnapshotItem($item)->Action
             : null;
@@ -262,7 +279,7 @@ class Snapshot extends DataObject
         return true;
     }
 
-    public function onBeforeWrite()
+    public function onBeforeWrite(): void
     {
         parent::onBeforeWrite();
 
@@ -270,16 +287,17 @@ class Snapshot extends DataObject
     }
 
     /**
-     *
      * @param DataObject|null $origin
      * @param array $extraObjects
      * @return Snapshot|null
      * @throws ValidationException
+     * @throws Exception
      */
     public function createSnapshot(
         DataObject $origin,
         array $extraObjects = []
     ): ?Snapshot {
+        /** @var DataObject|SnapshotPublishable $origin */
         if (!$origin->hasExtension(SnapshotPublishable::class)) {
             return null;
         }
@@ -301,14 +319,17 @@ class Snapshot extends DataObject
             $event->write();
             $snapshot->applyOrigin($event);
             $eventItem = $snapshot->getOriginItem();
-            /* @var RelationDiffer $diff */
+
+            /** @var RelationDiffer $diff */
             foreach ($diffs as $diff) {
                 foreach ($diff->getRecords() as $obj) {
                     $item = SnapshotItem::create()
                         ->hydrateFromDataObject($obj);
+
                     if ($diff->isRemoved($obj->ID ?: $obj->OldID)) {
                         $item->WasDeleted = true;
                     }
+
                     $eventItem->Children()->add($item);
                     $snapshot->addObject($item);
                 }
@@ -330,7 +351,7 @@ class Snapshot extends DataObject
      * @return Snapshot
      * @throws ValidationException
      */
-    public function createSnapshotEvent(string $message, $extraObjects = []): Snapshot
+    public function createSnapshotEvent(string $message, array $extraObjects = []): Snapshot
     {
         $event = SnapshotEvent::create([
             'Title' => $message,
@@ -344,10 +365,13 @@ class Snapshot extends DataObject
      * sets the related snapshot items to not modified
      *
      * items with modifications are used to determine the owner's modification
-     * status (eg in site tree's status flags)
+     * status (e.g. in site tree's status flags)
+     *
+     * @throws ValidationException
      */
     public function markNoModifications(): void
     {
+        /** @var SnapshotItem $item */
         foreach ($this->Items() as $item) {
             $item->Modification = false;
             $item->write();
@@ -377,6 +401,7 @@ class Snapshot extends DataObject
     public function addOwnershipChain(DataObject $obj): self
     {
         $this->addObject($obj);
+
         foreach ($obj->getIntermediaryObjects() as $o) {
             $this->addObject($o);
         }

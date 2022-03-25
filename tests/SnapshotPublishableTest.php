@@ -2,29 +2,45 @@
 
 namespace SilverStripe\Snapshots\Tests;
 
+use Exception;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
+use SilverStripe\Snapshots\Tests\SnapshotTest\Gallery;
 use SilverStripe\Versioned\Versioned;
 
 class SnapshotPublishableTest extends SnapshotTestAbstract
 {
-    public function testGetAtSnapshot()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetAtSnapshot(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage $a1 */
+        $a1 = $state['a1'];
+
         $firstSnapshot = Snapshot::get()->sort('Created ASC')->first();
         $result = SnapshotPublishable::get_at_snapshot(BlockPage::class, $a1->ID, $firstSnapshot->Created);
+
         $param = $result->getSourceQueryParam('Versioned.date');
         $this->assertNotNull($param);
         $this->assertEquals($firstSnapshot->Created, $param);
     }
 
-    public function testGetAtLastSnapshot()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetAtLastSnapshot(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage $a1 */
+        $a1 = $state['a1'];
+
         $a1->Title = 'changed';
         $a1->write();
 
@@ -33,27 +49,53 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->assertEquals('A1 Block Page', $result->Title);
     }
 
-    public function testGetLastSnapshotItem()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetLastSnapshotItem(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|Versioned $a1 */
+        $a1 = $state['a1'];
         $a1->Title = 'changed';
         $this->snapshot($a1);
 
+        /** @var DataObject|Versioned $result */
         $result = SnapshotPublishable::get_last_snapshot_item(BlockPage::class, $a1->ID);
         $this->assertNotNull($result);
         $this->assertEquals($a1->Version, $result->Version);
     }
 
-    public function testGetSnapshots()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetSnapshots(): void
     {
-        $arr = $this->buildState();
+        $state = $this->buildState();
         $snapshots = SnapshotPublishable::getSnapshots();
-        $this->assertOrigins($snapshots, $arr);
+        $this->assertOrigins($snapshots, $state);
     }
 
-    public function testGetRelevantSnapshots()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetRelevantSnapshots(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var BlockPage|SnapshotPublishable $a2 */
+        $a2 = $state['a2'];
+        /** @var Block $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
+        /** @var Block $a1Block2 */
+        $a1Block2 = $state['a1Block2'];
+        /** @var Block $a2Block1 */
+        $a2Block1 = $state['a2Block1'];
+        /** @var Gallery $gallery1 */
+        $gallery1 = $state['gallery1'];
+        /** @var Gallery $gallery2 */
+        $gallery2 = $state['gallery2'];
         $a1->Title = 'changed';
         $this->snapshot($a1);
 
@@ -80,14 +122,29 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
             [
                 $a2,
                 $a2Block1,
-                $gallery2
+                $gallery2,
             ]
         );
     }
 
-    public function testGetSnapshotsSinceVersion()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetSnapshotsSinceVersion(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var Block $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
+        /** @var Block $a1Block2 */
+        $a1Block2 = $state['a1Block2'];
+        /** @var Block $a2Block1 */
+        $a2Block1 = $state['a2Block1'];
+        /** @var Gallery $gallery1 */
+        $gallery1 = $state['gallery1'];
+        /** @var Gallery $gallery2 */
+        $gallery2 = $state['gallery2'];
         $this->publish($a1);
         $fromVersion = Versioned::get_versionnumber_by_stage(BlockPage::class, Versioned::LIVE, $a1->ID);
 
@@ -128,9 +185,20 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         );
     }
 
-    public function testHasOwnedModifications()
+    /**
+     * @throws ValidationException
+     */
+    public function testHasOwnedModifications(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var BlockPage|SnapshotPublishable $a2 */
+        $a2 = $state['a2'];
+        /** @var Block $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
+        /** @var Block $a1Block2 */
+        $a1Block2 = $state['a1Block2'];
         $this->publish($a1);
         $this->publish($a2);
 
@@ -147,9 +215,22 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->assertFalse($a2->hasOwnedModifications());
     }
 
-    public function testPublishableItems()
+    /**
+     * @throws ValidationException
+     */
+    public function testPublishableItems(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var BlockPage|SnapshotPublishable $a2 */
+        $a2 = $state['a2'];
+        /** @var Block $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
+        /** @var Block $a2Block1 */
+        $a2Block1 = $state['a2Block1'];
+        /** @var Gallery $gallery1 */
+        $gallery1 = $state['gallery1'];
         $this->publish($a1);
         $this->publish($a2);
 
@@ -191,21 +272,36 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->assertEquals($classes, $a2->getPublishableObjects()->column('ClassName'));
     }
 
-    public function testGetRelationTracking()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetRelationTracking(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var Block|Versioned $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
+        /** @var Block|Versioned $a1Block2 */
+        $a1Block2 = $state['a1Block2'];
         $this->assertEmpty($a1->getRelationTracking());
         Config::modify()->set(BlockPage::class, 'snapshot_relation_tracking', ['Blocks', 'Fail']);
         $result = $a1->getRelationTracking();
+
         $this->assertArrayHasKey('Blocks', $result);
         $this->assertArrayNotHasKey('Fail', $result);
         $this->assertEquals($a1Block1->Version, $result['Blocks'][$a1Block1->ID]);
         $this->assertEquals($a1Block2->Version, $result['Blocks'][$a1Block2->ID]);
     }
 
-    public function testPreviousSnapshotItem()
+    /**
+     * @throws ValidationException
+     */
+    public function testPreviousSnapshotItem(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
         $a1->Title = 'changed';
         $this->snapshot($a1);
         $version = Versioned::get_versionnumber_by_stage(BlockPage::class, Versioned::DRAFT, $a1->ID);
@@ -214,9 +310,14 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->assertHashCompare($a1, $item->getItem());
     }
 
-    public function testPreviousSnapshot()
+    /**
+     * @throws ValidationException
+     */
+    public function testPreviousSnapshot(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
         $a1->Title = 'changed';
         $this->snapshot($a1);
 
@@ -225,8 +326,10 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
         $result = $a1->atPreviousSnapshot(function ($date) use ($a1) {
             $this->assertNotNull($date);
+
             return DataObject::get_by_id(BlockPage::class, $a1->ID);
         });
+
         $this->assertNotNull($result);
         $this->assertEquals('changed', $result->Title);
 
@@ -235,27 +338,53 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->assertEquals('changed', $result->Title);
     }
 
-    public function testIsModifiedSinceLastSnapshot()
+    /**
+     * @throws ValidationException
+     */
+    public function testIsModifiedSinceLastSnapshot(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
         $this->assertFalse($a1->isModifiedSinceLastSnapshot());
         $a1->Title = 'changed';
         $a1->write();
+
+        /** @var BlockPage|SnapshotPublishable $obj */
         $obj = DataObject::get_by_id(BlockPage::class, $a1->ID);
 
         $this->assertTrue($obj->isModifiedSinceLastSnapshot());
     }
 
-    public function testGetIntermediaryObjects()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetIntermediaryObjects(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var Block|SnapshotPublishable $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
+        /** @var Gallery|SnapshotPublishable $gallery1 */
+        $gallery1 = $state['gallery1'];
         $objs = $gallery1->getIntermediaryObjects();
         $this->assertHashCompareList([$a1Block1, $a1], $objs);
     }
 
-    public function testGetRelationDiffs()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testGetRelationDiffs(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
+        /** @var Block|SnapshotPublishable $a1Block1 */
+        $a1Block1 = $state['a1Block1'];
+        /** @var Block|SnapshotPublishable $a1Block2 */
+        $a1Block2 = $state['a1Block2'];
         Config::modify()->set(BlockPage::class, 'snapshot_relation_tracking', ['Blocks']);
 
         $this->assertCount(1, $a1->getRelationDiffs());
@@ -305,9 +434,14 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->assertEquals([$a1Block1->ID], $diff->getChanged());
     }
 
-    public function testGetPreviousVersion()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetPreviousVersion(): void
     {
-        list($a1, $a2, $a1Block1, $a1Block2, $a2Block1, $gallery1, $gallery2) = $this->buildState();
+        $state = $this->buildState();
+        /** @var BlockPage|SnapshotPublishable $a1 */
+        $a1 = $state['a1'];
         $originalTitle = $a1->Title;
         $a1->Title = 'changed';
         $this->snapshot($a1);

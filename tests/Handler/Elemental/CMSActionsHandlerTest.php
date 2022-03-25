@@ -6,20 +6,26 @@ use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use DNADesign\Elemental\Models\BaseElement;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\EventDispatcher\Symfony\Event;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\CMSActionsHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class CMSActionsHandlerTest extends SnapshotTestAbstract
 {
+    /**
+     * @var array
+     */
+    protected static $required_extensions = [
+        BlockPage::class => [
+            ElementalPageExtension::class,
+        ],
+    ];
 
-    protected function setUp()
-    {
-        parent::setUp();
-        BlockPage::add_extension(ElementalPageExtension::class);
-    }
-
-    public function testHandlerDoesntFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesntFire(): void
     {
         $handler = new CMSActionsHandler();
         $this->mockSnapshot()
@@ -35,7 +41,7 @@ class CMSActionsHandlerTest extends SnapshotTestAbstract
         $context = Event::create(
             'action',
             [
-                'request' => new HTTPRequest('GET', '/')
+                'request' => new HTTPRequest('GET', '/'),
             ]
         );
         $handler->fire($context);
@@ -44,16 +50,19 @@ class CMSActionsHandlerTest extends SnapshotTestAbstract
             'action',
             [
                 'request' => (new HTTPRequest('GET', '/'))->setRouteParams([
-                    'ID' => 5
-                ])
+                    'ID' => 5,
+                ]),
             ]
         );
         $handler->fire($context);
     }
 
-    public function testHandlerDoesFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFire(): void
     {
-        $handler = new CMSActionsHandler();
+        $handler = CMSActionsHandler::create();
         $this->mockSnapshot()
             ->expects($this->once())
             ->method('createSnapshot');

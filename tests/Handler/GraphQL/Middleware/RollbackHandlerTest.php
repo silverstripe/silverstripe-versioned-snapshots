@@ -5,12 +5,16 @@ namespace SilverStripe\Snapshots\Tests\Handler\GraphQL\Middleware;
 use GraphQL\Executor\ExecutionResult;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\EventDispatcher\Symfony\Event;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\GraphQL\Middleware\RollbackHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class RollbackHandlerTest extends SnapshotTestAbstract
 {
-    public function testHandlerDoesntFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesntFire(): void
     {
         $handler = RollbackHandler::create();
         $this->mockSnapshot()
@@ -30,7 +34,7 @@ class RollbackHandlerTest extends SnapshotTestAbstract
             'params' => [
                 'id' => 5,
                 'toVersion' => 8,
-            ]
+            ],
         ]);
         $handler->fire($context);
 
@@ -42,13 +46,16 @@ class RollbackHandlerTest extends SnapshotTestAbstract
             'params' => [
                 'id' => $page->ID,
                 'toVersion' => $currentVersion * 100,
-            ]
+            ],
         ]);
 
         $handler->fire($context);
     }
 
-    public function testHandlerDoesFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFire(): void
     {
         $handler = RollbackHandler::create();
 

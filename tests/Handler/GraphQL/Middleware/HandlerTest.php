@@ -2,30 +2,30 @@
 
 namespace SilverStripe\Snapshots\Tests\Handler\GraphQL\Middleware;
 
-use DNADesign\Elemental\Models\BaseElement;
-use DNADesign\Elemental\Models\ElementalArea;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\EventDispatcher\Symfony\Event;
-use SilverStripe\Snapshots\Handler\Elemental\SortElementsHandler;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler;
 use SilverStripe\Snapshots\Handler\PageContextProvider;
 use SilverStripe\Snapshots\Tests\Handler\GraphQL\FakePageContextProvider;
-use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class HandlerTest extends SnapshotTestAbstract
 {
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         Injector::inst()->registerService(
-            new FakePageContextProvider(),
+            FakePageContextProvider::create(),
             PageContextProvider::class
         );
     }
 
-    public function testHandlerDoesntFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesntFire(): void
     {
         $handler = Handler::create();
         $this->mockSnapshot()
@@ -39,7 +39,10 @@ class HandlerTest extends SnapshotTestAbstract
         $handler->fire($context);
     }
 
-    public function testHandlerDoesFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFire(): void
     {
         $handler = Handler::create();
         $blockPage = SiteTree::create();
@@ -50,7 +53,7 @@ class HandlerTest extends SnapshotTestAbstract
         $this->mockSnapshot()
             ->expects($this->once())
             ->method('createSnapshot')
-            ->with($this->callback(function ($arg) use ($blockPage) {
+            ->with($this->callback(static function ($arg) use ($blockPage) {
                 return $arg instanceof SiteTree && $arg->ID == $blockPage->ID;
             }));
 

@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Migration;
 
 use SilverStripe\Core\Environment;
@@ -26,9 +25,10 @@ class Job extends AbstractQueuedJob
     /**
      * @return void
      */
-    public function setup()
+    public function setup(): void
     {
         parent::setup();
+
         Environment::increaseTimeLimitTo();
         $this->addMessage('Prepping database...');
         $this->getMigrator()->setup();
@@ -40,9 +40,9 @@ class Job extends AbstractQueuedJob
     /**
      * @return string
      */
-    public function getSignature()
+    public function getSignature(): string
     {
-        return md5(get_class($this));
+        return md5(static::class);
     }
 
     /**
@@ -52,23 +52,23 @@ class Job extends AbstractQueuedJob
     {
         $remainingChildren = $this->classesToProcess;
         $this->addMessage(sizeof($remainingChildren) . ' classes remaining');
-        if (empty($remainingChildren)) {
+
+        if (count($remainingChildren) === 0) {
             $this->isComplete = true;
+
             return;
         }
+
         $baseClass = array_shift($remainingChildren);
-        $this->addMessage("Migrating $baseClass");
+        $this->addMessage('Migrating ' . $baseClass);
         $rows = $this->getMigrator()->migrate($baseClass);
-        $this->addMessage("Base ID " . $this->getMigrator()->getBaseID());
-        $this->addMessage("Migrated $rows records");
+        $this->addMessage('Base ID ' . $this->getMigrator()->getBaseID());
+        $this->addMessage(sprintf('Migrated %d records', $rows));
 
         $this->classesToProcess = $remainingChildren;
-        $this->currentStep++;
+        $this->currentStep += 1;
     }
 
-    /**
-     * @return void
-     */
     public function afterComplete(): void
     {
         parent::afterComplete();
@@ -81,15 +81,12 @@ class Job extends AbstractQueuedJob
     /**
      * @return string
      */
-    public function getTitle()
+    public function getTitle(): string
     {
-        return _t(__CLASS__ . '.MIGRATE', 'Migrate versions tables to snapshots');
+        return _t(self::class . '.MIGRATE', 'Migrate versions tables to snapshots');
     }
 
-    /**
-     * @return string
-     */
-    public function getJobType()
+    public function getJobType(): int
     {
         return QueuedJob::QUEUED;
     }
@@ -98,7 +95,7 @@ class Job extends AbstractQueuedJob
      * @param MigrationService $migrator
      * @return $this
      */
-    public function setMigrator(MigrationService $migrator)
+    public function setMigrator(MigrationService $migrator): self
     {
         $this->migrator = $migrator;
 

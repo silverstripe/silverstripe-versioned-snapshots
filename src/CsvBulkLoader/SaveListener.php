@@ -1,8 +1,8 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\CsvBulkLoader;
 
+use SilverStripe\Dev\CsvBulkLoader;
 use SilverStripe\EventDispatcher\Dispatch\Dispatcher;
 use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\ORM\DataExtension;
@@ -10,7 +10,14 @@ use SilverStripe\ORM\DataObject;
 
 class SaveListener extends DataExtension
 {
-    public function onAfterProcessRecord(DataObject $obj, $preview, $isChanged)
+    /**
+     * Extension point in @see CsvBulkLoader::processRecord()
+     *
+     * @param DataObject $obj
+     * @param mixed $preview
+     * @param mixed $isChanged
+     */
+    public function onAfterProcessRecord(DataObject $obj, $preview, $isChanged): void
     {
         // No need tracking previews, since we don't expect any writes
         if ($preview) {

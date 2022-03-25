@@ -4,15 +4,19 @@ namespace SilverStripe\Snapshots\Tests\Handler\CMSMain;
 
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\EventDispatcher\Symfony\Event;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\CMSMain\Handler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class HandlerTest extends SnapshotTestAbstract
 {
-    public function testHandlerDoesntFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesntFire(): void
     {
-        $handler = new Handler();
+        $handler = Handler::create();
         $this->mockSnapshot()
             ->expects($this->never())
             ->method('createSnapshotEvent');
@@ -26,7 +30,7 @@ class HandlerTest extends SnapshotTestAbstract
         $context = Event::create(
             'action',
             [
-                'result' => HTTPResponse::create('response', 400)
+                'result' => HTTPResponse::create('response', 400),
             ]
         );
         $handler->fire($context);
@@ -34,7 +38,7 @@ class HandlerTest extends SnapshotTestAbstract
         $context = Event::create(
             'action',
             [
-                'result' => HTTPResponse::create('response', 200)
+                'result' => HTTPResponse::create('response', 200),
             ]
         );
         $handler->fire($context);
@@ -50,9 +54,12 @@ class HandlerTest extends SnapshotTestAbstract
         $handler->fire($context);
     }
 
-    public function testHandlerDoesFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFire(): void
     {
-        $handler = new Handler();
+        $handler = Handler::create();
         $this->mockSnapshot()
             ->expects($this->once())
             ->method('createSnapshotEvent');
