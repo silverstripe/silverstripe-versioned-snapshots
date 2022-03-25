@@ -82,7 +82,6 @@ class IntegrationTest extends SnapshotTestAbstract
     /**
      * @throws ValidationException
      * @throws Exception
-     * @group ttt
      */
     public function testFundamentals(): void
     {
