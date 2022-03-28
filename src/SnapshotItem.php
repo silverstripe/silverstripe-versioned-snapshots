@@ -2,14 +2,14 @@
 
 namespace SilverStripe\Snapshots;
 
+use Exception;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\HasManyList;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\ChangeSet;
 use SilverStripe\Versioned\Versioned;
-use Exception;
-use SilverStripe\View\ArrayData;
 
 /**
  * Class SnapshotItem
@@ -28,6 +28,7 @@ use SilverStripe\View\ArrayData;
  * @method Snapshot Snapshot()
  * @method DataObject Object()
  * @method SnapshotItem Parent()
+ * @method HasManyList|SnapshotItem[] Children()
  * @package SilverStripe\Snapshots
  */
 class SnapshotItem extends DataObject
@@ -58,6 +59,9 @@ class SnapshotItem extends DataObject
         'Parent' => SnapshotItem::class,
     ];
 
+    /**
+     * @var array
+     */
     private static $has_many = [
         'Children' => SnapshotItem::class,
     ];
@@ -69,8 +73,8 @@ class SnapshotItem extends DataObject
         'Version' => true,
         'ObjectHash' => true,
         'Object' => [
-            'columns' => ['ObjectHash', 'SnapshotID']
-        ]
+            'columns' => ['ObjectHash', 'SnapshotID'],
+        ],
     ];
 
     /**
@@ -154,6 +158,7 @@ class SnapshotItem extends DataObject
         // Allow extensions to bypass default permissions, but only if
         // each change can be individually published.
         $extended = $this->extendedCan($perm, $member, $context);
+
         if ($extended !== null) {
             return $extended;
         }
@@ -162,7 +167,7 @@ class SnapshotItem extends DataObject
         return (bool) Permission::checkMember($member, ChangeSet::config()->get('required_permission'));
     }
 
-    public function onBeforeWrite()
+    public function onBeforeWrite(): void
     {
         parent::onBeforeWrite();
 
@@ -187,7 +192,7 @@ class SnapshotItem extends DataObject
     /**
      * @return string
      */
-    public function getItemTitle()
+    public function getItemTitle(): string
     {
         return $this->getItem()->singular_name() . '    --  ' . $this->getItem()->getTitle();
     }
@@ -199,7 +204,7 @@ class SnapshotItem extends DataObject
      */
     public function hydrateFromDataObject(DataObject $object): self
     {
-        $objectID = (int)($object->ID ?: $object->OldID);
+        $objectID = (int) ($object->ID ?: $object->OldID);
 
         $this->ObjectClass = $object->baseClass();
         $this->ObjectID = $objectID;
@@ -217,7 +222,7 @@ class SnapshotItem extends DataObject
         } else {
             // Track publish state for non-versioned owners, they're always in a published state.
             $exists = SnapshotItem::get()->filter([
-                'ObjectHash' => $this->hashObjectForSnapshot($object)
+                'ObjectHash' => $this->hashObjectForSnapshot($object),
             ]);
             $this->WasCreated = !$exists->exists();
             $this->WasPublished = true;

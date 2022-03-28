@@ -5,7 +5,6 @@ namespace SilverStripe\Snapshots;
 use Exception;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\HasManyList;
-use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
@@ -194,8 +193,6 @@ class Snapshot extends DataObject
      */
     public function getIsLiveSnapshot(): bool
     {
-        $table = DataObject::getSchema()->tableName(SnapshotItem::class);
-
         /** @var Versioned|DataObject $originVersion */
         $originVersion = $this->getOriginVersion();
 
@@ -212,15 +209,12 @@ class Snapshot extends DataObject
             $originVersion->ID
         );
 
-        $latestPublishID = SQLSelect::create()
-            ->setSelect('MAX("SnapshotID")')
-            ->setFrom("\"$table\"")
-            ->addWhere([
-                "\"$table\".\"Version\" = ?" => $liveVersionNumber,
-                "\"$table\".\"ObjectHash\" = ?" => $this->hashObjectForSnapshot($originVersion),
+        $latestPublishID = SnapshotItem::get()
+            ->filter([
+                'Version' => $liveVersionNumber,
+                'ObjectHash' => $this->hashObjectForSnapshot($originVersion),
             ])
-            ->execute()
-            ->value();
+            ->max('SnapshotID');
 
         return $this->ID === $latestPublishID;
     }
@@ -318,6 +312,8 @@ class Snapshot extends DataObject
                 ->hydrateFromDiffs($diffs);
             $event->write();
             $snapshot->applyOrigin($event);
+
+            /** @var SnapshotItem $eventItem */
             $eventItem = $snapshot->getOriginItem();
 
             /** @var RelationDiffer $diff */
@@ -394,7 +390,7 @@ class Snapshot extends DataObject
     }
 
     /**
-     * @param DataObject $obj
+     * @param DataObject|SnapshotPublishable $obj
      * @return $this
      * @throws Exception
      */
