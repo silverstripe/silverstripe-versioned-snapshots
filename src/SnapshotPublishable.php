@@ -196,7 +196,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
     }
 
     /**
-     * Get Snapshot item ids for snapshots between 2 versions
+     * Get Snapshot items between 2 versions
      * If $max is null, includes everything unpublished too
      *
      * @param int $min Minimal version to start looking with (inclusive)
@@ -204,7 +204,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
      * @param bool $includeAll Include snapshot items that have no modifications
      * @return DataList
      */
-    protected function getSnapshotsBetweenVersionsItems(int $min, ?int $max = null, bool $includeAll = false): DataList
+    protected function getSnapshotItemsBetweenVersions(int $min, ?int $max = null, bool $includeAll = false): DataList
     {
         $hash = $this->hashObjectForSnapshot($this->owner);
         $minSnapshotID = (int) SnapshotItem::get()
@@ -260,7 +260,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
             return false;
         }
 
-        $snapshotIds = $this->getSnapshotsBetweenVersionsItems($minVersion)
+        $snapshotIds = $this->getSnapshotItemsBetweenVersions($minVersion)
             ->column('SnapshotID');
 
         if (count($snapshotIds) === 0) {
@@ -282,7 +282,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
             return 0;
         }
 
-        return $this->publishableItemsList($snapshotIds)->count();
+        return $this->publishableItems($snapshotIds)->count();
     }
 
     /**
@@ -297,7 +297,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
             return ArrayList::create();
         }
 
-        $items = $this->publishableItemsList($snapshotIds);
+        $items = $this->publishableItems($snapshotIds);
         $map = [];
 
         /** @var SnapshotItem $item */
@@ -523,10 +523,11 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
      * @return DataList
      * @throws Exception
      */
-    protected function publishableItemsList(array $snapShotIDs): DataList
+    protected function publishableItems(array $snapShotIDs): DataList
     {
         $singleton = SnapshotItem::singleton();
         $itemTable = DataObject::getSchema()->tableName($singleton->ClassName);
+        $snapshotOriginHashColumn = null;
 
         return SnapshotItem::get()
             ->filter([
@@ -709,7 +710,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
     public function getActivityBetweenVersions(int $min, ?int $max = null): SS_List
     {
         $singleton = SnapshotItem::singleton();
-        $snapshotIds = $this->getSnapshotsBetweenVersionsItems($min, $max)
+        $snapshotIds = $this->getSnapshotItemsBetweenVersions($min, $max)
             ->column('SnapshotID');
 
         if (count($snapshotIds) === 0) {
@@ -717,10 +718,12 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
         }
 
         $itemTable = DataObject::getSchema()->tableName($singleton->ClassName);
+        $snapshotOriginHashColumn = null;
+        $childIdColumn = null;
 
         return SnapshotItem::get()
             ->filter([
-                // Intentionally forcing a join here
+                // Intentionally forcing a join here by using 'Snapshot.ID' instead of 'SnapshotID'
                 'Snapshot.ID' => $snapshotIds,
             ])
             ->applyRelation('Snapshot.OriginHash', $snapshotOriginHashColumn)
@@ -728,7 +731,9 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
             ->where([
                 // Only get the items that were the subject of a user's action
                 sprintf(
+                    // "Snapshot"."OriginHash" = "SnapshotItem"."ObjectHash" AND "SnapshotItemChild"."ID" IS NULL OR
                     '(%1$s = "%3$s"."ObjectHash" AND %2$s IS NULL) OR '
+                    // "Snapshot"."OriginHash" != "SnapshotItem"."ObjectHash" AND "SnapshotItemChild"."ParentID" != 0
                     . '(%1$s != "%3$s"."ObjectHash" AND "%3$s"."ParentID" != 0)',
                     $snapshotOriginHashColumn,
                     $childIdColumn,
