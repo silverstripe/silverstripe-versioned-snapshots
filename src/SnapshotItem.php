@@ -14,7 +14,7 @@ use SilverStripe\Versioned\Versioned;
 /**
  * Class SnapshotItem
  *
- * @property int $Version
+ * @property int $ObjectVersion
  * @property int $WasPublished
  * @property int $WasUnpublished
  * @property int $WasCreated
@@ -40,7 +40,7 @@ class SnapshotItem extends DataObject
      * @var array
      */
     private static $db = [
-        'Version' => 'Int',
+        'ObjectVersion' => 'Int',
         'WasPublished' => 'Boolean',
         'WasDraft' => 'Boolean',
         'WasDeleted' => 'Boolean',
@@ -70,7 +70,7 @@ class SnapshotItem extends DataObject
      * @var array
      */
     private static $indexes = [
-        'Version' => true,
+        'ObjectVersion' => true,
         'ObjectHash' => true,
         'Object' => [
             'columns' => ['ObjectHash', 'SnapshotID'],
@@ -183,7 +183,7 @@ class SnapshotItem extends DataObject
      */
     public function getItem(?int $version = null): ?DataObject
     {
-        $version = $version ?? $this->Version;
+        $version = $version ?? $this->ObjectVersion;
 
         return Versioned::get_all_versions($this->ObjectClass, $this->ObjectID)
             ->find('Version', $version);
@@ -218,7 +218,7 @@ class SnapshotItem extends DataObject
             $this->WasPublished = false;
             $this->WasDraft = $object->isModifiedOnDraft();
             $this->WasDeleted = $object->isOnLiveOnly() || $object->isArchived();
-            $this->Version = $object->Version;
+            $this->ObjectVersion = $object->Version;
         } else {
             // Track publish state for non-versioned owners, they're always in a published state.
             $exists = SnapshotItem::get()->filter([

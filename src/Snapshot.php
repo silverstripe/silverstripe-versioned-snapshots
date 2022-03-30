@@ -154,7 +154,7 @@ class Snapshot extends DataObject
             return Versioned::get_version(
                 $originItem->ObjectClass,
                 $originItem->ObjectID,
-                $originItem->Version
+                $originItem->ObjectVersion
             );
         }
 
@@ -211,7 +211,7 @@ class Snapshot extends DataObject
 
         $latestPublishID = SnapshotItem::get()
             ->filter([
-                'Version' => $liveVersionNumber,
+                'ObjectVersion' => $liveVersionNumber,
                 'ObjectHash' => $this->hashObjectForSnapshot($originVersion),
             ])
             ->max('SnapshotID');

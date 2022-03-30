@@ -7,6 +7,7 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
+use SilverStripe\Snapshots\SnapshotItem;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
@@ -61,10 +62,10 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $a1->Title = 'changed';
         $this->snapshot($a1);
 
-        /** @var DataObject|Versioned $result */
+        /** @var SnapshotItem $result */
         $result = SnapshotPublishable::singleton()->getLastSnapshotItemByClassAndId(BlockPage::class, $a1->ID);
         $this->assertNotNull($result);
-        $this->assertEquals($a1->Version, $result->Version);
+        $this->assertEquals($a1->Version, $result->ObjectVersion);
     }
 
     /**
@@ -307,7 +308,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->snapshot($a1);
         $version = Versioned::get_versionnumber_by_stage(BlockPage::class, Versioned::DRAFT, $a1->ID);
         $item = $a1->getPreviousSnapshotItem();
-        $this->assertEquals($version, $item->Version);
+        $this->assertEquals($version, $item->ObjectVersion);
         $this->assertHashCompare($a1, $item->getItem());
     }
 

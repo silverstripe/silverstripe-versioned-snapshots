@@ -147,7 +147,7 @@ class SnapshotTest extends SnapshotTestAbstract
         $item->ObjectClass = $block1->baseClass();
         $item->ObjectID = $block1->ID;
         $item->SnapshotID = $snapshot->ID;
-        $item->Version = $block1->Version;
+        $item->ObjectVersion = $block1->Version;
         $item->write();
 
         /** @var Block|Versioned $block2 */
@@ -163,7 +163,7 @@ class SnapshotTest extends SnapshotTestAbstract
         $item->ObjectClass = $block2->baseClass();
         $item->ObjectID = $block2->ID;
         $item->SnapshotID = $snapshot->ID;
-        $item->Version = $expectedVersion;
+        $item->ObjectVersion = $expectedVersion;
         $item->write();
 
         $snapshot->OriginClass = $item->ObjectClass;
