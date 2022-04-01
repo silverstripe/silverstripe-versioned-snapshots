@@ -9,7 +9,7 @@ use Exception;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Form\SaveHandler;
-use SilverStripe\Snapshots\RelationDiffer;
+use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotPublishable;
 

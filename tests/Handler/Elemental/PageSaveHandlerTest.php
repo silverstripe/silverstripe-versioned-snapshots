@@ -12,7 +12,7 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\PageSaveHandler;
-use SilverStripe\Snapshots\RelationDiffer;
+use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;

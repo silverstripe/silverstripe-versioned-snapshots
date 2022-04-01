@@ -4,6 +4,7 @@ namespace SilverStripe\Snapshots;
 
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 
 class ImplicitModification extends SnapshotEvent
 {

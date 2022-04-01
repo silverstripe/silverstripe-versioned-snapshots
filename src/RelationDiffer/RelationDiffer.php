@@ -1,14 +1,16 @@
 <?php
 
-namespace SilverStripe\Snapshots;
+namespace SilverStripe\Snapshots\RelationDiffer;
 
 use InvalidArgumentException;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\Snapshots\SnapshotPublishable;
 
 class RelationDiffer
 {
+
     use Injectable;
 
     /**
