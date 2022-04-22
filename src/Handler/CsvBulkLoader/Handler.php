@@ -7,6 +7,7 @@ use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
+use SilverStripe\Versioned\Versioned;
 
 class Handler extends HandlerAbstract
 {
@@ -21,6 +22,10 @@ class Handler extends HandlerAbstract
 
         if (!$obj) {
             throw new InvalidArgumentException('Requires "record" in context');
+        }
+
+        if (!$obj->hasExtension(Versioned::class)) {
+            return null;
         }
 
         // Create an individual snapshot for each object to ensure they're all captured.
