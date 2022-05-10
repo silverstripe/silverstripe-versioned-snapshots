@@ -296,6 +296,11 @@ class Snapshot extends DataObject
             return null;
         }
 
+        if (!$origin->hasExtension(Versioned::class)) {
+            // We require origin to be versioned, if it's not we can bail out
+            return null;
+        }
+
         $currentUser = Security::getCurrentUser();
         $snapshot = Snapshot::create();
         $snapshot->AuthorID = $currentUser

@@ -22,6 +22,7 @@ use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Gallery;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImageJoin;
+use SilverStripe\Snapshots\Tests\SnapshotTest\SimpleBlock;
 use SilverStripe\Versioned\RecursivePublishable;
 use SilverStripe\Versioned\Versioned;
 
@@ -46,6 +47,7 @@ class SnapshotTestAbstract extends SapphireTest
         BaseJoin::class,
         GalleryImageJoin::class,
         SnapshotEvent::class,
+        SimpleBlock::class,
     ];
 
     /**
