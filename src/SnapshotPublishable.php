@@ -6,12 +6,13 @@ use Exception;
 use InvalidArgumentException;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Core\Injector\Injector;
-use SilverStripe\Core\Resettable;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataQuery;
 use SilverStripe\ORM\SS_List;
+use SilverStripe\Snapshots\RelationDiffer\RelationDiffCache;
+use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Versioned\RecursivePublishable;
 use SilverStripe\Versioned\Versioned;
 
@@ -20,7 +21,7 @@ use SilverStripe\Versioned\Versioned;
  *
  * @property DataObject|SnapshotPublishable|Versioned $owner
  */
-class SnapshotPublishable extends RecursivePublishable implements Resettable
+class SnapshotPublishable extends RecursivePublishable
 {
 
     use Injectable;
@@ -31,21 +32,6 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
      * @config
      */
     private static $snapshot_relation_tracking = [];
-
-    /**
-     * @var array
-     */
-    private $relationDiffs = [];
-
-    public function flushCachedData(): void
-    {
-        $this->relationDiffs = [];
-    }
-
-    public static function reset(): void
-    {
-        static::singleton()->flushCachedData();
-    }
 
     /**
      * A more resilient wrapper for the Versioned function that holds up against un-staged versioned
@@ -431,31 +417,23 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
      * @param bool $cache
      * @return RelationDiffer[]
      * @throws Exception
-     * TODO Memoise / cache / enable cache once it's confirmed that this feature is needed
      */
     public function getRelationDiffs(bool $cache = true): array
     {
-        $cacheKey = $this->owner->isInDB()
-            ? sprintf(
-                '%s-%s',
-                $this->owner->getUniqueKey(),
-                $this->hashObjectForSnapshot($this->owner)
-            )
-            : '';
-        // TODO in-memory cache disabled until we can confirm that we need it
-        $cacheKey = '';
+        $owner = $this->owner;
+        $cachedData = RelationDiffCache::singleton()->getCachedData($owner);
 
-        if ($cache && $cacheKey && array_key_exists($cacheKey, $this->relationDiffs)) {
-            return $this->relationDiffs[$cacheKey];
+        if ($cache && $cachedData !== null) {
+            return $cachedData;
         }
 
         $diffs = [];
-        $previousTracking = $this->owner->atPreviousSnapshot(function ($date) {
+        $previousTracking = $owner->atPreviousSnapshot(static function ($date) use ($owner) {
             if (!$date) {
                 return [];
             }
 
-            $record = DataObject::get_by_id($this->owner->baseClass(), $this->owner->ID, false);
+            $record = DataObject::get_by_id($owner->baseClass(), $owner->ID, false);
 
             if (!$record) {
                 return [];
@@ -465,17 +443,17 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
             return $record->getRelationTracking();
         });
 
-        $currentTracking = $this->owner->getRelationTracking();
+        $currentTracking = $owner->getRelationTracking();
 
         foreach ($currentTracking as $relationName => $currentMap) {
-            $class = $this->owner->getRelationClass($relationName);
-            $type = $this->owner->getRelationType($relationName);
+            $class = $owner->getRelationClass($relationName);
+            $type = $owner->getRelationType($relationName);
             $prevMap = $previousTracking[$relationName] ?? [];
             $diffs[] = RelationDiffer::create($class, $type, $prevMap, $currentMap);
         }
 
-        if ($cacheKey) {
-            $this->relationDiffs[$cacheKey] = $diffs;
+        if ($cache) {
+            RelationDiffCache::singleton()->addCachedData($owner, $diffs);
         }
 
         return $diffs;

@@ -4,7 +4,7 @@ namespace SilverStripe\Snapshots\Tests;
 
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\ValidationException;
-use SilverStripe\Snapshots\RelationDiffer;
+use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Versioned\Versioned;
 

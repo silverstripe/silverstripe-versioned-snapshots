@@ -9,6 +9,7 @@ use SilverStripe\ORM\ValidationException;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
+use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Versioned\Versioned;
 
 /**

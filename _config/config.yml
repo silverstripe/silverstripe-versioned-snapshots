@@ -12,6 +12,9 @@ SilverStripe\Versioned\ChangeSetItem:
 SilverStripe\Dev\CsvBulkLoader:
   extensions:
     - SilverStripe\Snapshots\CsvBulkLoader\SaveListener
+SilverStripe\ORM\DataObject:
+  extensions:
+    - SilverStripe\Snapshots\RelationDiffer\ClearCacheExtension
 ---
 Name: snapshot-migration
 ---
