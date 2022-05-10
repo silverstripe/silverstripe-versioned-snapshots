@@ -182,7 +182,7 @@ SQL;
             (
                 \"Created\",
                 \"LastEdited\",
-                \"Version\",
+                \"ObjectVersion\",
                 \"WasPublished\",
                 \"WasDraft\",
                 \"WasDeleted\",

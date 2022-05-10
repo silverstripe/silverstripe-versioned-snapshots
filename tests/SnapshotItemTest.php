@@ -19,15 +19,14 @@ class SnapshotItemTest extends SnapshotTestAbstract
         /** @var Block|Versioned $block */
         $block = Block::create();
         $block->write();
-        $item = SnapshotItem::create([
-            'ObjectClass' => Block::class,
-            'ObjectID' => $block->ID,
-            'Version' => $block->Version * 100,
-        ]);
+        $item = SnapshotItem::create();
+        $item->ObjectClass = Block::class;
+        $item->ObjectID = $block->ID;
+        $item->ObjectVersion = $block->Version * 100;
 
         $this->assertNull($item->getItem());
 
-        $item->Version = $block->Version;
+        $item->ObjectVersion = $block->Version;
 
         $this->assertInstanceOf(Block::class, $item->getItem());
         $this->assertEquals($block->ID, $item->getItem()->ID);
@@ -48,7 +47,7 @@ class SnapshotItemTest extends SnapshotTestAbstract
         $item->write();
         $this->assertEquals(Block::class, $item->ObjectClass);
         $this->assertEquals($block->ID, $item->ObjectID);
-        $this->assertEquals($block->Version, $item->Version);
+        $this->assertEquals($block->Version, $item->ObjectVersion);
         $this->assertEquals(SnapshotPublishable::singleton()->hashObjectForSnapshot($block), $item->ObjectHash);
 
         $this->assertTrue($item->WasDraft);

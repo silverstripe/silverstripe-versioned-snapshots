@@ -168,7 +168,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
         $lastPublishedSnapshotID = (int) SnapshotItem::get()
             ->filter([
                 'ObjectHash' => $this->hashObjectForSnapshot($this->owner),
-                'Version' => $sinceVersion,
+                'ObjectVersion' => $sinceVersion,
                 'WasPublished' => 1,
             ])
             ->max('SnapshotID');
@@ -177,7 +177,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
             ->getRelevantSnapshots()
             ->filter([
                 // last published version
-                'Items.Version:GreaterThanOrEqual' => $sinceVersion,
+                'Items.ObjectVersion:GreaterThanOrEqual' => $sinceVersion,
                 // is not a snapshot of the last publishing
                 'ID:GreaterThan' => $lastPublishedSnapshotID,
             ]);
@@ -210,14 +210,14 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
         $minSnapshotID = (int) SnapshotItem::get()
             ->filter([
                 'ObjectHash' => $hash,
-                'Version' => $min,
+                'ObjectVersion' => $min,
             ])
             ->min('SnapshotID');
 
         $maxSnapshotID = (int) SnapshotItem::get()
             ->filter([
                 'ObjectHash' => $hash,
-                'Version' => $max,
+                'ObjectVersion' => $max,
             ])
             ->max('SnapshotID');
 
@@ -237,7 +237,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
         return SnapshotItem::get()
             ->filter($filters)
             ->filterAny([
-                'Version:Not' => $min,
+                'ObjectVersion:Not' => $min,
                 'WasPublished' => 0,
             ]);
     }
@@ -421,7 +421,7 @@ class SnapshotPublishable extends RecursivePublishable implements Resettable
      */
     public function isModifiedSinceLastSnapshot(): bool
     {
-        /** @var SnapshotItem $previous */
+        /** @var DataObject|Versioned $previous */
         $previous = $this->getPreviousSnapshotVersion();
 
         return !$previous || $previous->Version < $this->owner->Version;
