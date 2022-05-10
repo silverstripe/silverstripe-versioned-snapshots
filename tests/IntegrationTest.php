@@ -1194,7 +1194,7 @@ class IntegrationTest extends SnapshotTestAbstract
 
         $this->editingPage(null);
 
-        $block = Block::create(['Title' => 'The Block']);
+        $block = Block::create();
         $block->Title = 'The Block';
         $block->write();
 

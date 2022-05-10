@@ -8,13 +8,13 @@ SilverStripe\Core\Injector\Injector:
     class: SilverStripe\Snapshots\SnapshotPublishable
 SilverStripe\Versioned\ChangeSetItem:
   extensions:
-    - SilverStripe\Snapshots\SnapshotChangeSetItem
+    SnapshotChangeSetItem: SilverStripe\Snapshots\SnapshotChangeSetItem
 SilverStripe\Dev\CsvBulkLoader:
   extensions:
-    - SilverStripe\Snapshots\CsvBulkLoader\SaveListener
+    SnapshotsSaveListener: SilverStripe\Snapshots\CsvBulkLoader\SaveListener
 SilverStripe\ORM\DataObject:
   extensions:
-    - SilverStripe\Snapshots\RelationDiffer\ClearCacheExtension
+    SnapshotsClearCacheExtension: SilverStripe\Snapshots\RelationDiffer\ClearCacheExtension
 ---
 Name: snapshot-migration
 ---
@@ -37,4 +37,4 @@ Only:
 ---
 SilverStripe\CMS\Model\SiteTree:
   extensions:
-    - SilverStripe\Snapshots\SnapshotSiteTree
+    SnapshotSiteTree: SilverStripe\Snapshots\SnapshotSiteTree

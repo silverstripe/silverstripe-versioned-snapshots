@@ -405,9 +405,13 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->assertEquals([$a1Block1->ID], $diff->getChanged());
 
         // Add two
-        $block1 = Block::create(['Title' => 'new one 1', 'ParentID' => $a1->ID]);
+        $block1 = Block::create();
+        $block1->Title = 'new one 1';
+        $block1->ParentID = $a1->ID;
         $block1->write();
-        $block2 = Block::create(['Title' => 'new one 2', 'ParentID' => $a1->ID]);
+        $block2 = Block::create();
+        $block2->Title = 'new one 2';
+        $block2->ParentID = $a1->ID;
         $block2->write();
 
         $diffs = $a1->getRelationDiffs(false);

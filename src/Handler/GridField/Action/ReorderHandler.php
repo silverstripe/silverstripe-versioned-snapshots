@@ -31,13 +31,12 @@ class ReorderHandler extends Handler
 
         $model = $grid->getModelClass();
         $pluralName = DataObject::singleton($model)->i18n_plural_name();
-        $event = SnapshotEvent::create([
-            'Title' => _t(
-                self::class . '.REORDER_ROWS',
-                'Reordered {title}',
-                ['title' => $pluralName]
-            ),
-        ]);
+        $event = SnapshotEvent::create();
+        $event->Title = _t(
+            self::class . '.REORDER_ROWS',
+            'Reordered {title}',
+            ['title' => $pluralName]
+        );
         $event->write();
 
         return $snapshot->applyOrigin($event);

@@ -5,7 +5,7 @@ Only:
 ---
 DNADesign\Elemental\Forms\ElementalAreaField:
   extensions:
-    - SilverStripe\Snapshots\Elemental\SaveListener
+    SnapshotsSaveListener: SilverStripe\Snapshots\Elemental\SaveListener
 DNADesign\Elemental\Models\ElementalArea:
   snapshot_relation_tracking:
     - Elements

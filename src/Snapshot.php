@@ -355,9 +355,8 @@ class Snapshot extends DataObject
      */
     public function createSnapshotEvent(string $message, array $extraObjects = []): Snapshot
     {
-        $event = SnapshotEvent::create([
-            'Title' => $message,
-        ]);
+        $event = SnapshotEvent::create();
+        $event->Title = $message;
         $event->write();
 
         return $this->createSnapshot($event, $extraObjects);

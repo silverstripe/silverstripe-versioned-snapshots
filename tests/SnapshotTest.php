@@ -226,7 +226,8 @@ class SnapshotTest extends SnapshotTestAbstract
             ]
         );
         $a1->Title = 'changed again';
-        $extraObject = BlockPage::create(['Title' => 'Extra page']);
+        $extraObject = BlockPage::create();
+        $extraObject->Title = 'Extra page';
         $extraObject->write();
         $snapshot = $this->snapshot($a1, [$extraObject]);
         $this->assertCount(2, $snapshot->Items());
