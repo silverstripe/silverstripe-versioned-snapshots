@@ -59,7 +59,8 @@ class RollbackHandlerTest extends SnapshotTestAbstract
     {
         $handler = RollbackHandler::create();
 
-        $page = SiteTree::create(['Title' => 'test']);
+        $page = SiteTree::create();
+        $page->Title = 'test';
         $page->write();
         $prevVersion = $page->Version;
         $this->createHistory($page);

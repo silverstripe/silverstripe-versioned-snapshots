@@ -5,10 +5,10 @@ Only:
 ---
 Symbiote\AdvancedWorkflow\Actions\PublishItemWorkflowAction:
   extensions:
-    - SilverStripe\Snapshots\Workflow\WorkflowExtension
+    SnapshotsWorkflowExtension: SilverStripe\Snapshots\Workflow\WorkflowExtension
 Symbiote\AdvancedWorkflow\Jobs\WorkflowPublishTargetJob:
-   extensions:
-     - SilverStripe\Snapshots\Workflow\WorkflowExtension
+  extensions:
+    SnapshotsWorkflowExtension: SilverStripe\Snapshots\Workflow\WorkflowExtension
 
 SilverStripe\Core\Injector\Injector:
   SilverStripe\EventDispatcher\Dispatch\Dispatcher:

@@ -37,7 +37,7 @@ Only:
 ---
 SilverStripe\ORM\DataObject:
   extensions:
-    - SilverStripe\Snapshots\Thirdparty\EmbargoExpiryExtension
+    SnapshotsEmbargoExpiryExtension: SilverStripe\Snapshots\Thirdparty\EmbargoExpiryExtension
 SilverStripe\Core\Injector\Injector:
   SilverStripe\EventDispatcher\Dispatch\Dispatcher:
     properties:
@@ -57,4 +57,4 @@ Only:
 ---
 SilverStripe\Admin\Forms\UsedOnTable:
   extensions:
-    - SilverStripe\Snapshots\Thirdparty\UsedOnTableExtension
+    SnapshotsUsedOnTableExtension: SilverStripe\Snapshots\Thirdparty\UsedOnTableExtension
