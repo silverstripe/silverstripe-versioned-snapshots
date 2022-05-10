@@ -8,10 +8,12 @@ use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\SnapshotItem;
+use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Gallery;
 use SilverStripe\Snapshots\Tests\SnapshotTest\GalleryImage;
+use SilverStripe\Snapshots\Tests\SnapshotTest\SimpleBlock;
 use SilverStripe\Versioned\Versioned;
 
 class SnapshotTest extends SnapshotTestAbstract
@@ -426,5 +428,21 @@ class SnapshotTest extends SnapshotTestAbstract
 
         $this->assertCount(1, $liveSnapshots);
         $this->assertEquals(Snapshot::get()->max('ID'), $liveSnapshots[0]->ID);
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    public function testUnVersionedObject(): void
+    {
+        $block = SimpleBlock::create();
+        $block->Title = 'Simple block';
+        $block->write();
+
+        $this->assertTrue($block->hasExtension(SnapshotPublishable::class));
+        $this->assertFalse($block->hasExtension(Versioned::class));
+
+        $snapshot = Snapshot::singleton()->createSnapshot($block);
+        $this->assertNull($snapshot, 'We expect no snapshot for models which are not versioned');
     }
 }
