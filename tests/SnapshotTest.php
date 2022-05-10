@@ -284,7 +284,7 @@ class SnapshotTest extends SnapshotTestAbstract
                 $event,
             ]
         );
-        $this->assertRegExp('/^Added 2/', $event->Title);
+        $this->assertStringStartsWith('Added 2', $event->Title);
 
         $gallery1->Images()->removeByID($image2->ID);
 
@@ -303,7 +303,7 @@ class SnapshotTest extends SnapshotTestAbstract
             ]
         );
         $name = $gallery1->i18n_singular_name();
-        $this->assertRegExp('/^Removed ' . $name . '/', $event->Title);
+        $this->assertStringStartsWith('Removed ' . $name, $event->Title);
 
         // Mixed changes
         $gallery1->Title = 'a whole new gallery';
@@ -313,7 +313,7 @@ class SnapshotTest extends SnapshotTestAbstract
         $snapshot = $this->snapshot($gallery1);
         $origin = $snapshot->getOriginItem()->getItem();
         $this->assertInstanceOf(SnapshotEvent::class, $origin);
-        $this->assertRegExp('/Added ' . $name . '/', $origin->Title);
+        $this->assertStringStartsWith('Added ' . $name, $origin->Title);
     }
 
     /**
