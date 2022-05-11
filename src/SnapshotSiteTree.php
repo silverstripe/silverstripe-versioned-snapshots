@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Snapshots;
 
+use Exception;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\FormAction;
@@ -13,6 +14,7 @@ class SnapshotSiteTree extends DataExtension
      * Extension point in @see SiteTree::getStatusFlags()
      *
      * @param mixed $flags
+     * @throws Exception
      */
     public function updateStatusFlags(&$flags): void
     {
@@ -35,6 +37,7 @@ class SnapshotSiteTree extends DataExtension
 
     /**
      * @param FieldList $actions
+     * @throws Exception
      */
     public function updateCMSActions(FieldList $actions): void
     {

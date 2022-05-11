@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Snapshots\RelationDiffer;
 
+use Exception;
 use SilverStripe\Core\Extension;
 use SilverStripe\ORM\DataObject;
 
@@ -10,10 +11,20 @@ use SilverStripe\ORM\DataObject;
  *
  * @method DataObject|$this getOwner()
  */
-class ClearCacheExtension extends Extension
+class UpdateCacheExtension extends Extension
 {
     public function onAfterWrite(): void
     {
         RelationDiffCache::reset();
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function onAfterPublishRecursive(): void
+    {
+        $owner = $this->getOwner();
+
+        RelationDiffCache::singleton()->markAsPublished($owner);
     }
 }
