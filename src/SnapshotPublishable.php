@@ -230,15 +230,22 @@ class SnapshotPublishable extends RecursivePublishable
 
     /**
      * @return bool
+     * @throws Exception
      */
     public function hasOwnedModifications(): bool
     {
-        if (!$this->owner->hasExtension(Versioned::class)) {
+        $owner = $this->owner;
+
+        if (!$owner->hasExtension(Versioned::class)) {
             return false;
         }
 
-        $class = $this->owner->baseClass();
-        $id = $this->owner->ID;
+        if (RelationDiffCache::singleton()->isMarkedAsPublished($owner)) {
+            return false;
+        }
+
+        $class = $owner->baseClass();
+        $id = $owner->ID;
         $minVersion = $this->getPublishedVersionNumber($class, $id);
 
         if (is_null($minVersion)) {

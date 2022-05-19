@@ -7,9 +7,10 @@ use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Core\Resettable;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\SnapshotHasher;
+use SilverStripe\Versioned\Versioned;
 
 /**
- * In-memory cache for relation diffs
+ * In-memory cache for relation diffs and stage related operations
  */
 class RelationDiffCache implements Resettable
 {
@@ -21,6 +22,13 @@ class RelationDiffCache implements Resettable
      * @var array
      */
     protected $cachedData = [];
+
+    /**
+     * List of all models which are fully published (we executed publish recursive)
+     *
+     * @var array
+     */
+    protected $publishedModels = [];
 
     /**
      * @param DataObject $object
@@ -63,9 +71,44 @@ class RelationDiffCache implements Resettable
         return $this;
     }
 
+    /**
+     * Mark model as published
+     * This information in meant to be used only within in-memory cache
+     * We can prevent some unnecessary data lookups within CMS and also bypass some sequencing issues related to
+     * the "Publish" action (snapshot models being saved later than the related model)
+     *
+     * @param DataObject $model
+     * @throws Exception
+     */
+    public function markAsPublished(DataObject $model): void
+    {
+        if (!$model->hasExtension(Versioned::class)) {
+            return;
+        }
+
+        $this->publishedModels[] = $this->getCacheKey($model);
+    }
+
+    /**
+     * @param DataObject $model
+     * @return bool
+     * @throws Exception
+     */
+    public function isMarkedAsPublished(DataObject $model): bool
+    {
+        if (!$model->hasExtension(Versioned::class)) {
+            return false;
+        }
+
+        $cacheKey = $this->getCacheKey($model);
+
+        return in_array($cacheKey, $this->publishedModels);
+    }
+
     public function flushCachedData(): void
     {
         $this->cachedData = [];
+        $this->publishedModels = [];
     }
 
     public static function reset(): void
