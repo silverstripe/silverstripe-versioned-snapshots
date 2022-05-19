@@ -292,6 +292,29 @@ SilverStripe\Snapshots\SnapshotItem:
         - ObjectHash
 ```
 
+## Upgrading to 1.x.x
+
+`1.x.x` release contains a couple of breaking changes.
+We provide upgrade path for both.
+
+### Object version DB field rename
+
+DB field `Version` on `SnapshotItem` was renamed to `ObjectVersion` to prevent naming conflicts.
+Please follow the steps below to upgrade.
+
+* run `composer update` to upgrade to the desired `1.x.x` version of this module
+* run `dev/build flush=all`
+* run `dev/tasks/migrate-object-version-task`, run via CLI
+
+### Legacy Fluent setup
+
+This is relevant only for project which use [Fluent module](https://github.com/tractorcow-farm/silverstripe-fluent) and use localised snapshot models.
+
+* run `composer update` to upgrade to the desired `1.x.x` version of this module
+* review and update your Fluent configuration as per **Localisation** section of this readme
+* run `dev/build flush=all`
+* run `dev/tasks/migrate-fluent-object-hash-task`, run via CLI
+
 ## Semantic versioning
 
 This library follows [Semver](http://semver.org). According to Semver,
