@@ -29,7 +29,7 @@
         "php": "^7.4 || ^8",
         "silverstripe/framework": "^4.7",
         "silverstripe/versioned": "^1",
-        "silverstripe/vendor-plugin": "^1",
+        "silverstripe/vendor-plugin": "^1.6",
         "silverstripe/cms-events": "dev-master"
     },
     "require-dev": {
