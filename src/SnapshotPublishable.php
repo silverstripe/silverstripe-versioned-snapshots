@@ -650,7 +650,7 @@ class SnapshotPublishable extends RecursivePublishable
         $intermediaryObjects = $record->findOwners();
         $extraObjects = [];
         foreach ($intermediaryObjects as $extra) {
-            $extraObjects[SnapshotHasher::hashObjectForSnapshot($extra)] = $extra;
+            $extraObjects[static::hashObjectForSnapshot($extra)] = $extra;
         }
 
         return $extraObjects;
