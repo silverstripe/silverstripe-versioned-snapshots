@@ -315,6 +315,14 @@ This is relevant only for project which use [Fluent module](https://github.com/t
 * run `dev/build flush=all`
 * run `dev/tasks/migrate-fluent-object-hash-task`, run via CLI
 
+### Recalculate hashes
+
+Object hashes may be out of date.
+It's recommended to update them otherwise pre-update history items may not show in the history viewer.
+Run `dev/tasks/recalculate-hashes-task`, run via CLI
+
+This dev task supports Fluent out of the box,
+
 ## Semantic versioning
 
 This library follows [Semver](http://semver.org). According to Semver,
