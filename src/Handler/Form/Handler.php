@@ -56,7 +56,9 @@ class Handler extends HandlerAbstract
 
         $url = $request->getURL();
 
-        return $this->getCurrentPageFromRequestUrl($url);
+        return $this
+            ->getPageContextProvider()
+            ->getCurrentPageFromRequestUrl($url);
     }
 
     /**

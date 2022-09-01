@@ -16,7 +16,6 @@ use SilverStripe\Versioned\Versioned;
  * Class Snapshot
  *
  * @property string $OriginHash
- * @property string $Message
  * @property int $OriginID
  * @property string $OriginClass
  * @property int AuthorID
