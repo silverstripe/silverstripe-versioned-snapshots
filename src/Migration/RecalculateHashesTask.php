@@ -35,16 +35,16 @@ class RecalculateHashesTask extends BuildTask
             && Snapshot::has_extension(FluentExtension::class)
             && SnapshotItem::has_extension(FluentExtension::class)) {
             echo 'Updating Snapshots (Localised)...' . PHP_EOL;
-            $sql = 'UPDATE "VersionedSnapshot"'
-                . 'INNER JOIN "VersionedSnapshot_Localised" ON "VersionedSnapshot"."ID" = "VersionedSnapshot_Localised"."RecordID"'
+            $sql = 'UPDATE "VersionedSnapshot" '
+                . 'INNER JOIN "VersionedSnapshot_Localised" ON "VersionedSnapshot"."ID" = "VersionedSnapshot_Localised"."RecordID" '
                 . 'SET "VersionedSnapshot"."OriginHash" = MD5(CONCAT("VersionedSnapshot"."OriginClass", \':\', "VersionedSnapshot"."OriginID")), '
                 . '"VersionedSnapshot_Localised"."OriginHash" = MD5(CONCAT("VersionedSnapshot"."OriginClass", \':\', "VersionedSnapshot"."OriginID"))';
             DB::query($sql);
             echo sprintf('Done, %d records updated.', DB::affected_rows()) . PHP_EOL;
 
             echo 'Updating Snapshot items...' . PHP_EOL;
-            $sql = 'UPDATE "VersionedSnapshotItem"'
-                . 'INNER JOIN "VersionedSnapshotItem_Localised" ON "VersionedSnapshotItem"."ID" = "VersionedSnapshotItem_Localised"."RecordID"'
+            $sql = 'UPDATE "VersionedSnapshotItem" '
+                . 'INNER JOIN "VersionedSnapshotItem_Localised" ON "VersionedSnapshotItem"."ID" = "VersionedSnapshotItem_Localised"."RecordID" '
                 . 'SET "VersionedSnapshotItem"."ObjectHash" = MD5(CONCAT("VersionedSnapshotItem"."ObjectClass", \':\', "VersionedSnapshotItem"."ObjectID")), '
                 . '"VersionedSnapshotItem_Localised"."ObjectHash" = MD5(CONCAT("VersionedSnapshotItem"."ObjectClass", \':\', "VersionedSnapshotItem"."ObjectID"))';
             DB::query($sql);
