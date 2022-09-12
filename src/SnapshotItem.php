@@ -183,10 +183,18 @@ class SnapshotItem extends DataObject
      */
     public function getItem(?int $version = null): ?DataObject
     {
-        $version = $version ?? $this->ObjectVersion;
+        $singleton = DataObject::singleton($this->ObjectClass);
 
-        return Versioned::get_all_versions($this->ObjectClass, $this->ObjectID)
-            ->find('Version', $version);
+        // Item is versioned - find the requested version
+        if ($singleton->hasExtension(Versioned::class)) {
+            $version = $version ?? $this->ObjectVersion;
+
+            return Versioned::get_all_versions($this->ObjectClass, $this->ObjectID)
+                ->find('Version', $version);
+        }
+
+        // Item is not versioned - return it as it is
+        return DataObject::get_by_id($this->ObjectClass, $this->ObjectID);
     }
 
     /**
