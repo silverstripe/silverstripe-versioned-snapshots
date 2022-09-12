@@ -51,18 +51,26 @@ class ActivityEntry extends ArrayData
 
         // If the items been deleted then we want to get the last version of it
         if ($itemObj === null || $itemObj->WasDeleted) {
-            // This gets all versions except for the deleted version so we just get the latest one
-            /** @var DataObject|Versioned $previousVersion */
-            $previousVersion = Versioned::get_all_versions($item->ObjectClass, $item->ObjectID)
-                ->sort('Version', 'DESC')
-                ->find('WasDeleted', 0);
+            $singleton = DataObject::singleton($item->ObjectClass);
 
-            if ($previousVersion && $previousVersion->exists()) {
-                $itemObj = $item->getItem($previousVersion->Version);
-            // This is to deal with the case in which there is no previous version
-            // it's better to give a faulty snapshot point than break the app
-            } elseif ($item->ObjectVersion > 1) {
-                $itemObj = $item->getItem($item->ObjectVersion - 1);
+            if ($singleton->hasExtension(Versioned::class)) {
+                // Item is versioned - find the previous version
+                // This gets all versions except for the deleted version so we just get the latest one
+                /** @var DataObject|Versioned $previousVersion */
+                $previousVersion = Versioned::get_all_versions($item->ObjectClass, $item->ObjectID)
+                    ->sort('Version', 'DESC')
+                    ->find('WasDeleted', 0);
+
+                if ($previousVersion && $previousVersion->exists()) {
+                    $itemObj = $item->getItem($previousVersion->Version);
+                    // This is to deal with the case in which there is no previous version
+                    // it's better to give a faulty snapshot point than break the app
+                } elseif ($item->ObjectVersion > 1) {
+                    $itemObj = $item->getItem($item->ObjectVersion - 1);
+                }
+            } else {
+                // Item is not versioned - use the singleton as stand-in
+                $itemObj = $singleton;
             }
         }
 
