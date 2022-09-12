@@ -52,6 +52,6 @@ class Handler extends HandlerAbstract
 
         $message = $this->getMessage($action);
 
-        return Snapshot::singleton()->createSnapshotEvent($message);
+        return Snapshot::singleton()->createSnapshotEvent($message, [$page]);
     }
 }
