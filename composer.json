@@ -28,13 +28,12 @@
     "require": {
         "php": "^7.4 || ^8",
         "silverstripe/framework": "^4.7",
-        "silverstripe/versioned": "^1",
+        "silverstripe/versioned": "^1.7",
         "silverstripe/vendor-plugin": "^1.6",
-        "silverstripe/cms-events": "dev-master"
+        "silverstripe/cms-events": "^1"
     },
     "require-dev": {
         "silverstripe/recipe-testing": "^1 || ^2",
-        "silverstripe/versioned": "^1",
         "dnadesign/silverstripe-elemental": "^4"
     },
     "conflict": {
