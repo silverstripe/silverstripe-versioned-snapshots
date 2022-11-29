@@ -33,7 +33,7 @@
         "silverstripe/cms-events": "^1"
     },
     "require-dev": {
-        "silverstripe/recipe-testing": "^1 || ^2",
+        "silverstripe/recipe-testing": "^2",
         "dnadesign/silverstripe-elemental": "^4"
     },
     "conflict": {
