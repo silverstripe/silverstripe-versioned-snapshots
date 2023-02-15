@@ -1,10 +1,10 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Migration;
 
+use Exception;
+use ReflectionException;
 use SilverStripe\Core\ClassInfo;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
@@ -14,10 +14,10 @@ use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\SnapshotItem;
 use SilverStripe\Versioned\Versioned;
-use ReflectionException;
 
 class MigrationService
 {
+
     use Injectable;
 
     /**
@@ -47,6 +47,7 @@ class MigrationService
 
     /**
      * MigrationService constructor.
+     *
      * @throws ReflectionException
      */
     public function __construct()
@@ -62,8 +63,7 @@ class MigrationService
      */
     public function migrate(string $baseClass): int
     {
-        /* @var DataObject $sng */
-        $sng = $baseClass::singleton();
+        $sng = DataObject::singleton($baseClass);
         $baseTable = $sng->baseTable();
         $versionsTable = $baseTable . '_Versions';
         $rows = $this->migrateSnapshots($versionsTable);
@@ -81,14 +81,17 @@ class MigrationService
      *
      * @throws ReflectionException
      * @throws ValidationException
+     * @throws Exception
      */
     public function seedRelationTracking(): void
     {
         foreach (ClassInfo::subclassesFor(DataObject::class, false) as $class) {
             $tracking = $class::config()->uninherited('snapshot_relation_tracking');
-            if (empty($tracking)) {
+
+            if (!$tracking) {
                 continue;
             }
+
             foreach ($class::get() as $record) {
                 SnapshotItem::create()
                     ->hydrateFromDataObject($record)
@@ -179,7 +182,7 @@ SQL;
             (
                 \"Created\",
                 \"LastEdited\",
-                \"Version\",
+                \"ObjectVersion\",
                 \"WasPublished\",
                 \"WasDraft\",
                 \"WasDeleted\",
@@ -214,7 +217,7 @@ SQL;
         return (int) DB::affected_rows();
     }
 
-    private function createTemporaryTable()
+    private function createTemporaryTable(): void
     {
         DB::query("DROP TABLE IF EXISTS \"__ClassNameLookup\"");
         DB::create_table(
@@ -225,6 +228,7 @@ SQL;
             ]
         );
         $lines = [];
+
         foreach ($this->getClassMap() as $className => $baseClassName) {
             $lines[] = sprintf(
                 "('%s', '%s')",
@@ -232,6 +236,7 @@ SQL;
                 $this->sanitiseClassName($baseClassName)
             );
         }
+
         $values = implode(",\n", $lines);
         $query = <<<SQL
             INSERT INTO "__ClassNameLookup"
@@ -264,8 +269,10 @@ SQL;
     private function generateClassMap(): void
     {
         $map = [];
+
         foreach (ClassInfo::subclassesFor(DataObject::class, false) as $class) {
             $sng = Injector::inst()->get($class);
+
             if (!$sng->hasExtension(Versioned::class)) {
                 continue;
             }
@@ -273,19 +280,20 @@ SQL;
             $baseClass = $sng->baseClass();
             $map[$class] = $baseClass;
         }
+
         $this->classMap = $map;
     }
 
     /**
-     * @param $class
+     * @param string $class
      * @return string
      */
-    private function sanitiseClassName($class): string
+    private function sanitiseClassName(string $class): string
     {
         return str_replace('\\', '\\\\', $class);
     }
 
-    public function getBaseID()
+    public function getBaseID(): int
     {
         return $this->baseID;
     }

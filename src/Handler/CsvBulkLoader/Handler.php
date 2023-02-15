@@ -1,9 +1,10 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Handler\CsvBulkLoader;
 
+use InvalidArgumentException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
 
@@ -19,7 +20,7 @@ class Handler extends HandlerAbstract
         $obj = $context->get('record');
 
         if (!$obj) {
-            throw new \InvalidArgumentException('Requires "record" in context');
+            throw new InvalidArgumentException('Requires "record" in context');
         }
 
         // Create an individual snapshot for each object to ensure they're all captured.

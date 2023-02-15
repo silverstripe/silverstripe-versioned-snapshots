@@ -6,22 +6,28 @@ use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use DNADesign\Elemental\Models\BaseElement;
 use DNADesign\Elemental\Models\ElementalArea;
 use SilverStripe\EventDispatcher\Symfony\Event;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\SortElementsHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class SortElementsHandlerTest extends SnapshotTestAbstract
 {
+    /**
+     * @var array
+     */
+    protected static $required_extensions = [
+        BlockPage::class => [
+            ElementalPageExtension::class,
+        ],
+    ];
 
-    protected function setUp()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesntFire(): void
     {
-        parent::setUp();
-        BlockPage::add_extension(ElementalPageExtension::class);
-    }
-
-    public function testHandlerDoesntFire()
-    {
-        $handler = new SortElementsHandler();
+        $handler = SortElementsHandler::create();
         $mock = $this->mockSnapshot();
         $mock
             ->expects($this->never())
@@ -47,19 +53,25 @@ class SortElementsHandlerTest extends SnapshotTestAbstract
         $context = Event::create(
             'action',
             [
-                'params' => ['blockId' => 5]
+                'params' => ['blockId' => 5],
             ]
         );
         $handler->fire($context);
     }
 
-    public function testHandlerDoesFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFire(): void
     {
-        $handler = new SortElementsHandler();
+        $handler = SortElementsHandler::create();
         $area = ElementalArea::create();
         $area->write();
-        $block = BaseElement::create(['ParentID' => $area->ID]);
+
+        $block = BaseElement::create();
+        $block->ParentID = $area->ID;
         $block->write();
+
         $mock = $this->mockSnapshot();
         $mock
             ->expects($this->once())
@@ -69,13 +81,13 @@ class SortElementsHandlerTest extends SnapshotTestAbstract
         $mock
             ->expects($this->once())
             ->method('addOwnershipChain')
-            ->with($this->callback(function ($arg) use ($area) {
+            ->with($this->callback(static function ($arg) use ($area) {
                 return $arg instanceof ElementalArea && $arg->ID == $area->ID;
             }));
 
         $context = Event::create('action', [
             'params' => [
-                'blockId' => $block->ID
+                'blockId' => $block->ID,
             ],
         ]);
 

@@ -2,19 +2,19 @@
 
 namespace SilverStripe\Snapshots;
 
+use Exception;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\HasManyList;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\ChangeSet;
 use SilverStripe\Versioned\Versioned;
-use Exception;
-use SilverStripe\View\ArrayData;
 
 /**
  * Class SnapshotItem
  *
- * @property int $Version
+ * @property int $ObjectVersion
  * @property int $WasPublished
  * @property int $WasUnpublished
  * @property int $WasCreated
@@ -24,8 +24,11 @@ use SilverStripe\View\ArrayData;
  * @property int $SnapshotID
  * @property int $ObjectID
  * @property string $ObjectClass
+ * @property string $Modification
  * @method Snapshot Snapshot()
  * @method DataObject Object()
+ * @method SnapshotItem Parent()
+ * @method HasManyList|SnapshotItem[] Children()
  * @package SilverStripe\Snapshots
  */
 class SnapshotItem extends DataObject
@@ -37,7 +40,7 @@ class SnapshotItem extends DataObject
      * @var array
      */
     private static $db = [
-        'Version' => 'Int',
+        'ObjectVersion' => 'Int',
         'WasPublished' => 'Boolean',
         'WasDraft' => 'Boolean',
         'WasDeleted' => 'Boolean',
@@ -56,6 +59,9 @@ class SnapshotItem extends DataObject
         'Parent' => SnapshotItem::class,
     ];
 
+    /**
+     * @var array
+     */
     private static $has_many = [
         'Children' => SnapshotItem::class,
     ];
@@ -64,11 +70,11 @@ class SnapshotItem extends DataObject
      * @var array
      */
     private static $indexes = [
-        'Version' => true,
+        'ObjectVersion' => true,
         'ObjectHash' => true,
         'Object' => [
-            'columns' => ['ObjectHash', 'SnapshotID']
-        ]
+            'columns' => ['ObjectHash', 'SnapshotID'],
+        ],
     ];
 
     /**
@@ -152,6 +158,7 @@ class SnapshotItem extends DataObject
         // Allow extensions to bypass default permissions, but only if
         // each change can be individually published.
         $extended = $this->extendedCan($perm, $member, $context);
+
         if ($extended !== null) {
             return $extended;
         }
@@ -160,11 +167,11 @@ class SnapshotItem extends DataObject
         return (bool) Permission::checkMember($member, ChangeSet::config()->get('required_permission'));
     }
 
-    public function onBeforeWrite()
+    public function onBeforeWrite(): void
     {
         parent::onBeforeWrite();
 
-        $this->ObjectHash = static::hashForSnapshot($this->ObjectClass, $this->ObjectID);
+        $this->ObjectHash = $this->hashForSnapshot($this->ObjectClass, $this->ObjectID);
     }
 
     /**
@@ -176,16 +183,24 @@ class SnapshotItem extends DataObject
      */
     public function getItem(?int $version = null): ?DataObject
     {
-        $version = $version ?? $this->Version;
+        $singleton = DataObject::singleton($this->ObjectClass);
 
-        return Versioned::get_all_versions($this->ObjectClass, $this->ObjectID)
-            ->find('Version', $version);
+        // Item is versioned - find the requested version
+        if ($singleton->hasExtension(Versioned::class)) {
+            $version = $version ?? $this->ObjectVersion;
+
+            return Versioned::get_all_versions($this->ObjectClass, $this->ObjectID)
+                ->find('Version', $version);
+        }
+
+        // Item is not versioned - return it as it is
+        return DataObject::get_by_id($this->ObjectClass, $this->ObjectID);
     }
 
     /**
      * @return string
      */
-    public function getItemTitle()
+    public function getItemTitle(): string
     {
         return $this->getItem()->singular_name() . '    --  ' . $this->getItem()->getTitle();
     }
@@ -197,7 +212,7 @@ class SnapshotItem extends DataObject
      */
     public function hydrateFromDataObject(DataObject $object): self
     {
-        $objectID = (int)($object->ID ?: $object->OldID);
+        $objectID = (int) ($object->ID ?: $object->OldID);
 
         $this->ObjectClass = $object->baseClass();
         $this->ObjectID = $objectID;
@@ -211,11 +226,11 @@ class SnapshotItem extends DataObject
             $this->WasPublished = false;
             $this->WasDraft = $object->isModifiedOnDraft();
             $this->WasDeleted = $object->isOnLiveOnly() || $object->isArchived();
-            $this->Version = $object->Version;
+            $this->ObjectVersion = $object->Version;
         } else {
             // Track publish state for non-versioned owners, they're always in a published state.
             $exists = SnapshotItem::get()->filter([
-                'ObjectHash' => static::hashObjectForSnapshot($object)
+                'ObjectHash' => $this->hashObjectForSnapshot($object),
             ]);
             $this->WasCreated = !$exists->exists();
             $this->WasPublished = true;

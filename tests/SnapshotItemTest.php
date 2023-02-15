@@ -2,33 +2,44 @@
 
 namespace SilverStripe\Snapshots\Tests;
 
-use SilverStripe\Snapshots\SnapshotHasher;
+use Exception;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\SnapshotItem;
+use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
+use SilverStripe\Versioned\Versioned;
 
 class SnapshotItemTest extends SnapshotTestAbstract
 {
-    public function testGetItem()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetItem(): void
     {
+        /** @var Block|Versioned $block */
         $block = Block::create();
         $block->write();
-        $item = SnapshotItem::create([
-            'ObjectClass' => Block::class,
-            'ObjectID' => $block->ID,
-            'Version' => $block->Version * 100
-        ]);
+        $item = SnapshotItem::create();
+        $item->ObjectClass = Block::class;
+        $item->ObjectID = $block->ID;
+        $item->ObjectVersion = $block->Version * 100;
 
         $this->assertNull($item->getItem());
 
-        $item->Version = $block->Version;
+        $item->ObjectVersion = $block->Version;
 
         $this->assertInstanceOf(Block::class, $item->getItem());
         $this->assertEquals($block->ID, $item->getItem()->ID);
         $this->assertEquals($block->Version, $item->getItem()->Version);
     }
 
-    public function testHydration()
+    /**
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function testHydration(): void
     {
+        /** @var Block|Versioned $block */
         $block = Block::create();
         $block->write();
 
@@ -36,8 +47,8 @@ class SnapshotItemTest extends SnapshotTestAbstract
         $item->write();
         $this->assertEquals(Block::class, $item->ObjectClass);
         $this->assertEquals($block->ID, $item->ObjectID);
-        $this->assertEquals($block->Version, $item->Version);
-        $this->assertEquals(SnapshotHasher::hashObjectForSnapshot($block), $item->ObjectHash);
+        $this->assertEquals($block->Version, $item->ObjectVersion);
+        $this->assertEquals(SnapshotPublishable::singleton()->hashObjectForSnapshot($block), $item->ObjectHash);
 
         $this->assertTrue($item->WasDraft);
         $this->assertFalse($item->WasDeleted);

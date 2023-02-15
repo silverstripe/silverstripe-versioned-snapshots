@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Handler\GraphQL\Mutation;
 
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
@@ -20,6 +19,7 @@ class Handler extends HandlerAbstract
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
         $type = $context->getAction();
+
         if ($type === null) {
             return null;
         }

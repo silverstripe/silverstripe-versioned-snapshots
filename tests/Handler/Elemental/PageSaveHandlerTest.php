@@ -10,8 +10,9 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\PageSaveHandler;
-use SilverStripe\Snapshots\RelationDiffer;
+use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
@@ -19,16 +20,21 @@ use SilverStripe\Versioned\RecursivePublishable;
 
 class PageSaveHandlerTest extends SnapshotTestAbstract
 {
-
+    /**
+     * @var array
+     */
     protected static $required_extensions = [
         BlockPage::class => [
             ElementalPageExtension::class,
-        ]
+        ],
     ];
 
-    public function testHandlerDoesntFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesntFire(): void
     {
-        $handler = new PageSaveHandler();
+        $handler = PageSaveHandler::create();
         $ext = $this->getMockBuilder(SnapshotPublishable::class)
             ->setMethods(['getRelationDiffs'])
             ->getMock();
@@ -36,13 +42,16 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
             ->method('getRelationDiffs')
             ->will($this->returnValue([]));
         Injector::inst()->registerService($ext, RecursivePublishable::class);
-        $area = ElementalArea::create([
-            'OwnerClassName' => BlockPage::class,
-        ]);
+
+        $area = ElementalArea::create();
+        $area->OwnerClassName = BlockPage::class;
         $area->write();
+
+        /** @var BlockPage|ElementalPageExtension $blockPage */
         $blockPage = BlockPage::create();
         $blockPage->ElementalAreaID = $area->ID;
         $blockPage->write();
+
         $this->createHistory($blockPage);
         $this->mockSnapshot()
             ->expects($this->never())
@@ -51,22 +60,23 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
             ->expects($this->never())
             ->method('createSnapshotEvent');
 
-        $form = Form::create(new Controller(), 'TestForm', FieldList::create(), FieldList::create());
+        $form = Form::create(Controller::create(), 'TestForm', FieldList::create(), FieldList::create());
         $form->loadDataFrom($blockPage);
         $context = Event::create('action', [
             'form' => $form,
         ]);
+
         $handler->fire($context);
     }
 
     /**
-     * @param $many
-     * @throws \SilverStripe\ORM\ValidationException
+     * @param bool $many
+     * @throws ValidationException
      * @dataProvider dataProvider
      */
-    public function testHandlerDoesFireMany($many)
+    public function testHandlerDoesFireMany(bool $many): void
     {
-        $handler = new PageSaveHandler();
+        $handler = PageSaveHandler::create();
         $block1 = BaseElement::create();
         $block1->write();
         $block2 = BaseElement::create();
@@ -94,10 +104,11 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
         Injector::inst()->registerService($ext, RecursivePublishable::class);
 
         // Now that the mock is registered, we can create the object
-        $area = ElementalArea::create([
-            'OwnerClassName' => BlockPage::class,
-        ]);
+        $area = ElementalArea::create();
+        $area->OwnerClassName = BlockPage::class;
         $area->write();
+
+        /** @var BlockPage|ElementalPageExtension $blockPage */
         $blockPage = BlockPage::create();
         $blockPage->ElementalAreaID = $area->ID;
         $blockPage->write();
@@ -108,7 +119,7 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
         // If only one, expect a standard snapshot with block1
         $mock->expects($many ? $this->never() : $this->once())
             ->method('createSnapshot')
-            ->with($this->callback(function ($sub) use ($block1) {
+            ->with($this->callback(static function ($sub) use ($block1) {
                 return $sub->ClassName === $block1->ClassName && $sub->ID = $block1->ID;
             }));
 
@@ -122,30 +133,31 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
             ->method('addOwnershipChain')
             ->withConsecutive(
                 [
-                    $this->callback(function ($sub) use ($block1) {
+                    $this->callback(static function ($sub) use ($block1) {
                         return $sub->ClassName === $block1->ClassName && $sub->ID = $block1->ID;
-                    })
+                    }),
                 ],
                 [
-                    $this->callback(function ($sub) use ($block2) {
+                    $this->callback(static function ($sub) use ($block2) {
                         return $sub->ClassName === $block2->ClassName && $sub->ID = $block2->ID;
-                    })
+                    }),
                 ]
             );
 
-        $form = Form::create(new Controller(), 'TestForm', FieldList::create(), FieldList::create());
+        $form = Form::create(Controller::create(), 'TestForm', FieldList::create(), FieldList::create());
         $form->loadDataFrom($blockPage);
         $context = Event::create('action', [
             'form' => $form,
         ]);
+
         $handler->fire($context);
     }
 
-    public function dataProvider()
+    public function dataProvider(): array
     {
         return [
             [true],
-            [false]
+            [false],
         ];
     }
 }

@@ -7,13 +7,17 @@ use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\GridField\GridField;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\GridField\Action\Handler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class HandlerTest extends SnapshotTestAbstract
 {
-    public function testHandlerDoesntFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesntFire(): void
     {
         $handler = Handler::create();
         $this->mockSnapshot()
@@ -34,7 +38,10 @@ class HandlerTest extends SnapshotTestAbstract
         $handler->fire($context);
     }
 
-    public function testHandlerDoesFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFire(): void
     {
         $handler = Handler::create();
         $block = Block::create();
@@ -43,7 +50,7 @@ class HandlerTest extends SnapshotTestAbstract
         $this->mockSnapshot()
             ->expects($this->once())
             ->method('createSnapshot')
-            ->with($this->callback(function ($arg) use ($block) {
+            ->with($this->callback(static function ($arg) use ($block) {
                 return $arg instanceof Block && $arg->ID == $block->ID;
             }));
 

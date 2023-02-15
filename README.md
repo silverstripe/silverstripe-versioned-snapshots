@@ -268,6 +268,60 @@ As mentioned above, elements all receive `snapshot_relation_tracking` on their p
 Another module that is supported out of the box is [GridFieldExtensions](https://github.com/symbiote/silverstripe-gridfieldextensions). A handler is provided
 for its `GridFieldOrderableRows` component.
 
+## Localisation
+
+This module can be configured to work with the [Fluent](https://github.com/tractorcow-farm/silverstripe-fluent) module.
+Following the paradigm set by the Fluent version history, we do not allow any content inheritance when it comes to versioned history.
+Our `Snapshot` and `SnpashotItem` models represent a more detailed version history, so we need to apply the following configuration to comply with the Fluent paradigm:
+
+```yaml
+SilverStripe\Snapshots\Snapshot:
+    cms_localisation_required: 'exact'
+    frontend_publish_required: 'exact'
+    extensions:
+        - TractorCow\Fluent\Extension\FluentExtension
+    translate:
+        - OriginHash
+
+SilverStripe\Snapshots\SnapshotItem:
+    cms_localisation_required: 'exact'
+    frontend_publish_required: 'exact'
+    extensions:
+        - TractorCow\Fluent\Extension\FluentExtension
+    translate:
+        - ObjectHash
+```
+
+## Upgrading to 1.x.x
+
+`1.x.x` release contains a couple of breaking changes.
+We provide upgrade path for both.
+
+### Object version DB field rename
+
+DB field `Version` on `SnapshotItem` was renamed to `ObjectVersion` to prevent naming conflicts.
+Please follow the steps below to upgrade.
+
+* run `composer update` to upgrade to the desired `1.x.x` version of this module
+* run `dev/build flush=all`
+* run `dev/tasks/migrate-object-version-task`, run via CLI
+
+### Legacy Fluent setup
+
+This is relevant only for project which use [Fluent module](https://github.com/tractorcow-farm/silverstripe-fluent) and use localised snapshot models.
+
+* run `composer update` to upgrade to the desired `1.x.x` version of this module
+* review and update your Fluent configuration as per **Localisation** section of this readme
+* run `dev/build flush=all`
+* run `dev/tasks/migrate-fluent-object-hash-task`, run via CLI
+
+### Recalculate hashes
+
+Object hashes may be out of date.
+It's recommended to update them otherwise pre-update history items may not show in the history viewer.
+Run `dev/tasks/recalculate-hashes-task`, run via CLI
+
+This dev task supports Fluent out of the box,
 
 ## Semantic versioning
 

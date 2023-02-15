@@ -1,10 +1,9 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Handler\Form;
 
+use Exception;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
-use SilverStripe\Forms\Form;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
@@ -18,11 +17,13 @@ class SaveHandler extends Handler
      * @param EventContextInterface $context
      * @return Snapshot|null
      * @throws ValidationException
+     * @throws Exception
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
-        /* @var SnapshotPublishable|DataObject $record */
+        /** @var SnapshotPublishable|DataObject $record */
         $record = $this->getRecordFromContext($context);
+
         if ($record === null) {
             return parent::createSnapshot($context);
         }

@@ -1,15 +1,16 @@
 <?php
 
+namespace SilverStripe\Snapshots\RelationDiffer;
 
-namespace SilverStripe\Snapshots;
-
+use InvalidArgumentException;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
-use InvalidArgumentException;
+use SilverStripe\Snapshots\SnapshotPublishable;
 
 class RelationDiffer
 {
+
     use Injectable;
 
     /**
@@ -49,6 +50,7 @@ class RelationDiffer
 
     /**
      * RelationDiffer constructor.
+     *
      * @var string $relationClass
      * @var string $relationTypes
      * @var array $previousVersionMapping
@@ -63,9 +65,13 @@ class RelationDiffer
         if (!is_subclass_of($relationClass, DataObject::class)) {
             throw new InvalidArgumentException(sprintf('%s is not a DataObject', $relationClass));
         }
+
         if (!$relationClass::singleton()->hasExtension(SnapshotPublishable::class)) {
-            throw new InvalidArgumentException(sprintf('DataObject must use the %s extension', SnapshotPublishable::class));
+            throw new InvalidArgumentException(
+                sprintf('DataObject must use the %s extension', SnapshotPublishable::class)
+            );
         }
+
         $this->relationClass = $relationClass;
         $this->relationType = $relationType;
         $this->previousVersionMapping = $previousVersionMapping;
@@ -91,11 +97,14 @@ class RelationDiffer
             if (!isset($this->currentVersionMapping[$prevID])) {
                 continue;
             }
+
             $currentVersion = $this->currentVersionMapping[$prevID];
+
             // Versioned extension not applied
             if ($prevVersion === null && $currentVersion === null) {
                 continue;
             }
+
             // New version is higher than old version. It's a change.
             if ($currentVersion > $prevVersion) {
                 $changed[] = $prevID;
@@ -110,7 +119,7 @@ class RelationDiffer
      */
     public function hasChanges(): bool
     {
-        return !empty($this->added) || !empty($this->removed) || !empty($this->changed);
+        return count($this->added) > 0 || count($this->removed) > 0 || count($this->changed) > 0;
     }
 
     /**
@@ -121,11 +130,13 @@ class RelationDiffer
         if (!$this->hasChanges()) {
             return [];
         }
+
         $ids = array_merge(
             $this->added,
             $this->removed,
             $this->changed
         );
+
         return DataList::create($this->relationClass)->byIDs($ids)->toArray();
     }
 

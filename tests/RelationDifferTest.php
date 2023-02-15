@@ -3,24 +3,29 @@
 namespace SilverStripe\Snapshots\Tests;
 
 use SilverStripe\Dev\SapphireTest;
-use SilverStripe\Snapshots\RelationDiffer;
+use SilverStripe\ORM\ValidationException;
+use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
+use SilverStripe\Versioned\Versioned;
 
 class RelationDifferTest extends SapphireTest
 {
+    /**
+     * @var array
+     */
     protected static $extra_dataobjects = [
         Block::class,
     ];
 
-    public function testDiffRemoved()
+    public function testDiffRemoved(): void
     {
-        $differ = new RelationDiffer(
+        $differ = RelationDiffer::create(
             Block::class,
             'has_many',
             [
                 '1' => 5,
                 '2' => 12,
-                '5' => 8
+                '5' => 8,
             ],
             []
         );
@@ -30,16 +35,16 @@ class RelationDifferTest extends SapphireTest
         $this->assertEquals(['1','2','5'], $differ->getRemoved());
     }
 
-    public function testDiffAdded()
+    public function testDiffAdded(): void
     {
-        $differ = new RelationDiffer(
+        $differ = RelationDiffer::create(
             Block::class,
             'has_many',
             [],
             [
                 '1' => 5,
                 '2' => 12,
-                '5' => 8
+                '5' => 8,
             ]
         );
         $this->assertTrue($differ->hasChanges());
@@ -48,9 +53,9 @@ class RelationDifferTest extends SapphireTest
         $this->assertEquals(['1','2','5'], $differ->getAdded());
     }
 
-    public function testDiffChanged()
+    public function testDiffChanged(): void
     {
-        $differ = new RelationDiffer(
+        $differ = RelationDiffer::create(
             Block::class,
             'has_many',
             [
@@ -76,9 +81,9 @@ class RelationDifferTest extends SapphireTest
         $this->assertEquals(['1','9','16'], $changed);
     }
 
-    public function testDiffMixed()
+    public function testDiffMixed(): void
     {
-        $differ = new RelationDiffer(
+        $differ = RelationDiffer::create(
             Block::class,
             'has_many',
             [
@@ -115,9 +120,9 @@ class RelationDifferTest extends SapphireTest
         $this->assertFalse($differ->isChanged(16));
     }
 
-    public function testNoChanges()
+    public function testNoChanges(): void
     {
-        $differ = new RelationDiffer(
+        $differ = RelationDiffer::create(
             Block::class,
             'has_many',
             [
@@ -146,16 +151,22 @@ class RelationDifferTest extends SapphireTest
         $this->assertEmpty($differ->getRemoved());
     }
 
-    public function testGetRecords()
+    /**
+     * @throws ValidationException
+     */
+    public function testGetRecords(): void
     {
+        /** @var Block|Versioned $block1 */
         $block1 = Block::create();
         $block1->write();
+        /** @var Block|Versioned $block2 */
         $block2 = Block::create();
         $block2->write();
+        /** @var Block|Versioned $block3 */
         $block3 = Block::create();
         $block3->write();
 
-        $differ = new RelationDiffer(
+        $differ = RelationDiffer::create(
             Block::class,
             'has_many',
             [
@@ -166,20 +177,22 @@ class RelationDifferTest extends SapphireTest
                 $block2->ID => $block2->Version,
             ]
         );
+
         $this->assertTrue($differ->hasChanges());
         $this->assertCount(3, $differ->getRecords());
         $expected = [$block1->ID, $block2->ID, $block3->ID];
         sort($expected);
-        $actual = array_map(function ($record) {
+
+        $actual = array_map(static function ($record) {
             return $record->ID;
         }, $differ->getRecords());
         sort($actual);
         $this->assertEquals($expected, $actual);
     }
 
-    public function testException()
+    public function testException(): void
     {
         $this->expectException('InvalidArgumentException');
-        new RelationDiffer(static::class, 'test');
+        RelationDiffer::create(static::class, 'test');
     }
 }

@@ -2,43 +2,52 @@
 
 namespace SilverStripe\Snapshots;
 
+use Exception;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\FormAction;
-use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataExtension;
 
 class SnapshotSiteTree extends DataExtension
 {
     /**
-     * @param $flags
+     * Extension point in @see SiteTree::getStatusFlags()
+     *
+     * @param mixed $flags
+     * @throws Exception
      */
-    public function updateStatusFlags(&$flags)
+    public function updateStatusFlags(&$flags): void
     {
         $owner = $this->owner;
+
         if (!$owner->hasExtension(SnapshotPublishable::class)) {
             return;
         }
-        /* @var SnapshotPublishable|SiteTree $owner */
-        if ($owner->hasOwnedModifications()) {
-            $flags['modified'] = [
-                'text' => _t(SiteTree::class . '.MODIFIEDONDRAFTSHORT', 'Modified'),
-                'title' => _t(SiteTree::class . '.MODIFIEDONDRAFTHELP', 'Page has owned modifications'),
-            ];
+
+        /** @var SnapshotPublishable|SiteTree $owner */
+        if (!$owner->hasOwnedModifications()) {
+            return;
         }
+
+        $flags['modified'] = [
+            'text' => _t(SiteTree::class . '.MODIFIEDONDRAFTSHORT', 'Modified'),
+            'title' => _t(SiteTree::class . '.MODIFIEDONDRAFTHELP', 'Page has owned modifications'),
+        ];
     }
 
     /**
      * @param FieldList $actions
+     * @throws Exception
      */
-    public function updateCMSActions(FieldList $actions)
+    public function updateCMSActions(FieldList $actions): void
     {
         $owner = $this->owner;
+
         if (!$owner->hasExtension(SnapshotPublishable::class)) {
             return;
         }
 
-        /* @var SnapshotPublishable|SiteTree $owner */
+        /** @var SnapshotPublishable|SiteTree $owner */
         $canPublish = $owner->canPublish();
         $canEdit = $owner->canEdit();
         $hasOwned = $owner->hasOwnedModifications();
@@ -57,14 +66,19 @@ class SnapshotSiteTree extends DataExtension
                 );
             }
         }
+
         $publish = $actions->fieldByName('MajorActions.action_publish');
+
         if (!$publish) {
             return;
         }
-        if ($hasOwned && $canPublish) {
-            $publish->addExtraClass('btn-primary font-icon-rocket');
-            $publish->setTitle(_t(SiteTree::class . '.BUTTONSAVEPUBLISH', 'Publish'));
-            $publish->removeExtraClass('btn-outline-primary font-icon-tick');
+
+        if (!$hasOwned || !$canPublish) {
+            return;
         }
+
+        $publish->addExtraClass('btn-primary font-icon-rocket');
+        $publish->setTitle(_t(SiteTree::class . '.BUTTONSAVEPUBLISH', 'Publish'));
+        $publish->removeExtraClass('btn-outline-primary font-icon-tick');
     }
 }

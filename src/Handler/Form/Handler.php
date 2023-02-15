@@ -1,6 +1,5 @@
 <?php
 
-
 namespace SilverStripe\Snapshots\Handler\Form;
 
 use SilverStripe\Control\HTTPRequest;
@@ -22,6 +21,7 @@ class Handler extends HandlerAbstract
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
         $action = $context->getAction();
+
         if ($action === null) {
             return null;
         }
@@ -35,8 +35,6 @@ class Handler extends HandlerAbstract
         return Snapshot::singleton()->createSnapshot($record);
     }
 
-
-
     /**
      * @param EventContextInterface $context
      * @return DataObject|null
@@ -44,19 +42,23 @@ class Handler extends HandlerAbstract
     protected function getPageFromContext(EventContextInterface $context): ?DataObject
     {
         $page = $context->get('page');
+
         if ($page) {
             return $page;
         }
 
-        /* @var HTTPRequest $request */
+        /** @var HTTPRequest $request */
         $request = $context->get('request');
 
-        if (!$request || !$request instanceof HTTPRequest) {
+        if (!$request instanceof HTTPRequest) {
             return null;
         }
 
         $url = $request->getURL();
-        return $this->getCurrentPageFromRequestUrl($url);
+
+        return $this
+            ->getPageContextProvider()
+            ->getCurrentPageFromRequestUrl($url);
     }
 
     /**
@@ -66,6 +68,7 @@ class Handler extends HandlerAbstract
     protected function getRecordFromContext(EventContextInterface $context): ?DataObject
     {
         $record = $context->get('record');
+
         if ($record) {
             return $record;
         }
@@ -79,13 +82,13 @@ class Handler extends HandlerAbstract
             return null;
         }
 
-        $refetched = DataObject::get_by_id($record->baseClass(), $record->ID);
+        $reFetched = DataObject::get_by_id($record->baseClass(), $record->ID);
 
         // If the record was deleted, return the version still linked to the form
-        if (!$refetched && $record->hasExtension(Versioned::class)) {
+        if (!$reFetched && $record->hasExtension(Versioned::class)) {
             return $record;
         }
 
-        return $refetched;
+        return $reFetched;
     }
 }

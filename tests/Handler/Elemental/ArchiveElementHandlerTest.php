@@ -5,21 +5,29 @@ namespace SilverStripe\Snapshots\Tests\Handler\Elemental;
 use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use DNADesign\Elemental\Models\BaseElement;
 use SilverStripe\EventDispatcher\Symfony\Event;
+use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\ArchiveElementHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
+use SilverStripe\Versioned\Versioned;
 
 class ArchiveElementHandlerTest extends SnapshotTestAbstract
 {
-    protected function setUp()
-    {
-        parent::setUp();
-        BlockPage::add_extension(ElementalPageExtension::class);
-    }
+    /**
+     * @var array
+     */
+    protected static $required_extensions = [
+        BlockPage::class => [
+            ElementalPageExtension::class,
+        ],
+    ];
 
-    public function testHandlerDoesntFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesntFire(): void
     {
-        $handler = new ArchiveElementHandler();
+        $handler = ArchiveElementHandler::create();
         $this->mockSnapshot()
             ->expects($this->never())
             ->method('createSnapshot');
@@ -33,7 +41,7 @@ class ArchiveElementHandlerTest extends SnapshotTestAbstract
         $context = Event::create(
             'action',
             [
-                'params' => []
+                'params' => [],
             ]
         );
         $handler->fire($context);
@@ -41,7 +49,7 @@ class ArchiveElementHandlerTest extends SnapshotTestAbstract
         $context = Event::create(
             'action',
             [
-                'params' => ['blockId' => 5]
+                'params' => ['blockId' => 5],
             ]
         );
         $handler->fire($context);
@@ -49,19 +57,23 @@ class ArchiveElementHandlerTest extends SnapshotTestAbstract
         $context = Event::create(
             'action',
             [
-                'params' => ['blockId' => $id]
+                'params' => ['blockId' => $id],
             ]
         );
         $handler->fire($context);
     }
 
-    public function testHandlerDoesFire()
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFire(): void
     {
-        $handler = new ArchiveElementHandler();
+        $handler = ArchiveElementHandler::create();
         $this->mockSnapshot()
             ->expects($this->once())
             ->method('createSnapshot');
 
+        /** @var BaseElement|Versioned $elem */
         $elem = BaseElement::create();
         $elem->write();
         $this->createHistory($elem);
@@ -69,7 +81,7 @@ class ArchiveElementHandlerTest extends SnapshotTestAbstract
         $context = Event::create(
             'action',
             [
-                'params' => ['blockId' => $elem->ID]
+                'params' => ['blockId' => $elem->ID],
             ]
         );
         $handler->fire($context);
