@@ -1,10 +1,11 @@
 ## SilverStripe Versioned Snapshots
 
 [![Build Status](https://github.com/silverstripe/silverstripe-versioned-snapshots/actions/workflows/ci.yml/badge.svg)](https://github.com/silverstripe/silverstripe-versioned-snapshots/actions/workflows/ci.yml)
-[![Latest Stable Version](https://poser.pugx.org/silverstripe/versioned-snapshots/version.svg)](https://packagist.org/packages/silverstripe/versioned-snapshots)
-[![Latest Unstable Version](https://poser.pugx.org/silverstripe/versioned-snapshots/v/unstable.svg)](https://packagist.org/packages/silverstripe/versioned-snapshots)
-[![Total Downloads](https://poser.pugx.org/silverstripe/versioned-snapshots/downloads.svg)](https://packagist.org/packages/silverstripe/versioned-snapshots)
-[![License](https://poser.pugx.org/silverstripe/versioned-snapshots/license.svg)](https://github.com/silverstripe/silverstripe-versioned-snapshots#license)
+[![Latest Stable Version](http://poser.pugx.org/silverstripe/versioned-snapshots/v)](https://packagist.org/packages/silverstripe/versioned-snapshots)
+[![Total Downloads](http://poser.pugx.org/silverstripe/versioned-snapshots/downloads)](https://packagist.org/packages/silverstripe/versioned-snapshots)
+[![Latest Unstable Version](http://poser.pugx.org/silverstripe/versioned-snapshots/v/unstable)](https://packagist.org/packages/silverstripe/versioned-snapshots)
+[![License](http://poser.pugx.org/silverstripe/versioned-snapshots/license)](https://packagist.org/packages/silverstripe/versioned-snapshots)
+[![PHP Version Require](http://poser.pugx.org/silverstripe/versioned-snapshots/require/php)](https://packagist.org/packages/silverstripe/versioned-snapshots)
 
 ## Overview
 
