@@ -1,11 +1,10 @@
 ## SilverStripe Versioned Snapshots
 
-[![Build Status](https://api.travis-ci.org/silverstripe/silverstripe-versioned-snapshots.svg?branch=master)](https://travis-ci.org/silverstripe/silverstripe-versioned-snapshots)
-[![Latest Stable Version](https://poser.pugx.org/silverstripe/versioned/version.svg)](http://www.silverstripe.org/stable-download/)
+[![Build Status](https://github.com/silverstripe/silverstripe-versioned-snapshots/actions/workflows/ci.yml/badge.svg)](https://github.com/silverstripe/silverstripe-versioned-snapshots/actions/workflows/ci.yml)
+[![Latest Stable Version](https://poser.pugx.org/silverstripe/versioned-snapshots/version.svg)](https://packagist.org/packages/silverstripe/versioned-snapshots)
 [![Latest Unstable Version](https://poser.pugx.org/silverstripe/versioned-snapshots/v/unstable.svg)](https://packagist.org/packages/silverstripe/versioned-snapshots)
 [![Total Downloads](https://poser.pugx.org/silverstripe/versioned-snapshots/downloads.svg)](https://packagist.org/packages/silverstripe/versioned-snapshots)
 [![License](https://poser.pugx.org/silverstripe/versioned-snapshots/license.svg)](https://github.com/silverstripe/silverstripe-versioned-snapshots#license)
-[![Dependency Status](https://www.versioneye.com/php/silverstripe:versioned-snapshots/badge.svg)](https://www.versioneye.com/php/silverstripe:versioned-snapshots)
 
 ## Overview
 
