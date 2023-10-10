@@ -1,0 +1,7 @@
+Page:
+  page1:
+    Title: 'Page1'
+    URLSegment: 'page1'
+  page2:
+    Title: 'Page2'
+    URLSegment: 'page2'

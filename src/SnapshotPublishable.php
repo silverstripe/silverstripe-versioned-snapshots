@@ -17,8 +17,6 @@ use SilverStripe\Versioned\RecursivePublishable;
 use SilverStripe\Versioned\Versioned;
 
 /**
- * Class SnapshotPublishable
- *
  * @property DataObject|SnapshotPublishable|Versioned $owner
  */
 class SnapshotPublishable extends RecursivePublishable
@@ -754,7 +752,14 @@ class SnapshotPublishable extends RecursivePublishable
         $list = ArrayList::create();
 
         foreach ($items as $item) {
-            $list->push(ActivityEntry::createFromSnapshotItem($item));
+            $entry = ActivityEntry::singleton()->createFromSnapshotItem($item);
+
+            if (!$entry) {
+                // We couldn't compose an activity entry from the item, so we will skip this entry
+                continue;
+            }
+
+            $list->push($entry);
         }
 
         return $list;
