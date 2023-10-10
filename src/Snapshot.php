@@ -13,8 +13,6 @@ use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Versioned\Versioned;
 
 /**
- * Class Snapshot
- *
  * @property string $OriginHash
  * @property int $OriginID
  * @property string $OriginClass
@@ -22,7 +20,6 @@ use SilverStripe\Versioned\Versioned;
  * @method DataObject Origin()
  * @method Member Author()
  * @method HasManyList|SnapshotItem[] Items()
- * @package SilverStripe\Snapshots
  */
 class Snapshot extends DataObject
 {
@@ -177,9 +174,10 @@ class Snapshot extends DataObject
     {
         /** @var SnapshotItem $item */
         $item = $this->getOriginItem();
+        $entry = ActivityEntry::singleton()->createFromSnapshotItem($item);
 
-        return $item
-            ? ActivityEntry::createFromSnapshotItem($item)->getDescription()
+        return $entry
+            ? $entry->getDescription()
             : _t(self::class . 'ACTIVITY_NONE', 'none');
     }
 
@@ -227,9 +225,10 @@ class Snapshot extends DataObject
     {
         /** @var SnapshotItem $item */
         $item = $this->getOriginItem();
+        $entry = ActivityEntry::singleton()->createFromSnapshotItem($item);
 
-        return $item
-            ? ActivityEntry::createFromSnapshotItem($item)->Action
+        return $entry
+            ? $entry->Action
             : null;
     }
 

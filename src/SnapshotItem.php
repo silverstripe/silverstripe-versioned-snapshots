@@ -12,8 +12,6 @@ use SilverStripe\Versioned\ChangeSet;
 use SilverStripe\Versioned\Versioned;
 
 /**
- * Class SnapshotItem
- *
  * @property int $ObjectVersion
  * @property int $WasPublished
  * @property int $WasUnpublished
@@ -29,7 +27,6 @@ use SilverStripe\Versioned\Versioned;
  * @method DataObject Object()
  * @method SnapshotItem Parent()
  * @method HasManyList|SnapshotItem[] Children()
- * @package SilverStripe\Snapshots
  */
 class SnapshotItem extends DataObject
 {
