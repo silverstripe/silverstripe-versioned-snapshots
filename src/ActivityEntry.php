@@ -4,11 +4,15 @@ namespace SilverStripe\Snapshots;
 
 use Exception;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\View\ArrayData;
 
 /**
- * @property DataObject $Subject
+ * @property DataObject|null $Subject
+ * @property string|null $Action
+ * @property string|null $Owner
+ * @property string $Date
  */
 class ActivityEntry extends ArrayData
 {
@@ -26,7 +30,7 @@ class ActivityEntry extends ArrayData
 
     const UNPUBLISHED = 'UNPUBLISHED';
 
-    public static function createFromSnapshotItem(SnapshotItem $item): self
+    public function createFromSnapshotItem(SnapshotItem $item): ?self
     {
         /** @var DataObject|Versioned $itemObj */
         $itemObj = $item->getItem();
@@ -75,18 +79,19 @@ class ActivityEntry extends ArrayData
         }
 
         if (!$itemObj) {
-            throw new Exception(sprintf(
-                'Could not resolve SnapshotItem %s to a previous %s version',
-                $item->ID,
-                $item->ObjectClass
-            ));
+            // We couldn't compose the activity entry from available versioned history records
+            // This is a valid case as some projects opt to delete some of their older versioned records
+            return null;
         }
+
+        /** @var DBDatetime $createdField */
+        $createdField = $item->obj('Created');
 
         return static::create([
             'Subject' => $itemObj,
             'Action' => $flag,
             'Owner' => null,
-            'Date' => $item->obj('Created')->Nice(),
+            'Date' => $createdField->Nice(),
         ]);
     }
 
