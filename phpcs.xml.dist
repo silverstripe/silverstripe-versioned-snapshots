@@ -5,6 +5,11 @@
     <file>src</file>
     <file>tests</file>
 
+    <!-- Show progress and output sniff names on violation, and add colours -->
+    <arg value="p" />
+    <arg name="colors" />
+    <arg value="s" />
+
     <rule ref="Generic.Arrays.DisallowLongArraySyntax" />
 
     <!-- base rules are PSR-2 -->
