@@ -4,6 +4,8 @@ namespace SilverStripe\Snapshots;
 
 use Exception;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\FieldType\DBDatetime;
+use SilverStripe\ORM\Filters\GreaterThanFilter;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Security\Member;
@@ -26,67 +28,64 @@ class Snapshot extends DataObject
 
     use SnapshotHasher;
 
-    /**
-     * @var array
-     */
-    private static $db = [
+    private static array $db = [
         'OriginHash' => 'Varchar(64)',
     ];
 
-    /**
-     * @var array
-     */
-    private static $has_one = [
+    private static array $has_one = [
         'Origin' => DataObject::class,
         'Author' => Member::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $has_many = [
+    private static array $has_many = [
         'Items' => SnapshotItem::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $indexes = [
+    private static array $indexes = [
         'OriginHash' => true,
     ];
 
-    /**
-     * @var string
-     */
-    private static $table_name = 'VersionedSnapshot';
+    private static string $table_name = 'VersionedSnapshot';
 
-    /**
-     * @var string
-     */
-    private static $singular_name = 'Snapshot';
+    private static string $singular_name = 'Snapshot';
 
-    /**
-     * @var string
-     */
-    private static $plural_name = 'Snapshots';
+    private static string $plural_name = 'Snapshots';
 
-    /**
-     * @var string
-     */
-    private static $default_sort = 'ID ASC';
+    private static string $default_sort = 'ID ASC';
 
-    /**
-     * @var array
-     */
-    private static $cascade_deletes = [
+    private static array $cascade_deletes = [
         'Items',
+    ];
+
+    private static array $summary_fields = [
+        'LastEdited.Nice' => 'Activity date',
+        'ActivityAgo' => 'Time ago',
+        'Author.Title' => 'Author',
+        'ActivityType' => 'Activity type',
+        'OriginObjectType' => 'Model type',
+        'ActivityDescription' => 'Description',
+    ];
+
+    private static array $searchable_fields = [
+        'OriginClass' => [
+            'title' => 'Model type',
+            'filter' => 'ExactMatchFilter',
+        ],
+        'AuthorID' => [
+            'title' => 'Author',
+            'filter' => 'ExactMatchFilter',
+        ],
+        'LastEdited' => [
+            'title' => 'More recent than',
+            'filter' => GreaterThanFilter::class,
+        ],
     ];
 
     /**
      * @var int Limit the number of snapshot items, for performance reasons
      * @config
      */
-    private static $item_limit = 20;
+    private static int $item_limit = 20;
 
     /**
      * @return SnapshotItem|null
@@ -140,9 +139,6 @@ class Snapshot extends DataObject
         return $this;
     }
 
-    /**
-     * @return DataObject|null
-     */
     public function getOriginVersion(): ?DataObject
     {
         $originItem = $this->getOriginItem();
@@ -158,9 +154,6 @@ class Snapshot extends DataObject
         return null;
     }
 
-    /**
-     * @return string
-     */
     public function getDate(): string
     {
         return $this->LastEdited;
@@ -183,12 +176,32 @@ class Snapshot extends DataObject
 
     public function getActivityAgo(): string
     {
-        return $this->obj('LastEdited')->Ago(false);
+        /** @var DBDatetime $lastEditedField */
+        $lastEditedField = $this->obj('LastEdited');
+
+        return $lastEditedField->Ago(false);
     }
 
     /**
-     * @return bool
+     * Get human-readable type of the origin object
+     *
+     * @return string|null
      */
+    public function getOriginObjectType(): ?string
+    {
+        if (!$this->OriginClass) {
+            return null;
+        }
+
+        if (!class_exists($this->OriginClass)) {
+            return null;
+        }
+
+        $origin = DataObject::singleton($this->OriginClass);
+
+        return $origin?->i18n_singular_name();
+    }
+
     public function getIsLiveSnapshot(): bool
     {
         /** @var Versioned|DataObject $originVersion */
@@ -227,9 +240,7 @@ class Snapshot extends DataObject
         $item = $this->getOriginItem();
         $entry = ActivityEntry::singleton()->createFromSnapshotItem($item);
 
-        return $entry
-            ? $entry->Action
-            : null;
+        return $entry?->Action;
     }
 
     /**
@@ -280,7 +291,7 @@ class Snapshot extends DataObject
     }
 
     /**
-     * @param DataObject|null $origin
+     * @param DataObject $origin
      * @param array $extraObjects
      * @return Snapshot|null
      * @throws ValidationException
@@ -302,9 +313,7 @@ class Snapshot extends DataObject
 
         $currentUser = Security::getCurrentUser();
         $snapshot = Snapshot::create();
-        $snapshot->AuthorID = $currentUser
-            ? (int) $currentUser->ID
-            : 0;
+        $snapshot->AuthorID = (int) $currentUser?->ID;
         $snapshot->applyOrigin($origin);
         $snapshot->addOwnershipChain($origin);
 
