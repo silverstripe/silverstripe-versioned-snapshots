@@ -6,45 +6,24 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 
 /**
- * Class SnapshotEvent
- *
- * snapshot event is used as a stand-in placeholder for snapshots that do not have their own origin
- *
- * @package SilverStripe\Snapshots
+ * Snapshot event is used as a stand-in placeholder for snapshots that do not have their own origin
+ * as well as a holder for custom events (custom message)
  */
 class SnapshotEvent extends DataObject
 {
-    /**
-     * @var array
-     */
-    private static $extensions = [
+    private static array $extensions = [
         Versioned::class,
     ];
 
-    /**
-     * @var string
-     */
-    private static $table_name = 'VersionedSnapshotEvent';
+    private static string $table_name = 'VersionedSnapshotEvent';
 
-    /**
-     * @var string
-     */
-    private static $singular_name = 'snapshot event';
+    private static string $singular_name = 'Custom event';
 
-    /**
-     * @var string
-     */
-    private static $plural_name = 'snapshot events';
+    private static string $plural_name = 'Custom events';
 
-    /**
-     * @var string
-     */
-    private static $description = 'Snapshot event';
+    private static string $description = 'Holder for a custom event which has a custom message';
 
-    /**
-     * @var array
-     */
-    private static $db = [
+    private static array $db = [
         'Title' => 'Varchar',
     ];
 }
