@@ -4,8 +4,8 @@ namespace SilverStripe\Snapshots\Tests\Handler\Elemental;
 
 use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use DNADesign\Elemental\Models\BaseElement;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\ArchiveElementHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
@@ -27,10 +27,8 @@ class ArchiveElementHandlerTest extends SnapshotTestAbstract
      */
     public function testHandlerDoesntFire(): void
     {
+        $mockSnapshot = $this->mockSnapshot();
         $handler = ArchiveElementHandler::create();
-        $this->mockSnapshot()
-            ->expects($this->never())
-            ->method('createSnapshot');
 
         $context = Event::create(null, []);
         $handler->fire($context);
@@ -53,14 +51,19 @@ class ArchiveElementHandlerTest extends SnapshotTestAbstract
             ]
         );
         $handler->fire($context);
-        $id = BaseElement::create()->write();
+        $blockID = BaseElement::create()->write();
         $context = Event::create(
             'action',
             [
-                'params' => ['blockId' => $id],
+                'params' => [
+                    'blockId' => $blockID,
+                ],
             ]
         );
         $handler->fire($context);
+
+        $createSnapshotCount = $mockSnapshot->wasMethodCalled('createSnapshot');
+        $this->assertEquals(0, $createSnapshotCount, 'We expect to not trigger the event handler');
     }
 
     /**
@@ -69,21 +72,26 @@ class ArchiveElementHandlerTest extends SnapshotTestAbstract
     public function testHandlerDoesFire(): void
     {
         $handler = ArchiveElementHandler::create();
-        $this->mockSnapshot()
-            ->expects($this->once())
-            ->method('createSnapshot');
 
-        /** @var BaseElement|Versioned $elem */
-        $elem = BaseElement::create();
-        $elem->write();
-        $this->createHistory($elem);
-        $elem->doArchive();
+        /** @var BaseElement|Versioned $block */
+        $block = BaseElement::create();
+        $block->write();
+        $this->createHistory($block);
+
+        $mockSnapshot = $this->mockSnapshot();
+
+        $block->doArchive();
         $context = Event::create(
             'action',
             [
-                'params' => ['blockId' => $elem->ID],
+                'params' => [
+                    'blockId' => $block->ID,
+                ],
             ]
         );
         $handler->fire($context);
+
+        $createSnapshotCount = $mockSnapshot->wasMethodCalled('createSnapshot');
+        $this->assertEquals(1, $createSnapshotCount, 'We expect to trigger the event handler');
     }
 }

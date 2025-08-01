@@ -2,35 +2,29 @@
 
 namespace SilverStripe\Snapshots\Migration;
 
-use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Dev\BuildTask;
 use SilverStripe\ORM\DB;
+use SilverStripe\PolyExecution\PolyOutput;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
 
 class MigrateObjectVersionTask extends BuildTask
 {
-    /**
-     * @var string
-     */
-    private static $segment = 'migrate-object-version-task';
+    protected static string $commandName = 'migrate-object-version-task';
 
-    /**
-     * @var string
-     */
-    protected $title = 'Migrate legacy format of object version for SnapshotItem';
+    protected string $title = 'Migrate legacy format of object version for SnapshotItem';
 
-    /**
-     * @var string
-     */
-    protected $description = 'Migrate "Version" DB field of VersionedSnapshotItem table to "ObjectVersion"'
-    . ', this task can be run multiple times';
+    protected static string $description = 'Migrate "Version" DB field of VersionedSnapshotItem table '
+    . 'to "ObjectVersion", this task can be run multiple times';
 
-    /**
-     * @param HTTPRequest $request
-     */
-    public function run($request): void
+    protected function execute(InputInterface $input, PolyOutput $output): int
     {
-        $sql = 'UPDATE "VersionedSnapshotItem" SET "ObjectVersion" = "Version" WHERE "ObjectVersion" = 0 AND "Version" > 0';
+        $sql = <<<'SQL'
+UPDATE "VersionedSnapshotItem" SET "ObjectVersion" = "Version" WHERE "ObjectVersion" = 0 AND "Version" > 0
+SQL;
         DB::query($sql);
         echo sprintf('Done, %d records updated.', DB::affected_rows()) . PHP_EOL;
+
+        return Command::SUCCESS;
     }
 }

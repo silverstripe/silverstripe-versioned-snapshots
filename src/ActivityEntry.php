@@ -2,13 +2,14 @@
 
 namespace SilverStripe\Snapshots;
 
-use Exception;
+use SilverStripe\Model\ArrayData;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Versioned\Versioned;
-use SilverStripe\View\ArrayData;
 
 /**
+ * In-memory data which surfaces information about snapshot even activity
+ *
  * @property DataObject|null $Subject
  * @property string|null $Action
  * @property string|null $Owner
@@ -16,21 +17,21 @@ use SilverStripe\View\ArrayData;
  */
 class ActivityEntry extends ArrayData
 {
-    const MODIFIED = 'MODIFIED';
+    public const string MODIFIED = 'MODIFIED';
 
-    const DELETED = 'DELETED';
+    public const string DELETED = 'DELETED';
 
-    const CREATED = 'CREATED';
+    public const string CREATED = 'CREATED';
 
-    const ADDED = 'ADDED';
+    public const string ADDED = 'ADDED';
 
-    const REMOVED = 'REMOVED';
+    public const string REMOVED = 'REMOVED';
 
-    const PUBLISHED = 'PUBLISHED';
+    public const string PUBLISHED = 'PUBLISHED';
 
-    const UNPUBLISHED = 'UNPUBLISHED';
+    public const string UNPUBLISHED = 'UNPUBLISHED';
 
-    public function createFromSnapshotItem(SnapshotItem $item): ?self
+    public function createFromSnapshotItem(SnapshotItem $item): ?ActivityEntry
     {
         /** @var DataObject|Versioned $itemObj */
         $itemObj = $item->getItem();
@@ -38,19 +39,19 @@ class ActivityEntry extends ArrayData
         if ($itemObj instanceof SnapshotEvent) {
             $flag = null;
         } elseif ($item->WasPublished) {
-            $flag = self::PUBLISHED;
+            $flag = ActivityEntry::PUBLISHED;
         } elseif ($item->Parent()->exists()) {
             $flag = $item->WasDeleted
-                ? self::REMOVED
-                : self::ADDED;
+                ? ActivityEntry::REMOVED
+                : ActivityEntry::ADDED;
         } elseif ($item->WasDeleted) {
-            $flag = self::DELETED;
+            $flag = ActivityEntry::DELETED;
         } elseif ($item->WasUnpublished) {
-            $flag = self::UNPUBLISHED;
+            $flag = ActivityEntry::UNPUBLISHED;
         } elseif ($item->WasCreated) {
-            $flag = self::CREATED;
+            $flag = ActivityEntry::CREATED;
         } else {
-            $flag = self::MODIFIED;
+            $flag = ActivityEntry::MODIFIED;
         }
 
         // If the items been deleted then we want to get the last version of it
@@ -95,9 +96,6 @@ class ActivityEntry extends ArrayData
         ]);
     }
 
-    /**
-     * @return string
-     */
     public function getDescription(): string
     {
         if ($this->Subject instanceof SnapshotEvent && $this->Subject->Title) {

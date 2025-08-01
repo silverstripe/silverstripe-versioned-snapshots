@@ -4,8 +4,9 @@ namespace SilverStripe\Snapshots\Tests\Handler\Elemental;
 
 use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use DNADesign\Elemental\Models\BaseElement;
+use PHPUnit\Framework\Attributes\DataProvider;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\ModifyElementHandler;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
@@ -28,7 +29,7 @@ class ModifyElementHandlerTest extends SnapshotTestAbstract
     public function testHandlerDoesntFire(): void
     {
         $handler = ModifyElementHandler::create();
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->never())
             ->method('createSnapshot');
 
@@ -64,7 +65,7 @@ class ModifyElementHandlerTest extends SnapshotTestAbstract
         $block = BaseElement::create();
         $block->write();
 
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->once())
             ->method('createSnapshot')
             ->with($this->callback(static function ($arg) use ($block) {
@@ -82,8 +83,8 @@ class ModifyElementHandlerTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
-     * @dataProvider dataProvider
      */
+    #[DataProvider('publishStateDataProvider')]
     public function testHandlerSetsPublishState(string $actionName, bool $wasPublished, bool $wasUnpublished): void
     {
         $handler = ModifyElementHandler::create();
@@ -109,14 +110,19 @@ class ModifyElementHandlerTest extends SnapshotTestAbstract
         $this->assertEquals($wasUnpublished, (bool) $item->WasUnpublished);
     }
 
-    /**
-     * @return array
-     */
-    public function dataProvider(): array
+    public static function publishStateDataProvider(): array
     {
         return [
-            ['PublishBlock', true, false],
-            ['UnpublishBlock', false, true],
+            'publish block' => [
+                'PublishBlock',
+                true,
+                false,
+            ],
+            'un-publish block' => [
+                'UnpublishBlock',
+                false,
+                true,
+            ],
         ];
     }
 }

@@ -5,14 +5,17 @@ namespace SilverStripe\Snapshots\Tests\Handler\Elemental;
 use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use DNADesign\Elemental\Models\BaseElement;
 use DNADesign\Elemental\Models\ElementalArea;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\Control\Controller;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
-use SilverStripe\ORM\ValidationException;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\Handler\Elemental\PageSaveHandler;
 use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
+use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
@@ -36,11 +39,11 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
     {
         $handler = PageSaveHandler::create();
         $ext = $this->getMockBuilder(SnapshotPublishable::class)
-            ->setMethods(['getRelationDiffs'])
+            ->onlyMethods(['getRelationDiffs'])
             ->getMock();
         $ext->expects($this->any())
             ->method('getRelationDiffs')
-            ->will($this->returnValue([]));
+            ->willReturn([]);
         Injector::inst()->registerService($ext, RecursivePublishable::class);
 
         $area = ElementalArea::create();
@@ -53,10 +56,10 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
         $blockPage->write();
 
         $this->createHistory($blockPage);
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->never())
             ->method('createSnapshot');
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->never())
             ->method('createSnapshotEvent');
 
@@ -72,8 +75,8 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
     /**
      * @param bool $many
      * @throws ValidationException
-     * @dataProvider dataProvider
      */
+    #[DataProvider('multipleBlockOptionsProvider')]
     public function testHandlerDoesFireMany(bool $many): void
     {
         $handler = PageSaveHandler::create();
@@ -84,22 +87,31 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
 
         // Differ needs to return some element IDs. Either one or two, depending on the test.
         $differ = $this->getMockBuilder(RelationDiffer::class)
-            ->setMethods(['getChanged'])
+            ->onlyMethods(['getChanged'])
             ->setConstructorArgs([BaseElement::class, 'has_many'])
             ->getMock();
         $differ->expects($this->once())
             ->method('getChanged')
-            ->will($this->returnValue(
-                $many ? [$block1->ID, $block2->ID] : [$block1->ID]
-            ));
+            ->willReturn(
+                $many ? [
+                    $block1->ID,
+                    $block2->ID,
+                ] : [
+                    $block1->ID,
+                ]
+            );
 
         // Ensure the getRelationDiffs() function returns the mocked differ
         $ext = $this->getMockBuilder(SnapshotPublishable::class)
-            ->setMethods(['getRelationDiffs'])
+            ->onlyMethods([
+                'getRelationDiffs',
+            ])
             ->getMock();
         $ext->expects($this->any())
             ->method('getRelationDiffs')
-            ->will($this->returnValue([$differ]));
+            ->willReturn([
+                $differ,
+            ]);
 
         Injector::inst()->registerService($ext, RecursivePublishable::class);
 
@@ -114,35 +126,7 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
         $blockPage->write();
         $this->createHistory($blockPage);
 
-        $mock = $this->mockSnapshot();
-        // If many elements are returned, we should get an event and add block1, block2.
-        // If only one, expect a standard snapshot with block1
-        $mock->expects($many ? $this->never() : $this->once())
-            ->method('createSnapshot')
-            ->with($this->callback(static function ($sub) use ($block1) {
-                return $sub->ClassName === $block1->ClassName && $sub->ID = $block1->ID;
-            }));
-
-        $mock->expects($many ? $this->once() : $this->never())
-            ->method('createSnapshotEvent')
-            ->will($this->returnSelf());
-
-        // If many elements are returned, the ownership chain should be created
-        // with block1 and block2
-        $mock->expects($many ? $this->exactly(2) : $this->never())
-            ->method('addOwnershipChain')
-            ->withConsecutive(
-                [
-                    $this->callback(static function ($sub) use ($block1) {
-                        return $sub->ClassName === $block1->ClassName && $sub->ID = $block1->ID;
-                    }),
-                ],
-                [
-                    $this->callback(static function ($sub) use ($block2) {
-                        return $sub->ClassName === $block2->ClassName && $sub->ID = $block2->ID;
-                    }),
-                ]
-            );
+        $mockSnapshot = $this->mockSnapshot();
 
         $form = Form::create(Controller::create(), 'TestForm', FieldList::create(), FieldList::create());
         $form->loadDataFrom($blockPage);
@@ -151,13 +135,109 @@ class PageSaveHandlerTest extends SnapshotTestAbstract
         ]);
 
         $handler->fire($context);
+
+        // If many elements are returned, we should get an event and add block1, block2.
+        // If only one, expect a standard snapshot with block1
+        $createSnapshotCount = $mockSnapshot->wasMethodCalled('createSnapshot');
+        $createSnapshotEventCount = $mockSnapshot->wasMethodCalled('createSnapshotEvent');
+
+        // If many elements are returned, the ownership chain should be created
+        // with block1 and block2
+        $addOwnershipChainCount = $mockSnapshot->wasMethodCalled('addOwnershipChain');
+
+        if ($many) {
+            $this->assertEquals(
+                0,
+                $createSnapshotCount,
+                'We expect to not trigger the event handler (createSnapshot method)'
+            );
+            $this->assertEquals(
+                1,
+                $createSnapshotEventCount,
+                'We expect to trigger the event handler (createSnapshotEvent method)'
+            );
+
+            // If many elements are returned, the ownership chain should be created
+            // with block1 and block2
+            $this->assertEquals(
+                2,
+                $addOwnershipChainCount,
+                'We expect to trigger the event handler (addOwnershipChainCount method)'
+            );
+
+            $addOwnershipChainWithParams = $mockSnapshot->wasMethodCalled(
+                'addOwnershipChain',
+                static function (array $params) use ($block1, $block2): bool {
+                    if (!array_key_exists('model', $params)) {
+                        return false;
+                    }
+
+                    /** @var DataObject $model */
+                    $model = $params['model'];
+
+                    if ($model->ClassName === $block1->ClassName && $model->ID === $block1->ID) {
+                        return true;
+                    }
+
+                    if ($model->ClassName === $block2->ClassName && $model->ID === $block2->ID) {
+                        return true;
+                    }
+
+                    return false;
+                }
+            );
+            $this->assertEquals(
+                2,
+                $addOwnershipChainWithParams,
+                'We expect to trigger the event handler (addOwnershipChain params)'
+            );
+        } else {
+            $this->assertEquals(
+                1,
+                $createSnapshotCount,
+                'We expect to trigger the event handler (createSnapshot method)'
+            );
+            $this->assertEquals(
+                0,
+                $createSnapshotEventCount,
+                'We expect to not trigger the event handler (createSnapshotEvent method)'
+            );
+            $this->assertEquals(
+                0,
+                $addOwnershipChainCount,
+                'We expect to not trigger the event handler (addOwnershipChainCount method)'
+            );
+
+            $createSnapshotEventCountWithParams = $mockSnapshot->wasMethodCalled(
+                'createSnapshot',
+                static function (array $params) use ($block1): bool {
+                    if (!array_key_exists('origin', $params)) {
+                        return false;
+                    }
+
+                    /** @var DataObject $origin */
+                    $origin = $params['origin'];
+
+                    return $origin->ClassName === $block1->ClassName && $origin->ID === $block1->ID;
+                }
+            );
+            $this->assertEquals(
+                1,
+                $createSnapshotEventCountWithParams,
+                'We expect to trigger the event handler (createSnapshot params)'
+            );
+        }
     }
 
-    public function dataProvider(): array
+    public static function multipleBlockOptionsProvider(): array
     {
         return [
-            [true],
-            [false],
+            'multiple blocks' => [
+                true,
+            ],
+            'single block' => [
+                false,
+            ],
         ];
     }
 }

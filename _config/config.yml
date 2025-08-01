@@ -19,7 +19,7 @@ SilverStripe\ORM\DataObject:
 Name: snapshot-migration
 ---
 SilverStripe\Core\Injector\Injector:
-  SilverStripe\Snapshots\Migration\Task:
+  SilverStripe\Snapshots\Migration\PopulateSnapshotsTask:
     constructor:
       migrator: '%$SilverStripe\Snapshots\Migration\MigrationService'
 ---
@@ -28,7 +28,7 @@ Only:
   moduleexists: symbiote/silverstripe-queuedjobs
 ---
 SilverStripe\Core\Injector\Injector:
-  SilverStripe\Snapshots\Migration\Job:
+  SilverStripe\Snapshots\Migration\PopulateSnapshotsJob:
     properties:
       migrator: '%$SilverStripe\Snapshots\Migration\MigrationService'
 ---

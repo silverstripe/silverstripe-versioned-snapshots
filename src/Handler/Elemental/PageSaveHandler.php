@@ -2,12 +2,12 @@
 
 namespace SilverStripe\Snapshots\Handler\Elemental;
 
-use DNADesign\Elemental\ElementalEditor;
 use DNADesign\Elemental\Extensions\ElementalAreasExtension;
 use DNADesign\Elemental\Models\BaseElement;
 use Exception;
+use Psr\Container\NotFoundExceptionInterface;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Form\SaveHandler;
 use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Snapshots\Snapshot;
@@ -23,16 +23,10 @@ class PageSaveHandler extends SaveHandler
      * @return Snapshot|null
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
-        // Wonky check for elemental 4.
-        // Elemental < 4 should leave this to the standard page save, which is a separate handler.
-        if (class_exists(ElementalEditor::class)) {
-            // This is also the reason why we need Elemental 4 as a require-dev dependency
-            return null;
-        }
-
         $record = $this->getRecordFromContext($context);
 
         if (!$record) {
@@ -70,7 +64,7 @@ class PageSaveHandler extends SaveHandler
         }
 
         $message = _t(
-            self::class . '.BLOCK_UPDATED_MANY',
+            PageSaveHandler::class . '.BLOCK_UPDATED_MANY',
             'Updated {count} {type}',
             [
                 'count' => count($changedElements),
@@ -79,8 +73,8 @@ class PageSaveHandler extends SaveHandler
         );
         $snapshot = Snapshot::singleton()->createSnapshotEvent($message);
 
-        foreach ($elements as $e) {
-            $snapshot->addOwnershipChain($e);
+        foreach ($elements as $element) {
+            $snapshot->addOwnershipChain($element);
         }
 
         return $snapshot;

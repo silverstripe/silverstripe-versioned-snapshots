@@ -3,14 +3,18 @@
 namespace SilverStripe\Snapshots\Handler\Form;
 
 use Exception;
+use Psr\Container\NotFoundExceptionInterface;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Versioned\Versioned;
 
+/**
+ * Event hook for @see Form
+ */
 class SaveHandler extends Handler
 {
     /**
@@ -18,6 +22,7 @@ class SaveHandler extends Handler
      * @return Snapshot|null
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
@@ -41,8 +46,7 @@ class SaveHandler extends Handler
         }
 
         if ($record->hasRelationChanges()) {
-            return parent::createSnapshot($context)
-            ->addObject($record);
+            return parent::createSnapshot($context)->addObject($record);
         }
 
         return null;

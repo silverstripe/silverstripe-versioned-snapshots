@@ -2,8 +2,10 @@
 
 namespace SilverStripe\Snapshots\Tests\Handler\GraphQL\Mutation;
 
+use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\Snapshots\Handler\GraphQL\Mutation\Handler;
 use SilverStripe\Snapshots\Handler\PageContextProvider;
@@ -15,16 +17,19 @@ class HandlerTest extends SnapshotTestAbstract
     protected function setUp(): void
     {
         parent::setUp();
-        Injector::inst()->registerService(
-            new FakePageContextProvider(),
-            PageContextProvider::class
-        );
+
+        $fakeContextProvider = FakePageContextProvider::create();
+        Injector::inst()->registerService($fakeContextProvider, PageContextProvider::class);
     }
 
+    /**
+     * @return void
+     * @throws ValidationException
+     */
     public function testHandlerDoesntFire(): void
     {
         $handler = Handler::create();
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->never())
             ->method('createSnapshot');
         $context = Event::create(null, []);
@@ -35,15 +40,20 @@ class HandlerTest extends SnapshotTestAbstract
         $handler->fire($context);
     }
 
+    /**
+     * @return void
+     * @throws ValidationException
+     * @throws NotFoundExceptionInterface
+     */
     public function testHandlerDoesFire(): void
     {
         $handler = Handler::create();
         $blockPage = SiteTree::create();
         $blockPage->write();
-        Injector::inst()->get(PageContextProvider::class)
-            ->setPage($blockPage);
 
-        $this->mockSnapshot()
+        PageContextProvider::singleton()->setPage($blockPage);
+
+        $this->mockSnapshotLegacy()
             ->expects($this->once())
             ->method('createSnapshot')
             ->with($this->callback(static function ($arg) use ($blockPage) {

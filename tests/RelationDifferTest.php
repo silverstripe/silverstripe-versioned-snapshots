@@ -2,8 +2,10 @@
 
 namespace SilverStripe\Snapshots\Tests;
 
+use InvalidArgumentException;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Dev\SapphireTest;
-use SilverStripe\ORM\ValidationException;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Versioned\Versioned;
@@ -78,7 +80,11 @@ class RelationDifferTest extends SapphireTest
         $this->assertEmpty($differ->getRemoved());
         $changed = $differ->getChanged();
         sort($changed);
-        $this->assertEquals(['1','9','16'], $changed);
+        $this->assertEquals([
+            '1',
+            '9',
+            '16',
+        ], $changed);
     }
 
     public function testDiffMixed(): void
@@ -104,18 +110,27 @@ class RelationDifferTest extends SapphireTest
         $this->assertTrue($differ->hasChanges());
         $added = $differ->getAdded();
         sort($added);
-        $this->assertEquals(['11', '44'], $added);
+        $this->assertEquals([
+            '11',
+            '44',
+        ], $added);
         $this->assertTrue($differ->isAdded(11));
         $this->assertFalse($differ->isAdded(1));
         $removed = $differ->getRemoved();
         sort($removed);
-        $this->assertEquals(['1', '16'], $removed);
+        $this->assertEquals([
+            '1',
+            '16',
+        ], $removed);
         $this->assertTrue($differ->isRemoved(16));
         $this->assertFalse($differ->isRemoved(11));
 
         $changed = $differ->getChanged();
         sort($changed);
-        $this->assertEquals(['5', '9'], $changed);
+        $this->assertEquals([
+            '5',
+            '9',
+        ], $changed);
         $this->assertTrue($differ->isChanged(5));
         $this->assertFalse($differ->isChanged(16));
     }
@@ -183,7 +198,7 @@ class RelationDifferTest extends SapphireTest
         $expected = [$block1->ID, $block2->ID, $block3->ID];
         sort($expected);
 
-        $actual = array_map(static function ($record) {
+        $actual = array_map(static function (DataObject $record) {
             return $record->ID;
         }, $differ->getRecords());
         sort($actual);
@@ -192,7 +207,7 @@ class RelationDifferTest extends SapphireTest
 
     public function testException(): void
     {
-        $this->expectException('InvalidArgumentException');
+        $this->expectException(InvalidArgumentException::class);
         RelationDiffer::create(static::class, 'test');
     }
 }

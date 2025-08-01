@@ -7,10 +7,7 @@ use SilverStripe\Snapshots\Handler\PageContextProvider;
 
 class FakePageContextProvider extends PageContextProvider
 {
-    /**
-     * @var SiteTree|null
-     */
-    private $page;
+    private ?SiteTree $page = null;
 
     public function setPage(SiteTree $page): self
     {

@@ -26,17 +26,16 @@ use SilverStripe\Versioned\Versioned;
  * @method Snapshot Snapshot()
  * @method DataObject Object()
  * @method SnapshotItem Parent()
- * @method HasManyList|SnapshotItem[] Children()
+ * @method HasManyList<SnapshotItem> Children()
  */
 class SnapshotItem extends DataObject
 {
 
     use SnapshotHasher;
 
-    /**
-     * @var array
-     */
-    private static $db = [
+    private static string $table_name = 'VersionedSnapshotItem';
+
+    private static array $db = [
         'ObjectVersion' => 'Int',
         'WasPublished' => 'Boolean',
         'WasDraft' => 'Boolean',
@@ -47,93 +46,70 @@ class SnapshotItem extends DataObject
         'Modification' => 'Boolean',
     ];
 
-    /**
-     * @var array
-     */
-    private static $has_one = [
+    private static array $has_one = [
         'Snapshot' => Snapshot::class,
         'Object' => DataObject::class,
         'Parent' => SnapshotItem::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $has_many = [
+    private static array $has_many = [
         'Children' => SnapshotItem::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $indexes = [
+    private static array $indexes = [
         'ObjectVersion' => true,
         'ObjectHash' => true,
         'Object' => [
-            'columns' => ['ObjectHash', 'SnapshotID'],
+            'columns' => [
+                'ObjectHash',
+                'SnapshotID',
+            ],
         ],
     ];
 
-    /**
-     * @var array
-     */
-    private static $defaults = [
+    private static array $defaults = [
         'Modification' => true,
     ];
 
-    /**
-     * @var string
-     */
-    private static $table_name = 'VersionedSnapshotItem';
+    private static string $singular_name = 'SnapshotItem';
+
+    private static string $plural_name = 'SnapshotItems';
+
+    private static string $default_sort = 'ID ASC';
 
     /**
-     * @var string
-     */
-    private static $singular_name = 'SnapshotItem';
-
-    /**
-     * @var string
-     */
-    private static $plural_name = 'SnapshotItems';
-
-    /**
-     * @var string
-     */
-    private static $default_sort = 'ID ASC';
-
-    /**
-     * @param null $member
+     * @param Member|null $member
      * @return bool
      */
-    public function canView($member = null)
+    public function canView(mixed $member = null): bool
     {
         return $this->can(__FUNCTION__, $member);
     }
 
     /**
-     * @param null $member
+     * @param Member|null $member
      * @return bool
      */
-    public function canEdit($member = null)
+    public function canEdit(mixed $member = null): bool
     {
         return $this->can(__FUNCTION__, $member);
     }
 
     /**
-     * @param null $member
+     * @param Member|null $member
      * @param array $context
      * @return bool
      */
-    public function canCreate($member = null, $context = [])
+    public function canCreate(mixed $member = null, mixed $context = []): bool
     {
         return $this->can(__FUNCTION__, $member, $context);
     }
 
     /**
-     * @param null $member
+     * @param Member|null $member
      * @return bool
      */
-    public function canDelete($member = null)
+    public function canDelete(mixed $member = null): bool
     {
         return $this->can(__FUNCTION__, $member);
     }
@@ -142,11 +118,11 @@ class SnapshotItem extends DataObject
      * Default permissions for this ChangeSetItem
      *
      * @param string $perm
-     * @param Member $member
+     * @param Member|null $member
      * @param array $context
      * @return bool
      */
-    public function can($perm, $member = null, $context = [])
+    public function can(mixed $perm, mixed $member = null, mixed $context = []): bool
     {
         if (!$member) {
             $member = Security::getCurrentUser();
@@ -164,7 +140,7 @@ class SnapshotItem extends DataObject
         return (bool) Permission::checkMember($member, ChangeSet::config()->get('required_permission'));
     }
 
-    public function onBeforeWrite(): void
+    protected function onBeforeWrite(): void
     {
         parent::onBeforeWrite();
 
@@ -194,9 +170,6 @@ class SnapshotItem extends DataObject
         return DataObject::get_by_id($this->ObjectClass, $this->ObjectID);
     }
 
-    /**
-     * @return string
-     */
     public function getItemTitle(): string
     {
         return $this->getItem()->singular_name() . '    --  ' . $this->getItem()->getTitle();
@@ -207,7 +180,7 @@ class SnapshotItem extends DataObject
      * @return SnapshotItem
      * @throws Exception
      */
-    public function hydrateFromDataObject(DataObject $object): self
+    public function hydrateFromDataObject(DataObject $object): SnapshotItem
     {
         $objectID = (int) ($object->ID ?: $object->OldID);
 

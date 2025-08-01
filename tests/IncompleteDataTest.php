@@ -4,10 +4,11 @@ namespace SilverStripe\Snapshots\Tests;
 
 use Exception;
 use Page;
+use Psr\Container\NotFoundExceptionInterface;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\Queries\SQLDelete;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotPublishable;
 
@@ -33,6 +34,7 @@ class IncompleteDataTest extends SapphireTest
      * @return void
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testGetActivityFeed(): void
     {

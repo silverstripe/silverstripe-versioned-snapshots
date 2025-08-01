@@ -2,10 +2,11 @@
 
 namespace SilverStripe\Snapshots\Tests\Handler\GraphQL\Middleware;
 
+use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler;
 use SilverStripe\Snapshots\Handler\PageContextProvider;
 use SilverStripe\Snapshots\Tests\Handler\GraphQL\FakePageContextProvider;
@@ -16,10 +17,9 @@ class HandlerTest extends SnapshotTestAbstract
     protected function setUp(): void
     {
         parent::setUp();
-        Injector::inst()->registerService(
-            FakePageContextProvider::create(),
-            PageContextProvider::class
-        );
+
+        $fakeContextProvider = FakePageContextProvider::create();
+        Injector::inst()->registerService($fakeContextProvider, PageContextProvider::class);
     }
 
     /**
@@ -28,7 +28,7 @@ class HandlerTest extends SnapshotTestAbstract
     public function testHandlerDoesntFire(): void
     {
         $handler = Handler::create();
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->never())
             ->method('createSnapshot');
         $context = Event::create(null, []);
@@ -40,17 +40,18 @@ class HandlerTest extends SnapshotTestAbstract
     }
 
     /**
+     * @return void
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testHandlerDoesFire(): void
     {
         $handler = Handler::create();
         $blockPage = SiteTree::create();
         $blockPage->write();
-        Injector::inst()->get(PageContextProvider::class)
-            ->setPage($blockPage);
+        PageContextProvider::singleton()->setPage($blockPage);
 
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->once())
             ->method('createSnapshot')
             ->with($this->callback(static function ($arg) use ($blockPage) {

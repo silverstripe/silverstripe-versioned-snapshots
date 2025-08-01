@@ -2,20 +2,26 @@
 
 namespace SilverStripe\Snapshots\Handler\CMSMain;
 
+use Psr\Container\NotFoundExceptionInterface;
+use SilverStripe\CMS\Controllers\CMSMain;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
 
+/**
+ * Event hook for @see CMSMain
+ */
 class Handler extends HandlerAbstract
 {
     /**
      * @param EventContextInterface $context
      * @return Snapshot|null
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
@@ -32,7 +38,7 @@ class Handler extends HandlerAbstract
             return null;
         }
 
-        if ((int) $result->getStatusCode() !== 200) {
+        if ($result->getStatusCode() !== 200) {
             return null;
         }
 

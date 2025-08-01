@@ -2,16 +2,15 @@
 
 namespace SilverStripe\Snapshots\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Snapshots\Handler\PageContextProvider;
 
 class PageContextProviderTest extends SapphireTest
 {
-    /**
-     * @var SiteTree|null
-     */
-    private $page;
+    private ?SiteTree $page;
 
     /**
      * @var array
@@ -20,17 +19,19 @@ class PageContextProviderTest extends SapphireTest
         SiteTree::class,
     ];
 
+    /**
+     * @throws ValidationException
+     */
     protected function setUp(): void
     {
         parent::setUp();
+
         $page = SiteTree::create();
         $page->write();
         $this->page = $page;
     }
 
-    /**
-     * @dataProvider dataProvider
-     */
+    #[DataProvider('pageUrlCasesProvider')]
     public function testPageFromURL(string $testURL, bool $shouldSucceed): void
     {
         $provider = PageContextProvider::create();
@@ -47,27 +48,78 @@ class PageContextProviderTest extends SapphireTest
         }
     }
 
-    public function dataProvider(): array
+    public static function pageUrlCasesProvider(): array
     {
         // This is called before the database is ready, so [ID] is used as a placeholder
         return [
-            ['/fail/[ID]', false],
-            ['/admin/[ID]', false],
-            ['admin/pages/[ID]', false],
-            ['/admin/pages/edit/anything/[ID]', true],
-            ['/admin/pages/edit/show/[ID]', true],
-            ['/admin/pages/edit/EditForm/[ID]', true],
-            ['admin/pages/edit/show/[ID]', true],
-            ['admin/pages/edit/EditForm/[ID]', true],
-            ['/admin/pages/edit/show/[ID]/', true],
-            ['/admin/pages/edit/EditForm/[ID]/', true],
-            ['admin/pages/edit/show/[ID]/', true],
-            ['admin/pages/edit/EditForm/[ID]/', true],
-            ['/admin/pages/edit/[ID]', false],
-            ['/admin/pages/EditForm/[ID]', false],
-            ['admin/pages/edit/show/[ID]/something', true],
-            ['admin/pages/edit/show/[ID]/something/another-thing', true],
-            ['admin/pages/edit/show/something/another-thing/[ID]', false],
+            [
+                '/fail/[ID]',
+                false,
+            ],
+            [
+                '/admin/[ID]',
+                false,
+            ],
+            [
+                'admin/pages/[ID]',
+                false,
+            ],
+            [
+                '/admin/pages/edit/anything/[ID]',
+                true,
+            ],
+            [
+                '/admin/pages/edit/show/[ID]',
+                true,
+            ],
+            [
+                '/admin/pages/edit/EditForm/[ID]',
+                true,
+            ],
+            [
+                'admin/pages/edit/show/[ID]',
+                true,
+            ],
+            [
+                'admin/pages/edit/EditForm/[ID]',
+                true,
+            ],
+            [
+                '/admin/pages/edit/show/[ID]/',
+                true,
+            ],
+            [
+                '/admin/pages/edit/EditForm/[ID]/',
+                true,
+            ],
+            [
+                'admin/pages/edit/show/[ID]/',
+                true,
+            ],
+            [
+                'admin/pages/edit/EditForm/[ID]/',
+                true,
+            ],
+            [
+                '/admin/pages/edit/[ID]',
+                false,
+            ],
+            [
+                '/admin/pages/EditForm/[ID]',
+                false,
+            ],
+            [
+                'admin/pages/edit/show/[ID]/something',
+                true,
+            ],
+            [
+                'admin/pages/edit/show/[ID]/something/another-thing',
+                true,
+            ],
+            [
+                'admin/pages/edit/show/something/another-thing/[ID]',
+                false,
+            ],
         ];
     }
 }

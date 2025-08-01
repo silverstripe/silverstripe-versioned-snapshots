@@ -3,9 +3,11 @@
 namespace SilverStripe\Snapshots;
 
 use Exception;
+use Psr\Container\NotFoundExceptionInterface;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\HasManyList;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
@@ -19,66 +21,41 @@ use SilverStripe\Versioned\Versioned;
  * @property int AuthorID
  * @method DataObject Origin()
  * @method Member Author()
- * @method HasManyList|SnapshotItem[] Items()
+ * @method HasManyList<SnapshotItem> Items()
  */
 class Snapshot extends DataObject
 {
 
     use SnapshotHasher;
 
-    /**
-     * @var array
-     */
-    private static $db = [
+    private static array $db = [
         'OriginHash' => 'Varchar(64)',
     ];
 
-    /**
-     * @var array
-     */
-    private static $has_one = [
+    private static array $has_one = [
         'Origin' => DataObject::class,
         'Author' => Member::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $has_many = [
+    private static array $has_many = [
         'Items' => SnapshotItem::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $indexes = [
+    private static array $indexes = [
         'OriginHash' => true,
     ];
 
-    /**
-     * @var string
-     */
-    private static $table_name = 'VersionedSnapshot';
+    private static string $table_name = 'VersionedSnapshot';
 
-    /**
-     * @var string
-     */
-    private static $singular_name = 'Snapshot';
+    private static string $singular_name = 'Snapshot';
 
-    /**
-     * @var string
-     */
-    private static $plural_name = 'Snapshots';
+    private static string $plural_name = 'Snapshots';
 
-    /**
-     * @var string
-     */
-    private static $default_sort = 'ID ASC';
+    private static string $class_description = 'Represents event that spans multiple models';
 
-    /**
-     * @var array
-     */
-    private static $cascade_deletes = [
+    private static string $default_sort = 'ID ASC';
+
+    private static array $cascade_deletes = [
         'Items',
     ];
 
@@ -86,14 +63,14 @@ class Snapshot extends DataObject
      * @var int Limit the number of snapshot items, for performance reasons
      * @config
      */
-    private static $item_limit = 20;
+    private static int $item_limit = 20;
 
-    /**
-     * @return SnapshotItem|null
-     */
-    public function getOriginItem(): ?DataObject
+    public function getOriginItem(): ?SnapshotItem
     {
-        $item = $this->Items()->find('ObjectHash', $this->OriginHash);
+        /** @var SnapshotItem $item */
+        $item = $this
+            ->Items()
+            ->find('ObjectHash', $this->OriginHash);
 
         if ($item instanceof DataObject) {
             return $item;
@@ -109,40 +86,37 @@ class Snapshot extends DataObject
      * @return $this
      * @throws Exception
      */
-    public function addObject(DataObject $obj): self
+    public function addObject(DataObject $obj): Snapshot
     {
-        if ($this->Items()->count() >= $this->config()->get('item_limit')) {
+        $items = $this->Items();
+
+        if ($items->count() >= $this->config()->get('item_limit')) {
             return $this;
         }
 
         if ($obj instanceof SnapshotItem) {
-            foreach ($this->Items() as $item) {
+            foreach ($items as $item) {
                 if ($item->ObjectClass === $obj->ObjectClass && $item->ObjectID === $obj->ObjectID) {
                     return $this;
                 }
             }
 
-            $this->Items()->add($obj);
+            $items->add($obj);
         } else {
             // Ensure uniqueness
-            foreach ($this->Items() as $item) {
+            foreach ($items as $item) {
                 if ($item->ObjectClass === $obj->baseClass() && $item->ObjectID === ($obj->ID ?: $obj->OldID)) {
                     return $this;
                 }
             }
 
-            $item = SnapshotItem::create()
-                ->hydrateFromDataObject($obj);
-
-            $this->Items()->add($item);
+            $item = SnapshotItem::create()->hydrateFromDataObject($obj);
+            $items->add($item);
         }
 
         return $this;
     }
 
-    /**
-     * @return DataObject|null
-     */
     public function getOriginVersion(): ?DataObject
     {
         $originItem = $this->getOriginItem();
@@ -158,9 +132,6 @@ class Snapshot extends DataObject
         return null;
     }
 
-    /**
-     * @return string
-     */
     public function getDate(): string
     {
         return $this->LastEdited;
@@ -175,20 +146,22 @@ class Snapshot extends DataObject
         /** @var SnapshotItem $item */
         $item = $this->getOriginItem();
         $entry = ActivityEntry::singleton()->createFromSnapshotItem($item);
+        $key = sprintf('%s.ACTIVITY_NONE', Snapshot::class);
+        $default = _t($key, 'none');
 
         return $entry
             ? $entry->getDescription()
-            : _t(self::class . 'ACTIVITY_NONE', 'none');
+            : $default;
     }
 
     public function getActivityAgo(): string
     {
-        return $this->obj('LastEdited')->Ago(false);
+        /** @var DBDatetime $lastEditedField */
+        $lastEditedField = $this->obj('LastEdited');
+
+        return $lastEditedField->Ago(false);
     }
 
-    /**
-     * @return bool
-     */
     public function getIsLiveSnapshot(): bool
     {
         /** @var Versioned|DataObject $originVersion */
@@ -227,52 +200,47 @@ class Snapshot extends DataObject
         $item = $this->getOriginItem();
         $entry = ActivityEntry::singleton()->createFromSnapshotItem($item);
 
-        return $entry
-            ? $entry->Action
-            : null;
+        return $entry?->Action;
     }
 
     /**
-     * @param null $member
-     * @param array $context
-     * @return bool|int
-     */
-    public function canCreate($member = null, $context = [])
-    {
-        return Permission::checkMember($member, 'CMS_ACCESS_CMSMain');
-    }
-
-    /**
-     * @param null $member
-     * @param array $context
-     * @return bool|int
-     */
-    public function canEdit($member = null, $context = [])
-    {
-        return Permission::checkMember($member, 'CMS_ACCESS_CMSMain');
-    }
-
-    /**
-     * @param null $member
-     * @param array $context
-     * @return bool|int
-     */
-    public function canDelete($member = null, $context = [])
-    {
-        return Permission::checkMember($member, 'CMS_ACCESS_CMSMain');
-    }
-
-    /**
-     * @param null $member
+     * @param Member|null $member
      * @param array $context
      * @return bool
      */
-    public function canView($member = null, $context = [])
+    public function canCreate(mixed $member = null, mixed $context = []): bool
+    {
+        return Permission::checkMember($member, 'CMS_ACCESS_CMSMain');
+    }
+
+    /**
+     * @param Member|null $member
+     * @return bool
+     */
+    public function canEdit(mixed $member = null): bool
+    {
+        return Permission::checkMember($member, 'CMS_ACCESS_CMSMain');
+    }
+
+    /**
+     * @param Member|null $member
+     * @return bool
+     */
+    public function canDelete(mixed $member = null): bool
+    {
+        return Permission::checkMember($member, 'CMS_ACCESS_CMSMain');
+    }
+
+    /**
+     * @param Member|null $member
+     * @return bool
+     */
+    public function canView(mixed $member = null): bool
     {
         return true;
     }
 
-    public function onBeforeWrite(): void
+    protected function onBeforeWrite(): void
     {
         parent::onBeforeWrite();
 
@@ -280,11 +248,12 @@ class Snapshot extends DataObject
     }
 
     /**
-     * @param DataObject|null $origin
+     * @param DataObject $origin
      * @param array $extraObjects
      * @return Snapshot|null
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function createSnapshot(
         DataObject $origin,
@@ -302,9 +271,7 @@ class Snapshot extends DataObject
 
         $currentUser = Security::getCurrentUser();
         $snapshot = Snapshot::create();
-        $snapshot->AuthorID = $currentUser
-            ? (int) $currentUser->ID
-            : 0;
+        $snapshot->AuthorID = (int) $currentUser?->ID;
         $snapshot->applyOrigin($origin);
         $snapshot->addOwnershipChain($origin);
 
@@ -312,8 +279,7 @@ class Snapshot extends DataObject
             // Change of course. This snapshot is about an update to a relationship (e.g. many_many)
             // and not really about the provided "origin".
             $diffs = $origin->getRelationDiffs();
-            $event = ImplicitModification::create()
-                ->hydrateFromDiffs($diffs);
+            $event = ImplicitModification::create()->hydrateFromDiffs($diffs);
             $event->write();
             $snapshot->applyOrigin($event);
 
@@ -323,8 +289,7 @@ class Snapshot extends DataObject
             /** @var RelationDiffer $diff */
             foreach ($diffs as $diff) {
                 foreach ($diff->getRecords() as $obj) {
-                    $item = SnapshotItem::create()
-                        ->hydrateFromDataObject($obj);
+                    $item = SnapshotItem::create()->hydrateFromDataObject($obj);
 
                     if ($diff->isRemoved($obj->ID ?: $obj->OldID)) {
                         $item->WasDeleted = true;
@@ -350,6 +315,7 @@ class Snapshot extends DataObject
      * @param array $extraObjects
      * @return Snapshot
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function createSnapshotEvent(string $message, array $extraObjects = []): Snapshot
     {
@@ -382,7 +348,7 @@ class Snapshot extends DataObject
      * @return $this
      * @throws Exception
      */
-    public function applyOrigin(DataObject $origin): self
+    public function applyOrigin(DataObject $origin): Snapshot
     {
         $this->OriginClass = $origin->baseClass();
         // Handler for deleted records
@@ -393,16 +359,16 @@ class Snapshot extends DataObject
     }
 
     /**
-     * @param DataObject|SnapshotPublishable $obj
-     * @return $this
+     * @param DataObject|SnapshotPublishable $model
+     * @return Snapshot
      * @throws Exception
      */
-    public function addOwnershipChain(DataObject $obj): self
+    public function addOwnershipChain(DataObject $model): Snapshot
     {
-        $this->addObject($obj);
+        $this->addObject($model);
 
-        foreach ($obj->getIntermediaryObjects() as $o) {
-            $this->addObject($o);
+        foreach ($model->getIntermediaryObjects() as $object) {
+            $this->addObject($object);
         }
 
         return $this;

@@ -18,17 +18,14 @@ class RelationDiffCache implements Resettable
     use Injectable;
     use SnapshotHasher;
 
-    /**
-     * @var array
-     */
-    protected $cachedData = [];
+    protected array $cachedData = [];
 
     /**
      * List of all models which are fully published (we executed publish recursive)
      *
      * @var array
      */
-    protected $publishedModels = [];
+    protected array $publishedModels = [];
 
     /**
      * @param DataObject $object
@@ -57,7 +54,7 @@ class RelationDiffCache implements Resettable
      * @return $this
      * @throws Exception
      */
-    public function addCachedData(DataObject $object, array $data): self
+    public function addCachedData(DataObject $object, array $data): RelationDiffCache
     {
         $key = $this->getCacheKey($object);
 

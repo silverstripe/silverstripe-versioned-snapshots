@@ -2,21 +2,26 @@
 
 namespace SilverStripe\Snapshots\Handler\Form;
 
+use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\Forms\Form;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Versioned\Versioned;
 
+/**
+ * Event hook for @see Form
+ */
 class Handler extends HandlerAbstract
 {
     /**
      * @param EventContextInterface $context
      * @return Snapshot|null
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
@@ -35,10 +40,6 @@ class Handler extends HandlerAbstract
         return Snapshot::singleton()->createSnapshot($record);
     }
 
-    /**
-     * @param EventContextInterface $context
-     * @return DataObject|null
-     */
     protected function getPageFromContext(EventContextInterface $context): ?DataObject
     {
         $page = $context->get('page');
@@ -61,12 +62,9 @@ class Handler extends HandlerAbstract
             ->getCurrentPageFromRequestUrl($url);
     }
 
-    /**
-     * @param EventContextInterface $context
-     * @return DataObject|null
-     */
     protected function getRecordFromContext(EventContextInterface $context): ?DataObject
     {
+        /** @var DataObject $record */
         $record = $context->get('record');
 
         if ($record) {
@@ -76,6 +74,7 @@ class Handler extends HandlerAbstract
         /** @var Form $form */
         $form = $context->get('form');
 
+        /** @var DataObject $record */
         $record = $form->getRecord();
 
         if (!$record) {

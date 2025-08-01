@@ -3,8 +3,8 @@
 namespace SilverStripe\Snapshots\Tests\Handler\CMSMain;
 
 use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\CMSMain\Handler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
@@ -17,7 +17,7 @@ class HandlerTest extends SnapshotTestAbstract
     public function testHandlerDoesntFire(): void
     {
         $handler = Handler::create();
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->never())
             ->method('createSnapshotEvent');
 
@@ -60,7 +60,7 @@ class HandlerTest extends SnapshotTestAbstract
     public function testHandlerDoesFire(): void
     {
         $handler = Handler::create();
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->once())
             ->method('createSnapshotEvent');
 

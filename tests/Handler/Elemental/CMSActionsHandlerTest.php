@@ -5,8 +5,8 @@ namespace SilverStripe\Snapshots\Tests\Handler\Elemental;
 use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use DNADesign\Elemental\Models\BaseElement;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\CMSActionsHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
@@ -28,7 +28,7 @@ class CMSActionsHandlerTest extends SnapshotTestAbstract
     public function testHandlerDoesntFire(): void
     {
         $handler = new CMSActionsHandler();
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->never())
             ->method('createSnapshot');
 
@@ -63,7 +63,7 @@ class CMSActionsHandlerTest extends SnapshotTestAbstract
     public function testHandlerDoesFire(): void
     {
         $handler = CMSActionsHandler::create();
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->once())
             ->method('createSnapshot');
 

@@ -3,64 +3,53 @@
 namespace SilverStripe\Snapshots\Migration;
 
 use Exception;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionException;
 use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\SnapshotItem;
 use SilverStripe\Versioned\Versioned;
 
+/**
+ * Migration regular version records to snapshot records
+ */
 class MigrationService
 {
 
     use Injectable;
 
-    /**
-     * @var string
-     */
-    private $snapshotsTable;
+    private string $snapshotsTable;
+
+    private string $itemsTable;
 
     /**
-     * @var string
-     */
-    private $itemsTable;
-
-    /**
+     * In-memory cache
+     *
      * @var array|null
      */
-    private $classMap;
+    private ?array $classMap;
 
-    /**
-     * @var int
-     */
-    private $baseID = 0;
+    private int $baseID = 0;
 
-    /**
-     * @var string|null
-     */
-    private $baseClassSubquery;
+    private ?string $baseClassSubquery;
 
     /**
      * MigrationService constructor.
-     *
-     * @throws ReflectionException
      */
     public function __construct()
     {
-        $this->snapshotsTable = DataObject::getSchema()->baseDataTable(Snapshot::class);
-        $this->itemsTable = DataObject::getSchema()->baseDataTable(SnapshotItem::class);
+        $schema = DataObject::getSchema();
+        $this->snapshotsTable = $schema->baseDataTable(Snapshot::class);
+        $this->itemsTable = $schema->baseDataTable(SnapshotItem::class);
     }
 
-
-    /**
-     * @param string $baseClass
-     * @return int
-     */
     public function migrate(string $baseClass): int
     {
         $sng = DataObject::singleton($baseClass);
@@ -85,8 +74,10 @@ class MigrationService
      */
     public function seedRelationTracking(): void
     {
-        foreach (ClassInfo::subclassesFor(DataObject::class, false) as $class) {
-            $tracking = $class::config()->uninherited('snapshot_relation_tracking');
+        $classes = ClassInfo::subclassesFor(DataObject::class, false);
+
+        foreach ($classes as $class) {
+            $tracking = Config::forClass($class)->uninherited('snapshot_relation_tracking');
 
             if (!$tracking) {
                 continue;
@@ -102,14 +93,23 @@ class MigrationService
 
     /**
      * @return array
+     * @throws NotFoundExceptionInterface
+     * @throws ReflectionException
      */
     public function getClassesToMigrate(): array
     {
-        return array_unique(array_values($this->getClassMap()));
+        $classMap = $this->getClassMap();
+        $classMap = array_values($classMap);
+
+        return array_unique($classMap);
     }
 
     /**
      * Restart the task
+     *
+     * @return void
+     * @throws NotFoundExceptionInterface
+     * @throws ReflectionException
      */
     public function setup(): void
     {
@@ -118,7 +118,7 @@ class MigrationService
         $eventTable = DataObject::getSchema()->baseDataTable(SnapshotEvent::class);
         DB::query("DELETE FROM \"$eventTable\"");
         $this->createTemporaryTable();
-        $this->baseClassSubquery = <<<SQL
+        $this->baseClassSubquery = <<<'SQL'
                     (
                         SELECT "BaseClassName"
                             FROM "__ClassNameLookup"
@@ -133,10 +133,6 @@ SQL;
         $this->removeTemporaryTable();
     }
 
-    /**
-     * @param string $versionsTable
-     * @return int
-     */
     private function migrateSnapshots(string $versionsTable): int
     {
         DB::query(
@@ -168,13 +164,9 @@ SQL;
             "
         );
 
-        return (int) DB::affected_rows();
+        return DB::affected_rows();
     }
 
-    /**
-     * @param string $versionsTable
-     * @return int
-     */
     private function migrateItems(string $versionsTable): int
     {
         DB::query(
@@ -214,9 +206,14 @@ SQL;
             "
         );
 
-        return (int) DB::affected_rows();
+        return DB::affected_rows();
     }
 
+    /**
+     * @return void
+     * @throws NotFoundExceptionInterface
+     * @throws ReflectionException
+     */
     private function createTemporaryTable(): void
     {
         DB::query("DROP TABLE IF EXISTS \"__ClassNameLookup\"");
@@ -227,9 +224,11 @@ SQL;
                 'BaseClassName' => 'varchar(255) not null',
             ]
         );
+
+        $classMap = $this->getClassMap();
         $lines = [];
 
-        foreach ($this->getClassMap() as $className => $baseClassName) {
+        foreach ($classMap as $className => $baseClassName) {
             $lines[] = sprintf(
                 "('%s', '%s')",
                 $this->sanitiseClassName($className),
@@ -238,7 +237,7 @@ SQL;
         }
 
         $values = implode(",\n", $lines);
-        $query = <<<SQL
+        $query = <<<'SQL'
             INSERT INTO "__ClassNameLookup"
             ("ObjectClassName", "BaseClassName")
             VALUES
@@ -255,6 +254,8 @@ SQL;
 
     /**
      * @return array
+     * @throws NotFoundExceptionInterface
+     * @throws ReflectionException
      */
     private function getClassMap(): array
     {
@@ -265,29 +266,30 @@ SQL;
         return $this->classMap;
     }
 
-
+    /**
+     * @return void
+     * @throws ReflectionException
+     * @throws NotFoundExceptionInterface
+     */
     private function generateClassMap(): void
     {
+        $classes = ClassInfo::subclassesFor(DataObject::class, false);
         $map = [];
 
-        foreach (ClassInfo::subclassesFor(DataObject::class, false) as $class) {
-            $sng = Injector::inst()->get($class);
+        foreach ($classes as $class) {
+            $model = singleton($class);
 
-            if (!$sng->hasExtension(Versioned::class)) {
+            if (!$model->hasExtension(Versioned::class)) {
                 continue;
             }
 
-            $baseClass = $sng->baseClass();
+            $baseClass = $model->baseClass();
             $map[$class] = $baseClass;
         }
 
         $this->classMap = $map;
     }
 
-    /**
-     * @param string $class
-     * @return string
-     */
     private function sanitiseClassName(string $class): string
     {
         return str_replace('\\', '\\\\', $class);

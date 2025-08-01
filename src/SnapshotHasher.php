@@ -32,11 +32,6 @@ trait SnapshotHasher
         return $this->hashForSnapshot($obj->baseClass(), $obj->ID);
     }
 
-    /**
-     * @param DataObject $obj1
-     * @param DataObject $obj2
-     * @return bool
-     */
     public function hashSnapshotCompare(DataObject $obj1, DataObject $obj2): bool
     {
         return $this->hashObjectForSnapshot($obj1) === $this->hashObjectForSnapshot($obj2);

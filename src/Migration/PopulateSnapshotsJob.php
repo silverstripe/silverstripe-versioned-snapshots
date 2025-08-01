@@ -2,7 +2,10 @@
 
 namespace SilverStripe\Snapshots\Migration;
 
+use Psr\Container\NotFoundExceptionInterface;
+use ReflectionException;
 use SilverStripe\Core\Environment;
+use SilverStripe\Core\Validation\ValidationException;
 use Symbiote\QueuedJobs\Services\AbstractQueuedJob;
 use Symbiote\QueuedJobs\Services\QueuedJob;
 
@@ -10,20 +13,19 @@ if (!class_exists(AbstractQueuedJob::class)) {
     return;
 }
 
-class Job extends AbstractQueuedJob
+/**
+ * Job version of @see PopulateSnapshotsTask
+ */
+class PopulateSnapshotsJob extends AbstractQueuedJob
 {
-    /**
-     * @var MigrationService
-     */
-    private $migrator;
+    private MigrationService $migrator;
 
-    /**
-     * @var array
-     */
-    private $classesToProcess = [];
+    private array $classesToProcess = [];
 
     /**
      * @return void
+     * @throws ReflectionException
+     * @throws NotFoundExceptionInterface
      */
     public function setup(): void
     {
@@ -37,17 +39,11 @@ class Job extends AbstractQueuedJob
         $this->totalSteps = sizeof($this->classesToProcess);
     }
 
-    /**
-     * @return string
-     */
     public function getSignature(): string
     {
         return md5(static::class);
     }
 
-    /**
-     * @return void
-     */
     public function process(): void
     {
         $remainingChildren = $this->classesToProcess;
@@ -69,21 +65,24 @@ class Job extends AbstractQueuedJob
         $this->currentStep += 1;
     }
 
+    /**
+     * @return void
+     * @throws ReflectionException
+     * @throws ValidationException
+     */
     public function afterComplete(): void
     {
         parent::afterComplete();
+
         $this->addMessage('Seeding relation tracking...');
         $this->getMigrator()->seedRelationTracking();
         $this->addMessage('Tearing down...');
         $this->getMigrator()->tearDown();
     }
 
-    /**
-     * @return string
-     */
     public function getTitle(): string
     {
-        return _t(self::class . '.MIGRATE', 'Migrate versions tables to snapshots');
+        return _t(PopulateSnapshotsJob::class . '.MIGRATE', 'Migrate versions tables to snapshots');
     }
 
     public function getJobType(): int
@@ -91,20 +90,13 @@ class Job extends AbstractQueuedJob
         return QueuedJob::QUEUED;
     }
 
-    /**
-     * @param MigrationService $migrator
-     * @return $this
-     */
-    public function setMigrator(MigrationService $migrator): self
+    public function setMigrator(MigrationService $migrator): PopulateSnapshotsJob
     {
         $this->migrator = $migrator;
 
         return $this;
     }
 
-    /**
-     * @return MigrationService
-     */
     public function getMigrator(): MigrationService
     {
         return $this->migrator;

@@ -3,13 +3,19 @@
 namespace SilverStripe\Snapshots\Handler\Form;
 
 use Exception;
+use Psr\Container\NotFoundExceptionInterface;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotHasher;
+use SilverStripe\Snapshots\SnapshotItem;
 use SilverStripe\Versioned\ChangeSet;
+use SilverStripe\Versioned\ChangeSetItem;
 use SilverStripe\Versioned\Versioned;
 
+/**
+ * Event hook for @see Form
+ */
 class PublishHandler extends Handler
 {
 
@@ -18,6 +24,7 @@ class PublishHandler extends Handler
     /**
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
@@ -46,6 +53,7 @@ class PublishHandler extends Handler
             ->first();
 
         if ($changeSet) {
+            /** @var ChangeSetItem $item */
             foreach ($changeSet->Changes() as $item) {
                 foreach ($item->findReferenced() as $obj) {
                     $snapshot->addObject($obj);
@@ -53,8 +61,9 @@ class PublishHandler extends Handler
             }
         }
 
-        foreach ($snapshot->Items() as $i) {
-            $i->WasPublished = true;
+        /** @var SnapshotItem $item */
+        foreach ($snapshot->Items() as $item) {
+            $item->WasPublished = true;
         }
 
         return $snapshot;

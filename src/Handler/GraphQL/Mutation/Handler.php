@@ -2,19 +2,24 @@
 
 namespace SilverStripe\Snapshots\Handler\GraphQL\Mutation;
 
+use Psr\Container\NotFoundExceptionInterface;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
 
+/**
+ * Event hook for GraphQL operations
+ *
+ * @deprecated GraphQL no longer officially supported
+ */
 class Handler extends HandlerAbstract
 {
-    const ACTION_PREFIX = 'graphql_crud_';
-
     /**
      * @param EventContextInterface $context
      * @return Snapshot|null
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {

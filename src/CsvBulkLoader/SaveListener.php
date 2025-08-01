@@ -2,13 +2,18 @@
 
 namespace SilverStripe\Snapshots\CsvBulkLoader;
 
+use SilverStripe\Core\Extension;
 use SilverStripe\Dev\CsvBulkLoader;
 use SilverStripe\EventDispatcher\Dispatch\Dispatcher;
 use SilverStripe\EventDispatcher\Symfony\Event;
-use SilverStripe\ORM\DataExtension;
 use SilverStripe\ORM\DataObject;
 
-class SaveListener extends DataExtension
+/**
+ * Event hook for @see CsvBulkLoader
+ *
+ * @extends Extension<CsvBulkLoader>
+ */
+class SaveListener extends Extension
 {
     /**
      * Extension point in @see CsvBulkLoader::processRecord()
@@ -17,7 +22,7 @@ class SaveListener extends DataExtension
      * @param mixed $preview
      * @param mixed $isChanged
      */
-    public function onAfterProcessRecord(DataObject $obj, $preview, $isChanged): void
+    protected function onAfterProcessRecord(DataObject $obj, mixed $preview, mixed $isChanged): void
     {
         // No need tracking previews, since we don't expect any writes
         if ($preview) {
@@ -32,7 +37,9 @@ class SaveListener extends DataExtension
 
         Dispatcher::singleton()->trigger(
             'csvBulkLoaderImport',
-            Event::create(get_class($obj), ['record' => $obj])
+            Event::create($obj::class, [
+                'record' => $obj,
+            ])
         );
     }
 }
