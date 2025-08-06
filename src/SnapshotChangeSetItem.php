@@ -3,16 +3,16 @@
 namespace SilverStripe\Snapshots;
 
 use Exception;
-use SilverStripe\ORM\DataExtension;
+use SilverStripe\Core\Extension;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\ChangeSetItem;
 
 /**
- * Class SnapshotChangeSetItem
+ * Customise @see ChangeSetItem to use snapshot records instead of versioned records
  *
- * @property ChangeSetItem $owner
+ * @extends Extension<ChangeSetItem>
  */
-class SnapshotChangeSetItem extends DataExtension
+class SnapshotChangeSetItem extends Extension
 {
     /**
      * Extension point in @see ChangeSetItem::getChangeType()
@@ -22,10 +22,12 @@ class SnapshotChangeSetItem extends DataExtension
      * @param $liveVersion
      * @throws Exception
      */
-    public function updateChangeType(&$type, $draftVersion, $liveVersion): void
+    protected function updateChangeType(&$type, $draftVersion, $liveVersion): void
     {
+        $owner = $this->getOwner();
+
         /** @var DataObject|SnapshotPublishable $obj */
-        $obj = $this->owner->getComponent('Object');
+        $obj = $owner->getComponent('Object');
 
         if (!$obj->hasExtension(SnapshotPublishable::class)) {
             return;

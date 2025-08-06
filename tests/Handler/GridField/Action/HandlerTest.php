@@ -3,11 +3,11 @@
 namespace SilverStripe\Snapshots\Tests\Handler\GridField\Action;
 
 use SilverStripe\Control\Controller;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\GridField\GridField;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\GridField\Action\Handler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
@@ -20,21 +20,25 @@ class HandlerTest extends SnapshotTestAbstract
     public function testHandlerDoesntFire(): void
     {
         $handler = Handler::create();
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->never())
             ->method('createSnapshot');
 
         $context = Event::create(null, []);
         $handler->fire($context);
 
-        $context = Event::create('action', ['gridField' => new GridField('test')]);
+        $context = Event::create('action', [
+            'gridField' => new GridField('test'),
+        ]);
         $handler->fire($context);
 
         $form = Form::create(Controller::create(), 'TestForm', FieldList::create(), FieldList::create());
         $grid = GridField::create('Test');
         $grid->setForm($form);
 
-        $context = Event::create('action', ['gridField' => $grid]);
+        $context = Event::create('action', [
+            'gridField' => $grid,
+        ]);
         $handler->fire($context);
     }
 
@@ -47,7 +51,7 @@ class HandlerTest extends SnapshotTestAbstract
         $block = Block::create();
         $block->write();
 
-        $this->mockSnapshot()
+        $this->mockSnapshotLegacy()
             ->expects($this->once())
             ->method('createSnapshot')
             ->with($this->callback(static function ($arg) use ($block) {
@@ -59,7 +63,9 @@ class HandlerTest extends SnapshotTestAbstract
         $grid = GridField::create('Test');
         $grid->setForm($form);
 
-        $context = Event::create('action', ['gridField' => $grid]);
+        $context = Event::create('action', [
+            'gridField' => $grid,
+        ]);
         $handler->fire($context);
     }
 }

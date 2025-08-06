@@ -11,29 +11,17 @@ use SilverStripe\Versioned\Versioned;
  */
 class GalleryImage extends DataObject implements TestOnly
 {
-    /**
-     * @var array
-     */
-    private static $db = [
+    private static string $table_name = 'SnapshotTest_GalleryImage';
+
+    private static array $db = [
         'URL' => 'Varchar',
     ];
 
-    /**
-     * @var array
-     */
-    private static $belongs_many_many = [
+    private static array $belongs_many_many = [
         'Gallery' => Gallery::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $extensions = [
+    private static array $extensions = [
         Versioned::class,
     ];
-
-    /**
-     * @var string
-     */
-    private static $table_name = 'SnapshotTest_GalleryImage';
 }

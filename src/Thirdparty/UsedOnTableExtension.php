@@ -3,12 +3,17 @@
 namespace SilverStripe\Snapshots\Thirdparty;
 
 use SilverStripe\Admin\Forms\UsedOnTable;
-use SilverStripe\ORM\DataExtension;
+use SilverStripe\Core\Extension;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\SnapshotItem;
 
-class UsedOnTableExtension extends DataExtension
+/**
+ * Asset usage customisation (exclude snapshot related data to be shown in asset usage)
+ *
+ * @extends Extension<UsedOnTable>
+ */
+class UsedOnTableExtension extends Extension
 {
     /**
      * Exclude snapshot data objects from appearing in Used On tab in Files section
@@ -16,7 +21,7 @@ class UsedOnTableExtension extends DataExtension
      *
      * @param array $excludedClasses
      */
-    public function updateUsageExcludedClasses(array &$excludedClasses): void
+    protected function updateUsageExcludedClasses(array &$excludedClasses): void
     {
         $excludedClasses[] = Snapshot::class;
         $excludedClasses[] = SnapshotItem::class;

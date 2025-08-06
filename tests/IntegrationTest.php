@@ -3,18 +3,19 @@
 namespace SilverStripe\Snapshots\Tests;
 
 use Exception;
+use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\CMS\Controllers\CMSPageEditController;
 use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\CMSEvents\Listener\Form\Listener;
+use SilverStripe\CMSEvents\Listener\Form\FormListenerExtension;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Dispatch\Dispatcher;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
-use SilverStripe\ORM\ArrayList;
+use SilverStripe\Model\List\ArrayList;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\ActivityEntry;
 use SilverStripe\Snapshots\ImplicitModification;
 use SilverStripe\Snapshots\SnapshotEvent;
@@ -54,28 +55,32 @@ class IntegrationTest extends SnapshotTestAbstract
         ChangeSetItem::class,
     ];
 
-    /**
-     * @var SiteTree|null
-     */
-    private $currentPage;
+    private ?DataObject $currentPage = null;
 
     protected function setUp(): void
     {
         parent::setUp();
+
         Config::modify()->set(
             BlockPage::class,
             'snapshot_relation_tracking',
-            ['Blocks']
+            [
+                'Blocks',
+            ]
         );
         Config::modify()->set(
             Block::class,
             'snapshot_relation_tracking',
-            ['Galleries']
+            [
+                'Galleries',
+            ]
         );
         Config::modify()->set(
             Gallery::class,
             'snapshot_relation_tracking',
-            ['Images']
+            [
+                'Images',
+            ]
         );
     }
 
@@ -170,10 +175,22 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$a1Block1, ActivityEntry::CREATED],
-                [$a1Block2, ActivityEntry::CREATED],
-                [$a1, ActivityEntry::MODIFIED],
-                [$a1Block1, ActivityEntry::MODIFIED],
+                [
+                    $a1Block1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1Block2,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $a1Block1,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
 
@@ -215,11 +232,26 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$a1Block1, ActivityEntry::CREATED],
-                [$a1Block2, ActivityEntry::CREATED],
-                [$a1, ActivityEntry::MODIFIED],
-                [$a1Block1, ActivityEntry::MODIFIED],
-                [$gallery1, ActivityEntry::CREATED],
+                [
+                    $a1Block1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1Block2,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $a1Block1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $gallery1,
+                    ActivityEntry::CREATED,
+                ],
             ]
         );
 
@@ -257,12 +289,30 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$a1Block1, ActivityEntry::CREATED],
-                [$a1Block2, ActivityEntry::CREATED],
-                [$a1, ActivityEntry::MODIFIED],
-                [$a1Block1, ActivityEntry::MODIFIED],
-                [$gallery1, ActivityEntry::CREATED],
-                [$gallery1, ActivityEntry::MODIFIED],
+                [
+                    $a1Block1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1Block2,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $a1Block1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $gallery1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $gallery1,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
 
@@ -302,15 +352,42 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$a1Block1, ActivityEntry::CREATED],
-                [$a1Block2, ActivityEntry::CREATED],
-                [$a1, ActivityEntry::MODIFIED],
-                [$a1Block1, ActivityEntry::MODIFIED],
-                [$gallery1, ActivityEntry::CREATED],
-                [$gallery1, ActivityEntry::MODIFIED],
-                [$galleryItem1, ActivityEntry::ADDED],
-                [$galleryItem2, ActivityEntry::ADDED],
-                [ImplicitModification::singleton(), null],
+                [
+                    $a1Block1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1Block2,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $a1Block1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $gallery1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $gallery1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $galleryItem1,
+                    ActivityEntry::ADDED,
+                ],
+                [
+                    $galleryItem2,
+                    ActivityEntry::ADDED,
+                ],
+                [
+                    ImplicitModification::singleton(),
+                    null,
+                ],
             ],
         );
 
@@ -355,10 +432,23 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$a2Block1, ActivityEntry::CREATED],
-                [$gallery1a, ActivityEntry::CREATED],
-                [$galleryItem1, ActivityEntry::ADDED, $gallery1a],
-                [ImplicitModification::singleton(), null],
+                [
+                    $a2Block1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $gallery1a,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $galleryItem1,
+                    ActivityEntry::ADDED,
+                    $gallery1a,
+                ],
+                [
+                    ImplicitModification::singleton(),
+                    null,
+                ],
             ]
         );
 
@@ -392,11 +482,27 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$a2Block1, ActivityEntry::CREATED],
-                [$gallery1a, ActivityEntry::CREATED],
-                [$galleryItem1, ActivityEntry::ADDED, $gallery1a],
-                [ImplicitModification::singleton(), null],
-                [$galleryItem1, ActivityEntry::MODIFIED],
+                [
+                    $a2Block1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $gallery1a,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $galleryItem1,
+                    ActivityEntry::ADDED,
+                    $gallery1a,
+                ],
+                [
+                    ImplicitModification::singleton(),
+                    null,
+                ],
+                [
+                    $galleryItem1,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
 
@@ -417,16 +523,48 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$a1Block1, ActivityEntry::CREATED],
-                [$a1Block2, ActivityEntry::CREATED],
-                [$a1, ActivityEntry::MODIFIED],
-                [$a1Block1, ActivityEntry::MODIFIED],
-                [$gallery1, ActivityEntry::CREATED],
-                [$gallery1, ActivityEntry::MODIFIED],
-                [$galleryItem1, ActivityEntry::ADDED, $gallery1],
-                [$galleryItem2, ActivityEntry::ADDED, $gallery1],
-                [ImplicitModification::singleton(), null],
-                [$galleryItem1, ActivityEntry::MODIFIED],
+                [
+                    $a1Block1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1Block2,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $a1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $a1Block1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $gallery1,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $gallery1,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $galleryItem1,
+                    ActivityEntry::ADDED,
+                    $gallery1,
+                ],
+                [
+                    $galleryItem2,
+                    ActivityEntry::ADDED,
+                    $gallery1,
+                ],
+                [
+                    ImplicitModification::singleton(),
+                    null,
+                ],
+                [
+                    $galleryItem1,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
         $this->assertPublishableObjectsContains(
@@ -487,6 +625,7 @@ class IntegrationTest extends SnapshotTestAbstract
     /**
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testRevertChanges(): void
     {
@@ -531,6 +670,8 @@ class IntegrationTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testIntermediaryObjects(): void
     {
@@ -616,6 +757,7 @@ class IntegrationTest extends SnapshotTestAbstract
     /**
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testChangeOwnershipStructure(): void
     {
@@ -679,8 +821,14 @@ class IntegrationTest extends SnapshotTestAbstract
         // change of ownership (foreign key)
         $activity = $a2->getActivityFeed();
         $this->assertActivityContains($activity, [
-            [$blockMoved, ActivityEntry::MODIFIED],
-            [$blockMoved, ActivityEntry::MODIFIED],
+            [
+                $blockMoved,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $blockMoved,
+                ActivityEntry::MODIFIED,
+            ],
         ]);
 
         $this->editingPage($a1);
@@ -701,8 +849,14 @@ class IntegrationTest extends SnapshotTestAbstract
         // A2 still has the two modification entries listed above
         $activity = $a2->getActivityFeed();
         $this->assertActivityContains($activity, [
-            [$blockMoved, ActivityEntry::MODIFIED],
-            [$blockMoved, ActivityEntry::MODIFIED],
+            [
+                $blockMoved,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $blockMoved,
+                ActivityEntry::MODIFIED,
+            ],
         ]);
 
         $this->editingPage($a2);
@@ -750,10 +904,22 @@ class IntegrationTest extends SnapshotTestAbstract
         $activity = $a2->getActivityFeed();
         $this->assertCount(4, $activity);
         $this->assertActivityContains($activity, [
-            [$blockMoved, ActivityEntry::MODIFIED],
-            [$gallery1, ActivityEntry::MODIFIED],
-            [$item, ActivityEntry::ADDED],
-            [ImplicitModification::singleton(), null],
+            [
+                $blockMoved,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $gallery1,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $item,
+                ActivityEntry::ADDED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
         ]);
 
         // Move the block back to A1
@@ -785,11 +951,26 @@ class IntegrationTest extends SnapshotTestAbstract
         // Moved block has a modification for the local change,
         // and also one for the ownership change (foreign key)
         $this->assertActivityContains($activity, [
-            [$blockMoved, ActivityEntry::MODIFIED],
-            [$gallery1, ActivityEntry::MODIFIED],
-            [$item, ActivityEntry::ADDED],
-            [ImplicitModification::singleton(), null],
-            [$blockMoved, ActivityEntry::MODIFIED],
+            [
+                $blockMoved,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $gallery1,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $item,
+                ActivityEntry::ADDED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
+            [
+                $blockMoved,
+                ActivityEntry::MODIFIED,
+            ],
         ]);
 
         $this->editingPage($a2);
@@ -835,22 +1016,38 @@ class IntegrationTest extends SnapshotTestAbstract
         $activity = $a1->getActivityFeed();
         $this->assertCount(2, $activity);
         $this->assertActivityContains($activity, [
-            [$item, ActivityEntry::REMOVED],
-            [ImplicitModification::singleton(), null],
+            [
+                $item,
+                ActivityEntry::REMOVED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
         ]);
 
         $activity = $a2->getActivityFeed();
         $this->assertCount(3, $activity);
         $this->assertActivityContains($activity, [
-            [$item, ActivityEntry::ADDED],
-            [ImplicitModification::singleton(), null],
-            [$item, ActivityEntry::MODIFIED],
+            [
+                $item,
+                ActivityEntry::ADDED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
+            [
+                $item,
+                ActivityEntry::MODIFIED,
+            ],
         ]);
     }
 
     /**
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testPartialActivityMigration(): void
     {
@@ -893,9 +1090,18 @@ class IntegrationTest extends SnapshotTestAbstract
         $activity = $a1->getActivityFeed();
         $this->assertCount(3, $activity);
         $this->assertActivityContains($activity, [
-            [$a1Block1, ActivityEntry::MODIFIED],
-            [$a1Block2, ActivityEntry::MODIFIED],
-            [$gallery, ActivityEntry::CREATED],
+            [
+                $a1Block1,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $a1Block2,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $gallery,
+                ActivityEntry::CREATED,
+            ],
         ]);
 
         // Move one modified block, but leave the other.
@@ -916,22 +1122,35 @@ class IntegrationTest extends SnapshotTestAbstract
         $activity = $a1->getActivityFeed();
         $this->assertCount(1, $activity);
         $this->assertActivityContains($activity, [
-            [$a1Block1, ActivityEntry::MODIFIED],
+            [
+                $a1Block1,
+                ActivityEntry::MODIFIED,
+            ],
         ]);
 
         // And the other activity is now on A2
         $activity = $a2->getActivityFeed();
         $this->assertCount(3, $activity);
         $this->assertActivityContains($activity, [
-            [$a1Block2, ActivityEntry::MODIFIED],
-            [$gallery, ActivityEntry::CREATED],
-            [$a1Block2, ActivityEntry::MODIFIED], // <--- the migration
+            [
+                $a1Block2,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $gallery,
+                ActivityEntry::CREATED,
+            ],
+            [
+                $a1Block2,
+                ActivityEntry::MODIFIED,
+            ], // <--- the migration
         ]);
     }
 
     /**
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testDeletions(): void
     {
@@ -967,7 +1186,10 @@ class IntegrationTest extends SnapshotTestAbstract
         $activity = $a1->getActivityFeed();
         $this->assertCount(1, $activity);
         $this->assertActivityContains($activity, [
-            [$a1Block1, ActivityEntry::DELETED],
+            [
+                $a1Block1,
+                ActivityEntry::DELETED,
+            ],
         ]);
 
         $this->editingPage($a2);
@@ -989,8 +1211,14 @@ class IntegrationTest extends SnapshotTestAbstract
         $activity = $a2->getActivityFeed();
         $this->assertCount(2, $activity);
         $this->assertActivityContains($activity, [
-            [$a2Block1, ActivityEntry::MODIFIED],
-            [$gallery2, ActivityEntry::MODIFIED],
+            [
+                $a2Block1,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $gallery2,
+                ActivityEntry::MODIFIED,
+            ],
         ]);
 
         $this->formDeleteObject($a2Block1);
@@ -1005,19 +1233,29 @@ class IntegrationTest extends SnapshotTestAbstract
         $activity = $a2->getActivityFeed();
         $this->assertCount(3, $activity);
         $this->assertActivityContains($activity, [
-            [$a2Block1, ActivityEntry::MODIFIED],
-            [$gallery2, ActivityEntry::MODIFIED],
-            [$a2Block1, ActivityEntry::DELETED],
+            [
+                $a2Block1,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $gallery2,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $a2Block1,
+                ActivityEntry::DELETED,
+            ],
         ]);
     }
 
     /**
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testGetAtSnapshot(): void
     {
-         $this->sleep(1);
+        $this->sleep(1);
 
         $state = $this->buildState();
         /** @var BlockPage|SnapshotPublishable $a1 */
@@ -1174,7 +1412,10 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$block, ActivityEntry::MODIFIED],
+                [
+                    $block,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
     }
@@ -1208,8 +1449,14 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$page, ActivityEntry::CREATED],
-                [$block, ActivityEntry::MODIFIED],
+                [
+                    $page,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $block,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
     }
@@ -1251,8 +1498,15 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$i, ActivityEntry::ADDED, $g],
-                [ImplicitModification::singleton(), null],
+                [
+                    $i,
+                    ActivityEntry::ADDED,
+                    $g,
+                ],
+                [
+                    ImplicitModification::singleton(),
+                    null,
+                ],
             ]
         );
     }
@@ -1281,9 +1535,18 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$page, ActivityEntry::CREATED],
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::MODIFIED],
+                [
+                    $page,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
 
@@ -1292,9 +1555,18 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $versionedActivity,
             [
-                [$page, ActivityEntry::CREATED],
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::MODIFIED],
+                [
+                    $page,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
 
@@ -1309,10 +1581,22 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $versionedActivity,
             [
-                [$page, ActivityEntry::CREATED],
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::PUBLISHED],
+                [
+                    $page,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::PUBLISHED,
+                ],
             ]
         );
 
@@ -1328,8 +1612,14 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::MODIFIED],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
 
@@ -1338,12 +1628,30 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $versionedActivity,
             [
-                [$page, ActivityEntry::CREATED],
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::PUBLISHED],
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::MODIFIED],
+                [
+                    $page,
+                    ActivityEntry::CREATED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::PUBLISHED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
 
@@ -1352,9 +1660,18 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $versionedActivity,
             [
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::PUBLISHED],
-                [$page, ActivityEntry::MODIFIED],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::PUBLISHED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
             ]
         );
 
@@ -1365,11 +1682,26 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $versionedActivity,
             [
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::PUBLISHED],
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::MODIFIED],
-                [$page, ActivityEntry::PUBLISHED],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::PUBLISHED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::MODIFIED,
+                ],
+                [
+                    $page,
+                    ActivityEntry::PUBLISHED,
+                ],
             ]
         );
     }
@@ -1411,8 +1743,15 @@ class IntegrationTest extends SnapshotTestAbstract
         $this->assertActivityContains(
             $activity,
             [
-                [$i, ActivityEntry::ADDED, $g],
-                [ImplicitModification::singleton(), null],
+                [
+                    $i,
+                    ActivityEntry::ADDED,
+                    $g,
+                ],
+                [
+                    ImplicitModification::singleton(),
+                    null,
+                ],
             ]
         );
 
@@ -1438,39 +1777,107 @@ class IntegrationTest extends SnapshotTestAbstract
         $a = $p->getActivityFeed(2);
         $this->assertCount(8, $a);
         $this->assertActivityContains($a, [
-            [$i, ActivityEntry::ADDED],
-            [ImplicitModification::singleton(), null],
-            [$b, ActivityEntry::MODIFIED],
-            [$b, ActivityEntry::PUBLISHED],
-            [ImplicitModification::singleton(), null],
-            [$i, ActivityEntry::MODIFIED],
-            [$b, ActivityEntry::PUBLISHED],
-            [ImplicitModification::singleton(), null],
+            [
+                $i,
+                ActivityEntry::ADDED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
+            [
+                $b,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $b,
+                ActivityEntry::PUBLISHED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
+            [
+                $i,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $b,
+                ActivityEntry::PUBLISHED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
         ]);
 
         $a = $p->getActivityFeed(2, 4);
         $this->assertCount(8, $a);
 
         $this->assertActivityContains($a, [
-            [$i, ActivityEntry::ADDED, $g],
-            [ImplicitModification::singleton(), null],
-            [$b, ActivityEntry::MODIFIED],
-            [$b, ActivityEntry::PUBLISHED],
-            [ImplicitModification::singleton(), null],
-            [$i, ActivityEntry::MODIFIED],
-            [$b, ActivityEntry::PUBLISHED],
-            [ImplicitModification::singleton(), null],
+            [
+                $i,
+                ActivityEntry::ADDED,
+                $g,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
+            [
+                $b,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $b,
+                ActivityEntry::PUBLISHED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
+            [
+                $i,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $b,
+                ActivityEntry::PUBLISHED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
         ]);
 
         $a = $p->getActivityFeed(2, 3);
         $this->assertCount(6, $a);
         $this->assertActivityContains($a, [
-            [$i, ActivityEntry::ADDED, $g],
-            [ImplicitModification::singleton(), null],
-            [$b, ActivityEntry::MODIFIED],
-            [$b, ActivityEntry::PUBLISHED],
-            [ImplicitModification::singleton(), null],
-            [$i, ActivityEntry::MODIFIED],
+            [
+                $i,
+                ActivityEntry::ADDED,
+                $g,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
+            [
+                $b,
+                ActivityEntry::MODIFIED,
+            ],
+            [
+                $b,
+                ActivityEntry::PUBLISHED,
+            ],
+            [
+                ImplicitModification::singleton(),
+                null,
+            ],
+            [
+                $i,
+                ActivityEntry::MODIFIED,
+            ],
         ]);
     }
 
@@ -1482,7 +1889,10 @@ class IntegrationTest extends SnapshotTestAbstract
     {
         foreach ($activity as $i => $entry) {
             /** @var DataObject|SnapshotPublishable $obj */
-            [$obj, $action] = $objs[$i];
+            [
+                $obj,
+                $action
+            ] = $objs[$i];
 
             if ($obj instanceof SnapshotEvent) {
                 continue;
@@ -1525,6 +1935,7 @@ class IntegrationTest extends SnapshotTestAbstract
     {
         $list = [];
 
+        /** @var ActivityEntry $entry */
         foreach ($activity as $entry) {
             $list[] = sprintf(
                 '[%s] %s #%s (%s)',
@@ -1532,22 +1943,6 @@ class IntegrationTest extends SnapshotTestAbstract
                 $entry->Subject->ClassName,
                 $entry->Subject->ID,
                 $entry->Subject->getTitle()
-            );
-        }
-
-        return implode(PHP_EOL, $list);
-    }
-
-    private function debugPublishable($items): string
-    {
-        $list = [];
-
-        foreach ($items as $item) {
-            $list[] = sprintf(
-                '%s #%s (%s)',
-                $item->ClassName,
-                $item->ID,
-                $item->getTitle()
             );
         }
 
@@ -1573,6 +1968,7 @@ class IntegrationTest extends SnapshotTestAbstract
     /**
      * @param DataObject|RecursivePublishable $object
      * @throws ValidationException
+     * @throws Exception
      */
     private function formPublishObject(DataObject $object): void
     {
@@ -1629,7 +2025,7 @@ class IntegrationTest extends SnapshotTestAbstract
             : 'remove';
 
         foreach ($items as $item) {
-            $object->$component()->$method($item);
+            $object->{$component}()->{$method}($item);
         }
 
         $event = $this->createEvent($object, 'doSave');
@@ -1639,7 +2035,7 @@ class IntegrationTest extends SnapshotTestAbstract
 
     private function dispatch(EventContextInterface $event): void
     {
-        Dispatcher::singleton()->trigger(Listener::EVENT_NAME, $event);
+        Dispatcher::singleton()->trigger(FormListenerExtension::EVENT_NAME, $event);
     }
 
     private function createEvent(DataObject $object, string $actionName): Event

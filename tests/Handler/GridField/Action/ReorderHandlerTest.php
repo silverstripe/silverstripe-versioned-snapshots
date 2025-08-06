@@ -3,6 +3,7 @@
 namespace SilverStripe\Snapshots\Tests\Handler\GridField\Action;
 
 use SilverStripe\Control\Controller;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
@@ -14,13 +15,16 @@ use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
 
 class ReorderHandlerTest extends SnapshotTestAbstract
 {
+    /**
+     * @throws ValidationException
+     */
     public function testHandlerDoesFire(): void
     {
         $handler = ReorderHandler::create();
         $block = Block::create();
         $block->write();
 
-        $mock = $this->mockSnapshot();
+        $mock = $this->mockSnapshotLegacy();
         $mock->method('createSnapshot')->willReturnSelf();
         $mock
             ->expects($this->once())
@@ -35,7 +39,9 @@ class ReorderHandlerTest extends SnapshotTestAbstract
         $grid = GridField::create('Test', 'Test', Block::get());
         $grid->setForm($form);
 
-        $context = Event::create('action', ['gridField' => $grid]);
+        $context = Event::create('action', [
+            'gridField' => $grid,
+        ]);
         $handler->fire($context);
     }
 }

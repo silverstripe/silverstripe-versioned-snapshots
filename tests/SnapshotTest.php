@@ -3,8 +3,9 @@
 namespace SilverStripe\Snapshots\Tests;
 
 use Exception;
+use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\Core\Config\Config;
-use SilverStripe\ORM\ValidationException;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\SnapshotItem;
@@ -180,6 +181,7 @@ class SnapshotTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testCreateSnapshotNoRelations(): void
     {
@@ -243,6 +245,7 @@ class SnapshotTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testCreateSnapshotWithImplicitModifications(): void
     {
@@ -262,7 +265,9 @@ class SnapshotTest extends SnapshotTestAbstract
         $this->assertInstanceOf(SnapshotItem::class, $snapshot->getOriginItem());
         $this->assertCount(3, $snapshot->Items());
 
-        Config::modify()->set(Gallery::class, 'snapshot_relation_tracking', ['Images']);
+        Config::modify()->set(Gallery::class, 'snapshot_relation_tracking', [
+            'Images',
+        ]);
         $image1 = GalleryImage::create();
         $image1->write();
         $image2 = GalleryImage::create();
@@ -321,6 +326,7 @@ class SnapshotTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testCreateSnapshotEvent(): void
     {
@@ -336,7 +342,10 @@ class SnapshotTest extends SnapshotTestAbstract
         $block2 = Block::create();
         $block2->write();
 
-        $snapshot = Snapshot::singleton()->createSnapshotEvent('test event 2', [$block1, $block2]);
+        $snapshot = Snapshot::singleton()->createSnapshotEvent('test event 2', [
+            $block1,
+            $block2,
+        ]);
         $snapshot->write();
         $event = $snapshot->getOriginItem()->getItem();
         $this->assertInstanceOf(SnapshotEvent::class, $event);
@@ -355,6 +364,7 @@ class SnapshotTest extends SnapshotTestAbstract
     /**
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testAddOwnershipChain(): void
     {
@@ -399,6 +409,7 @@ class SnapshotTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testIsLiveSnapshot(): void
     {
@@ -433,6 +444,7 @@ class SnapshotTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testUnVersionedObject(): void
     {

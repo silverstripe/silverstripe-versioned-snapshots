@@ -9,11 +9,12 @@ use SilverStripe\ORM\DataObject;
 /**
  * Clear in-memory cache when DB update is executed
  *
- * @method DataObject|$this getOwner()
+ * @extends Extension<DataObject>
+ * @extends Extension<UpdateCacheExtension>
  */
 class UpdateCacheExtension extends Extension
 {
-    public function onAfterWrite(): void
+    protected function onAfterWrite(): void
     {
         RelationDiffCache::reset();
     }
@@ -21,7 +22,7 @@ class UpdateCacheExtension extends Extension
     /**
      * @throws Exception
      */
-    public function onAfterPublishRecursive(): void
+    protected function onAfterPublishRecursive(): void
     {
         $owner = $this->getOwner();
 

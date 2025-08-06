@@ -5,7 +5,11 @@ namespace SilverStripe\Snapshots\Handler\Form;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotHasher;
+use SilverStripe\Snapshots\SnapshotItem;
 
+/**
+ * Event hook for @see Form
+ */
 class UnpublishHandler extends Handler
 {
 
@@ -25,6 +29,7 @@ class UnpublishHandler extends Handler
             return null;
         }
 
+        /** @var SnapshotItem $item */
         foreach ($snapshot->Items() as $item) {
             $itemObject = $item->getItem();
 

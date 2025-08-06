@@ -3,7 +3,8 @@
 namespace SilverStripe\Snapshots\Tests;
 
 use Exception;
-use SilverStripe\ORM\ValidationException;
+use SilverStripe\Core\Validation\ValidationException;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\SnapshotItem;
 use SilverStripe\Snapshots\SnapshotPublishable;
 use SilverStripe\Snapshots\Tests\SnapshotTest\Block;
@@ -23,14 +24,18 @@ class SnapshotItemTest extends SnapshotTestAbstract
         $item->ObjectClass = Block::class;
         $item->ObjectID = $block->ID;
         $item->ObjectVersion = $block->Version * 100;
+        $itemModel = $item->getItem();
 
-        $this->assertNull($item->getItem());
+        $this->assertNull($itemModel);
 
         $item->ObjectVersion = $block->Version;
 
-        $this->assertInstanceOf(Block::class, $item->getItem());
-        $this->assertEquals($block->ID, $item->getItem()->ID);
-        $this->assertEquals($block->Version, $item->getItem()->Version);
+        /** @var DataObject|Versioned $itemModel */
+        $itemModel = $item->getItem();
+
+        $this->assertInstanceOf(Block::class, $itemModel);
+        $this->assertEquals($block->ID, $itemModel->ID);
+        $this->assertEquals($block->Version, $itemModel->Version);
     }
 
     /**
@@ -50,9 +55,9 @@ class SnapshotItemTest extends SnapshotTestAbstract
         $this->assertEquals($block->Version, $item->ObjectVersion);
         $this->assertEquals(SnapshotPublishable::singleton()->hashObjectForSnapshot($block), $item->ObjectHash);
 
-        $this->assertTrue($item->WasDraft);
+        $this->assertTrue((bool) $item->WasDraft);
         $this->assertFalse($item->WasDeleted);
-        $this->assertTrue($item->WasCreated);
+        $this->assertTrue((bool) $item->WasCreated);
         $this->assertFalse($item->WasUnpublished);
         $this->assertFalse($item->WasPublished);
 
@@ -61,7 +66,7 @@ class SnapshotItemTest extends SnapshotTestAbstract
         $block->write();
 
         $item = SnapshotItem::create()->hydrateFromDataObject($block);
-        $this->assertTrue($item->WasDraft);
+        $this->assertTrue((bool) $item->WasDraft);
         $this->assertFalse($item->WasDeleted);
         $this->assertFalse($item->WasCreated);
         $this->assertFalse($item->WasUnpublished);
@@ -70,7 +75,7 @@ class SnapshotItemTest extends SnapshotTestAbstract
         $block->doArchive();
         $item = SnapshotItem::create()->hydrateFromDataObject($block);
         $this->assertFalse($item->WasDraft);
-        $this->assertTrue($item->WasDeleted);
+        $this->assertTrue((bool) $item->WasDeleted);
         $this->assertFalse($item->WasCreated);
         $this->assertFalse($item->WasUnpublished);
         $this->assertFalse($item->WasPublished);

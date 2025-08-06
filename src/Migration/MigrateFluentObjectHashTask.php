@@ -2,40 +2,33 @@
 
 namespace SilverStripe\Snapshots\Migration;
 
-use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Dev\BuildTask;
 use SilverStripe\ORM\DB;
+use SilverStripe\PolyExecution\PolyOutput;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
 
 class MigrateFluentObjectHashTask extends BuildTask
 {
-    /**
-     * @var string
-     */
-    private static $segment = 'migrate-fluent-object-hash-task';
+    protected static string $commandName = 'migrate-fluent-object-hash-task';
 
-    /**
-     * @var string
-     */
-    protected $title = 'Migrate legacy fluent object hash to the new format for SnapshotItem';
+    protected string $title = 'Migrate legacy fluent object hash to the new format for SnapshotItem';
 
-    /**
-     * @var string
-     */
-    protected $description = 'Localise "ObjectHash" DB field of VersionedSnapshotItem table';
+    protected static string $description = 'Localise "ObjectHash" DB field of VersionedSnapshotItem table';
 
-    /**
-     * @param HTTPRequest $request
-     */
-    public function run($request): void
+    protected function execute(InputInterface $input, PolyOutput $output): int
     {
-        $sql = <<<EOT
+        $sql = <<<'SQL'
 INSERT INTO "VersionedSnapshotItem_Localised" ("RecordID", "Locale", "ObjectHash")
-SELECT "VersionedSnapshotItem"."ID" as "RecordID", "VersionedSnapshot_Localised"."Locale" as "Locale", "VersionedSnapshotItem"."ObjectHash" as "ObjectHash"
+SELECT "VersionedSnapshotItem"."ID" as "RecordID", "VersionedSnapshot_Localised"."Locale" as "Locale",
+       "VersionedSnapshotItem"."ObjectHash" as "ObjectHash"
 FROM "VersionedSnapshot"
 INNER JOIN "VersionedSnapshot_Localised" ON "VersionedSnapshot"."ID" = "VersionedSnapshot_Localised"."RecordID"
 INNER JOIN "VersionedSnapshotItem" ON "VersionedSnapshot"."ID" = "VersionedSnapshotItem"."SnapshotID"
-EOT;
+SQL;
         DB::query($sql);
         echo sprintf('Done, %d records created.', DB::affected_rows()) . PHP_EOL;
+
+        return Command::SUCCESS;
     }
 }

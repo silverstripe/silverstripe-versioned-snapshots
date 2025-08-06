@@ -4,12 +4,16 @@ namespace SilverStripe\Snapshots\Handler\Elemental;
 
 use DNADesign\Elemental\Models\BaseElement;
 use Exception;
+use Psr\Container\NotFoundExceptionInterface;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotPublishable;
 
+/**
+ * Event hook for @see BaseElement
+ */
 class SortElementsHandler extends Handler
 {
     /**
@@ -17,6 +21,7 @@ class SortElementsHandler extends Handler
      * @return Snapshot|null
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
@@ -47,9 +52,10 @@ class SortElementsHandler extends Handler
         }
 
         $area = $block->Parent();
+        $message = _t(SortElementsHandler::class . '.REORDER_BLOCKS', 'Reordered blocks');
+        $event = Snapshot::singleton()->createSnapshotEvent($message);
+        $event->addOwnershipChain($area);
 
-        return Snapshot::singleton()
-            ->createSnapshotEvent(_t(self::class . '.REORDER_BLOCKS', 'Reordered blocks'))
-            ->addOwnershipChain($area);
+        return $event;
     }
 }

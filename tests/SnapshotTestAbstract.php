@@ -5,13 +5,14 @@ namespace SilverStripe\Snapshots\Tests;
 use DateTime;
 use DNADesign\Elemental\Models\ElementalArea;
 use Exception;
-use PHPUnit_Framework_MockObject_MockObject;
+use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\Model\List\SS_List;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
-use SilverStripe\ORM\SS_List;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotEvent;
 use SilverStripe\Snapshots\SnapshotItem;
@@ -51,12 +52,16 @@ class SnapshotTestAbstract extends SapphireTest
     ];
 
     /**
-     * @return PHPUnit_Framework_MockObject_MockObject|Snapshot
+     * This method is deprecated as we are trying to move away from mock builder
+     * with the aim to use anonymous classes instead
+     *
+     * @return MockObject|Snapshot
+     * @deprecated use mockSnapshot() instead
      */
-    protected function mockSnapshot()
+    protected function mockSnapshotLegacy(): mixed
     {
         $mock = $this->getMockBuilder(Snapshot::class)
-            ->setMethods([
+            ->onlyMethods([
                 'createSnapshotEvent',
                 'createSnapshot',
                 'addOwnershipChain',
@@ -66,6 +71,129 @@ class SnapshotTestAbstract extends SapphireTest
         Injector::inst()->registerService($mock, Snapshot::class);
 
         return $mock;
+    }
+
+    /**
+     * Replaces certain methods with dummy ones and provides the ability to keep track
+     * of method cals instances which allows tests assertions to check if specific method was called
+     *
+     * @return mixed
+     */
+    protected function mockSnapshot(): mixed
+    {
+        $mockSnapshot = new class extends Snapshot {
+            private array $log = [];
+
+            public function createSnapshotEvent(string $message, array $extraObjects = []): Snapshot
+            {
+                $this->logMethodCall('createSnapshotEvent', [
+                    'message' => $message,
+                    'extraObjects' => $extraObjects,
+                ]);
+
+                return $this;
+            }
+
+            public function createSnapshot(DataObject $origin, array $extraObjects = []): ?Snapshot
+            {
+                $this->logMethodCall('createSnapshot', [
+                    'origin' => $origin,
+                    'extraObjects' => $extraObjects,
+                ]);
+
+                return null;
+            }
+
+            public function addOwnershipChain(DataObject $model): Snapshot
+            {
+                $this->logMethodCall('addOwnershipChain', [
+                    'model' => $model,
+                ]);
+
+                return $this;
+            }
+
+            public function applyOrigin(DataObject $origin): Snapshot
+            {
+                $this->logMethodCall('applyOrigin', [
+                    'origin' => $origin,
+                ]);
+
+                return $this;
+            }
+
+            public function write(
+                $showDebug = false,
+                $forceInsert = false,
+                $forceWrite = false,
+                $writeComponents = false,
+                bool $skipValidation = false
+            ): int {
+                // Override write method so we do not attempt to write mock object into DB
+                // as that won't work as it's meant to be used in-memory only
+                return 1;
+            }
+
+            /**
+             * Get the list of all logged method calls
+             * This is intended to support debugging and some edge case scenarios
+             * Ideally, use @see wasMethodCalled() instead
+             *
+             * @return array
+             */
+            public function getLog(): array
+            {
+                return $this->log;
+            }
+
+            /**
+             * Allows to get the number of method call instances and optionally pass a callback
+             * to validate a specific method params conditions
+             * This is intended for tests to be able to assert if a method was called or not
+             * and if it was what were the specific params
+             *
+             * @param string $methodName
+             * @param callable|null $callback
+             * @return int
+             */
+            public function wasMethodCalled(string $methodName, ?callable $callback = null): int
+            {
+                $calledCount = 0;
+
+                foreach ($this->log as $logData) {
+                    [
+                        $logMethodName,
+                        $logParams,
+                    ] = $logData;
+
+                    // Check for specific method name
+                    if ($logMethodName !== $methodName) {
+                        continue;
+                    }
+
+                    // Check for specific method params
+                    if ($callback !== null && !$callback($logParams)) {
+                        continue;
+                    }
+
+                    $calledCount += 1;
+                }
+
+                return $calledCount;
+            }
+
+            private function logMethodCall(string $methodName, array $params = []): void
+            {
+                $this->log[] = [
+                    $methodName,
+                    $params,
+                ];
+            }
+        };
+
+        Injector::inst()->registerService($mockSnapshot, Snapshot::class);
+
+        return $mockSnapshot;
     }
 
     /**
@@ -109,6 +237,7 @@ class SnapshotTestAbstract extends SapphireTest
      * @return Snapshot
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     protected function snapshot(DataObject $obj, array $extraObjects = []): Snapshot
     {
@@ -126,6 +255,7 @@ class SnapshotTestAbstract extends SapphireTest
      * @param array $extraObjects
      * @return Snapshot
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     protected function publish(DataObject $obj, array $extraObjects = []): Snapshot
     {
@@ -145,6 +275,7 @@ class SnapshotTestAbstract extends SapphireTest
     /**
      * @return array
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     protected function buildState(): array
     {

@@ -21,25 +21,26 @@
     ],
     "extra": {
         "branch-alias": {
-            "dev-master": "3.x-dev",
+            "dev-master": "4.x-dev",
+            "dev-3": "3.x-dev",
             "dev-2": "2.x-dev",
             "dev-1": "1.x-dev"
         }
     },
     "require": {
-        "php": "^8.1",
-        "silverstripe/framework": "^5",
-        "silverstripe/versioned": "^2",
-        "silverstripe/cms-events": "^2",
-        "silverstripe/event-dispatcher": "^1"
+        "php": "^8.3",
+        "silverstripe/framework": "^6",
+        "silverstripe/versioned": "^3",
+        "silverstripe/cms-events": "^3",
+        "silverstripe/event-dispatcher": "^2"
     },
     "require-dev": {
-        "silverstripe/recipe-testing": "^3",
-        "dnadesign/silverstripe-elemental": "^5"
-    },
-    "conflict": {
-        "dnadesign/elemental": "< 3.2.1",
-        "silverstripe/graphql": "< 3.2.3"
+        "dnadesign/silverstripe-elemental": "^6",
+        "silverstripe/documentation-lint": "^1",
+        "silverstripe/recipe-testing": "^4",
+        "silverstripe/frameworktest": "^2",
+        "silverstripe/standards": "^1",
+        "phpstan/extension-installer": "^1.3"
     },
     "autoload": {
         "psr-4": {
@@ -55,5 +56,10 @@
         "silverstripe/versioned-snapshot-admin": "Provides a version history user interface based on snapshots"
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
 }

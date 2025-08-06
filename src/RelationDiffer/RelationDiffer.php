@@ -8,45 +8,27 @@ use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\SnapshotPublishable;
 
+/**
+ * Capability to find differences between versions of relations
+ */
 class RelationDiffer
 {
 
     use Injectable;
 
-    /**
-     * @var string
-     */
-    private $relationClass;
+    private string $relationClass;
 
-    /**
-     * @var string
-     */
-    private $relationType;
+    private string $relationType;
 
-    /**
-     * @var array
-     */
-    private $previousVersionMapping = [];
+    private array $previousVersionMapping = [];
 
-    /**
-     * @var array
-     */
-    private $currentVersionMapping = [];
+    private array $currentVersionMapping = [];
 
-    /**
-     * @var array
-     */
-    private $added = [];
+    private array $added = [];
 
-    /**
-     * @var array
-     */
-    private $removed = [];
+    private array $removed = [];
 
-    /**
-     * @var array
-     */
-    private $changed = [];
+    private array $changed = [];
 
     /**
      * RelationDiffer constructor.
@@ -79,9 +61,6 @@ class RelationDiffer
         $this->diff();
     }
 
-    /**
-     * @return void
-     */
     private function diff(): void
     {
         $currentIDs = array_keys($this->currentVersionMapping);
@@ -114,17 +93,11 @@ class RelationDiffer
         $this->changed = $changed;
     }
 
-    /**
-     * @return bool
-     */
     public function hasChanges(): bool
     {
         return count($this->added) > 0 || count($this->removed) > 0 || count($this->changed) > 0;
     }
 
-    /**
-     * @return array
-     */
     public function getRecords(): array
     {
         if (!$this->hasChanges()) {
@@ -140,68 +113,41 @@ class RelationDiffer
         return DataList::create($this->relationClass)->byIDs($ids)->toArray();
     }
 
-    /**
-     * @return string
-     */
     public function getRelationClass(): string
     {
         return $this->relationClass;
     }
 
-    /**
-     * @return string
-     */
     public function getRelationType(): string
     {
         return $this->relationType;
     }
 
-    /**
-     * @return array
-     */
     public function getAdded(): array
     {
         return $this->added;
     }
 
-    /**
-     * @return array
-     */
     public function getRemoved(): array
     {
         return $this->removed;
     }
 
-    /**
-     * @return array
-     */
     public function getChanged(): array
     {
         return $this->changed;
     }
 
-    /**
-     * @param int $id
-     * @return bool
-     */
     public function isAdded(int $id): bool
     {
         return in_array($id, $this->getAdded());
     }
 
-    /**
-     * @param int $id
-     * @return bool
-     */
     public function isRemoved(int $id): bool
     {
         return in_array($id, $this->getRemoved());
     }
 
-    /**
-     * @param int $id
-     * @return bool
-     */
     public function isChanged(int $id): bool
     {
         return in_array($id, $this->getChanged());

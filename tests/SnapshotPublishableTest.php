@@ -3,9 +3,10 @@
 namespace SilverStripe\Snapshots\Tests;
 
 use Exception;
+use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotItem;
 use SilverStripe\Snapshots\SnapshotPublishable;
@@ -18,6 +19,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 {
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testGetAtSnapshot(): void
     {
@@ -25,9 +27,14 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         /** @var BlockPage $a1 */
         $a1 = $state['a1'];
 
-        $firstSnapshot = Snapshot::get()->sort('Created ASC')->first();
-        $result = SnapshotPublishable::singleton()
-            ->getAtSnapshotByClassAndId(BlockPage::class, $a1->ID, $firstSnapshot->Created);
+        $firstSnapshot = Snapshot::get()
+            ->sort('Created ASC')
+            ->first();
+        $result = SnapshotPublishable::singleton()->getAtSnapshotByClassAndId(
+            BlockPage::class,
+            $a1->ID,
+            $firstSnapshot->Created
+        );
 
         $param = $result->getSourceQueryParam('Versioned.date');
         $this->assertNotNull($param);
@@ -36,6 +43,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testGetAtLastSnapshot(): void
     {
@@ -53,6 +61,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testGetLastSnapshotItem(): void
     {
@@ -70,6 +79,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testGetSnapshots(): void
     {
@@ -80,6 +90,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testGetRelevantSnapshots(): void
     {
@@ -131,6 +142,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testGetSnapshotsSinceVersion(): void
     {
@@ -189,6 +201,8 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testHasOwnedModifications(): void
     {
@@ -219,6 +233,8 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testPublishableItems(): void
     {
@@ -238,8 +254,8 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
         $this->assertEquals(0, $a1->getPublishableItemsCount());
         $this->assertEquals(0, $a2->getPublishableItemsCount());
-        $this->assertEquals(0, $a1->getPublishableObjects()->count());
-        $this->assertEquals(0, $a2->getPublishableObjects()->count());
+        $this->assertCount(0, $a1->getPublishableObjects());
+        $this->assertCount(0, $a2->getPublishableObjects());
 
         $a1Block1->Title = 'changed';
         $this->snapshot($a1Block1);
@@ -248,26 +264,26 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
         $this->snapshot($gallery1);
 
         $this->assertEquals(2, $a1->getPublishableItemsCount());
-        $this->assertEquals(2, $a1->getPublishableObjects()->count());
+        $this->assertCount(2, $a1->getPublishableObjects());
         $ids = [$a1Block1->ID, $gallery1->ID];
         $classes = [$a1Block1->ClassName, $gallery1->ClassName];
         $this->assertEquals($ids, $a1->getPublishableObjects()->column('ID'));
         $this->assertEquals($classes, $a1->getPublishableObjects()->column('ClassName'));
         $this->assertEquals(0, $a2->getPublishableItemsCount());
-        $this->assertEquals(0, $a2->getPublishableObjects()->count());
+        $this->assertCount(0, $a2->getPublishableObjects());
 
         $a2Block1->Title = 'changed';
         $this->snapshot($a2Block1);
 
         $this->assertEquals(2, $a1->getPublishableItemsCount());
-        $this->assertEquals(2, $a1->getPublishableObjects()->count());
+        $this->assertCount(2, $a1->getPublishableObjects());
         $ids = [$a1Block1->ID, $gallery1->ID];
         $classes = [$a1Block1->ClassName, $gallery1->ClassName];
         $this->assertEquals($ids, $a1->getPublishableObjects()->column('ID'));
         $this->assertEquals($classes, $a1->getPublishableObjects()->column('ClassName'));
 
         $this->assertEquals(1, $a2->getPublishableItemsCount());
-        $this->assertEquals(1, $a2->getPublishableObjects()->count());
+        $this->assertCount(1, $a2->getPublishableObjects());
         $ids = [$a2Block1->ID];
         $classes = [$a2Block1->ClassName];
         $this->assertEquals($ids, $a2->getPublishableObjects()->column('ID'));
@@ -276,6 +292,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testGetRelationTracking(): void
     {
@@ -298,6 +315,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testPreviousSnapshotItem(): void
     {
@@ -314,6 +332,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testPreviousSnapshot(): void
     {
@@ -342,6 +361,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testIsModifiedSinceLastSnapshot(): void
     {
@@ -360,6 +380,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testGetIntermediaryObjects(): void
     {
@@ -377,6 +398,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
     /**
      * @throws ValidationException
      * @throws Exception
+     * @throws NotFoundExceptionInterface
      */
     public function testGetRelationDiffs(): void
     {
@@ -442,6 +464,7 @@ class SnapshotPublishableTest extends SnapshotTestAbstract
 
     /**
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     public function testGetPreviousVersion(): void
     {

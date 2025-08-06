@@ -5,8 +5,8 @@ namespace SilverStripe\Snapshots\Tests\Handler\Elemental;
 use DNADesign\Elemental\Extensions\ElementalPageExtension;
 use DNADesign\Elemental\Models\BaseElement;
 use DNADesign\Elemental\Models\ElementalArea;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Symfony\Event;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\Elemental\SortElementsHandler;
 use SilverStripe\Snapshots\Tests\SnapshotTest\BlockPage;
 use SilverStripe\Snapshots\Tests\SnapshotTestAbstract;
@@ -27,14 +27,8 @@ class SortElementsHandlerTest extends SnapshotTestAbstract
      */
     public function testHandlerDoesntFire(): void
     {
+        $mockSnapshot = $this->mockSnapshot();
         $handler = SortElementsHandler::create();
-        $mock = $this->mockSnapshot();
-        $mock
-            ->expects($this->never())
-            ->method('createSnapshot');
-        $mock
-            ->expects($this->never())
-            ->method('createSnapshotEvent');
 
         $context = Event::create(null, []);
         $handler->fire($context);
@@ -57,6 +51,19 @@ class SortElementsHandlerTest extends SnapshotTestAbstract
             ]
         );
         $handler->fire($context);
+
+        $createSnapshotCount = $mockSnapshot->wasMethodCalled('createSnapshot');
+        $this->assertEquals(
+            0,
+            $createSnapshotCount,
+            'We expect to not trigger the event handler for snapshot'
+        );
+        $createSnapshotEventCount = $mockSnapshot->wasMethodCalled('createSnapshotEvent');
+        $this->assertEquals(
+            0,
+            $createSnapshotEventCount,
+            'We expect to not trigger the event handler for snapshot event'
+        );
     }
 
     /**
@@ -72,18 +79,7 @@ class SortElementsHandlerTest extends SnapshotTestAbstract
         $block->ParentID = $area->ID;
         $block->write();
 
-        $mock = $this->mockSnapshot();
-        $mock
-            ->expects($this->once())
-            ->method('createSnapshotEvent')
-            ->willReturnSelf()
-            ->with($this->equalTo('Reordered blocks'));
-        $mock
-            ->expects($this->once())
-            ->method('addOwnershipChain')
-            ->with($this->callback(static function ($arg) use ($area) {
-                return $arg instanceof ElementalArea && $arg->ID == $area->ID;
-            }));
+        $mockSnapshot = $this->mockSnapshot();
 
         $context = Event::create('action', [
             'params' => [
@@ -92,5 +88,46 @@ class SortElementsHandlerTest extends SnapshotTestAbstract
         ]);
 
         $handler->fire($context);
+
+        $createSnapshotEventCount = $mockSnapshot->wasMethodCalled('createSnapshotEvent');
+        $this->assertEquals(
+            1,
+            $createSnapshotEventCount,
+            'We expect to trigger the event handler (method)'
+        );
+
+        $createSnapshotEventCountWithParams = $mockSnapshot->wasMethodCalled(
+            'createSnapshotEvent',
+            static function (array $params): bool {
+                if (!array_key_exists('message', $params)) {
+                    return false;
+                }
+
+                return $params['message'] === 'Reordered blocks';
+            }
+        );
+        $this->assertEquals(
+            1,
+            $createSnapshotEventCountWithParams,
+            'We expect to trigger the event handler (params)'
+        );
+
+        $addOwnershipChainCountWithParams = $mockSnapshot->wasMethodCalled(
+            'addOwnershipChain',
+            static function (array $params) use ($area): bool {
+                if (!array_key_exists('model', $params)) {
+                    return false;
+                }
+
+                $model = $params['model'];
+
+                return $model instanceof ElementalArea && $model->ID === $area->ID;
+            }
+        );
+        $this->assertEquals(
+            1,
+            $addOwnershipChainCountWithParams,
+            'We expect to trigger the event handler (params)'
+        );
     }
 }

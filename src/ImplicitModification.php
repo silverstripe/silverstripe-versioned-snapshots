@@ -2,17 +2,22 @@
 
 namespace SilverStripe\Snapshots;
 
+use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Snapshots\RelationDiffer\RelationDiffer;
 
+/**
+ * Represents a situation where snapshot origin itself is not being updated but rather a related model
+ */
 class ImplicitModification extends SnapshotEvent
 {
     /**
      * @param RelationDiffer[] $diffs
      * @return $this
+     * @throws NotFoundExceptionInterface
      */
-    public function hydrateFromDiffs(array $diffs): self
+    public function hydrateFromDiffs(array $diffs): ImplicitModification
     {
         $messages = [];
 
@@ -28,6 +33,7 @@ class ImplicitModification extends SnapshotEvent
     /**
      * @param RelationDiffer $diff
      * @return array
+     * @throws NotFoundExceptionInterface
      */
     private function getMessagesForDiff(RelationDiffer $diff): array
     {
@@ -36,9 +42,18 @@ class ImplicitModification extends SnapshotEvent
         $class = $diff->getRelationClass();
         $sng = Injector::inst()->get($class);
         $i18nGraph = [
-            'added' => ['Added', 'Created'],
-            'removed' => ['Removed', 'Deleted'],
-            'changed' => ['Modified', 'Modified'],
+            'added' => [
+                'Added',
+                'Created',
+            ],
+            'removed' => [
+                'Removed',
+                'Deleted',
+            ],
+            'changed' => [
+                'Modified',
+                'Modified',
+            ],
         ];
 
         foreach ($i18nGraph as $category => $labels) {
@@ -48,7 +63,10 @@ class ImplicitModification extends SnapshotEvent
             // e.g. MANY_MANY, HAS_MANY
             $i18nRelationKey = strtoupper($relationType);
             // e.g. use "Added" for many_many, "Created" for has_many
-            [$manyManyLabel, $hasManyLabel] = $labels;
+            [
+                $manyManyLabel,
+                $hasManyLabel,
+            ] = $labels;
             $action = $relationType === 'many_many'
                 ? $manyManyLabel
                 : $hasManyLabel;
@@ -62,8 +80,10 @@ class ImplicitModification extends SnapshotEvent
                 $record = DataObject::get_by_id($class, $id);
 
                 if ($record) {
+                    $key = sprintf('%s.%s_%s_ONE', ImplicitModification::class, $i18nRelationKey, $i18nActionKey);
+                    /** @phpstan-ignore translation.key (we need the key to be dynamic here) */
                     $messages[] = _t(
-                        self::class . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_ONE',
+                        $key,
                         $action . ' {type} {title}',
                         [
                             'type' => $sng->singular_name(),
@@ -75,8 +95,10 @@ class ImplicitModification extends SnapshotEvent
                 }
             } elseif ($ct > 1) {
                 // Otherwise, just give a count
+                $key = sprintf('%s.%s_%s_MANY', ImplicitModification::class, $i18nRelationKey, $i18nActionKey);
+                /** @phpstan-ignore translation.key (we need the key to be dynamic here) */
                 $messages[] = _t(
-                    self::class . '.' . $i18nRelationKey . '_' . $i18nActionKey . '_MANY',
+                    $key,
                     $action . ' {count} {name}',
                     [
                         'count' => $ct,

@@ -4,11 +4,18 @@ namespace SilverStripe\Snapshots;
 
 use Exception;
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\Extension;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\FormAction;
-use SilverStripe\ORM\DataExtension;
 
-class SnapshotSiteTree extends DataExtension
+/**
+ * Customise site tree status flags for pages to use snapshot records instead of versioned records
+ *
+ * @extends Extension<SiteTree>
+ * @extends Extension<SnapshotSiteTree>
+ * @extends Extension<SnapshotPublishable>
+ */
+class SnapshotSiteTree extends Extension
 {
     /**
      * Extension point in @see SiteTree::getStatusFlags()
@@ -16,15 +23,14 @@ class SnapshotSiteTree extends DataExtension
      * @param mixed $flags
      * @throws Exception
      */
-    public function updateStatusFlags(&$flags): void
+    protected function updateStatusFlags(mixed &$flags): void
     {
-        $owner = $this->owner;
+        $owner = $this->getOwner();
 
         if (!$owner->hasExtension(SnapshotPublishable::class)) {
             return;
         }
 
-        /** @var SnapshotPublishable|SiteTree $owner */
         if (!$owner->hasOwnedModifications()) {
             return;
         }
@@ -39,15 +45,14 @@ class SnapshotSiteTree extends DataExtension
      * @param FieldList $actions
      * @throws Exception
      */
-    public function updateCMSActions(FieldList $actions): void
+    protected function updateCMSActions(FieldList $actions): void
     {
-        $owner = $this->owner;
+        $owner = $this->getOwner();
 
         if (!$owner->hasExtension(SnapshotPublishable::class)) {
             return;
         }
 
-        /** @var SnapshotPublishable|SiteTree $owner */
         $canPublish = $owner->canPublish();
         $canEdit = $owner->canEdit();
         $hasOwned = $owner->hasOwnedModifications();

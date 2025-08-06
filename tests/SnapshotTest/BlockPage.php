@@ -8,40 +8,25 @@ use SilverStripe\ORM\HasManyList;
 use SilverStripe\Versioned\Versioned;
 
 /**
- * @method HasManyList|Block[] Blocks()
+ * @method HasManyList<Block> Blocks()
  */
 class BlockPage extends DataObject implements TestOnly
 {
-    /**
-     * @var array
-     */
-    private static $db = [
+    private static string $table_name = 'SnapshotTest_BlockPage';
+
+    private static array $db = [
         'Title' => 'Varchar',
     ];
 
-    /**
-     * @var array
-     */
-    private static $has_many = [
+    private static array $has_many = [
         'Blocks' => Block::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $owns = [
+    private static array $owns = [
         'Blocks',
     ];
 
-    /**
-     * @var array
-     */
-    private static $extensions = [
+    private static array $extensions = [
         Versioned::class,
     ];
-
-    /**
-     * @var string
-     */
-    private static $table_name = 'SnapshotTest_BlockPage';
 }

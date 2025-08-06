@@ -14,20 +14,12 @@ use SilverStripe\Forms\Form;
 use SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest;
 use SilverStripe\ORM\DataObject;
 
-/**
- * Trait PageContextProvider
- *
- * @package SilverStripe\Snapshots\Listener
- */
 class PageContextProvider
 {
 
     use Injectable;
 
-    /**
-     * @var HTTPRequest|null
-     */
-    private $request;
+    private ?HTTPRequest $request;
 
     public function __construct(?HTTPRequest $request = null)
     {
@@ -41,7 +33,7 @@ class PageContextProvider
      * @param mixed $controller
      * @return SiteTree|null
      */
-    public function getCurrentPageFromController($controller): ?DataObject
+    public function getCurrentPageFromController(mixed $controller): ?DataObject
     {
         while ($controller instanceof Form || $controller instanceof GridFieldDetailForm_ItemRequest) {
             $controller = $controller->getController();
@@ -55,7 +47,7 @@ class PageContextProvider
             return null;
         }
 
-        $page = $controller->currentPage();
+        $page = $controller->currentRecord();
 
         if (!$page instanceof SiteTree) {
             return null;
@@ -116,34 +108,24 @@ class PageContextProvider
         return $page;
     }
 
-    /**
-     * @return HTTPRequest|null
-     */
     public function getRequest(): ?HTTPRequest
     {
         if ($this->request) {
             return $this->request;
         }
 
-        return Controller::has_curr()
-            ? Controller::curr()->getRequest()
-            : null;
+        $controller = Controller::curr();
+
+        return $controller?->getRequest();
     }
 
-    /**
-     * @param HTTPRequest $request
-     * @return $this
-     */
-    public function setRequest(HTTPRequest $request): self
+    public function setRequest(HTTPRequest $request): PageContextProvider
     {
         $this->request = $request;
 
         return $this;
     }
 
-    /**
-     * @return SiteTree|null
-     */
     public function getPageFromReferrer(): ?SiteTree
     {
         $request = $this->getRequest();

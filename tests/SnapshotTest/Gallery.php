@@ -9,30 +9,23 @@ use SilverStripe\ORM\ManyManyThroughList;
 use SilverStripe\Versioned\Versioned;
 
 /**
- * @property string $Title
  * @property int $BlockID
- * @method ManyManyThroughList|Image[] Images()
+ * @method Block Block()
+ * @method ManyManyThroughList<Image> Images()
  */
 class Gallery extends DataObject implements TestOnly
 {
-    /**
-     * @var array
-     */
-    private static $db = [
+    private static string $table_name = 'SnapshotTest_Gallery';
+
+    private static array $db = [
         'Title' => 'Varchar',
     ];
 
-    /**
-     * @var array
-     */
-    private static $has_one = [
+    private static array $has_one = [
         'Block' => Block::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $many_many = [
+    private static array $many_many = [
         'Images' => [
             'through' => GalleryImageJoin::class,
             'from' => 'Gallery',
@@ -40,22 +33,11 @@ class Gallery extends DataObject implements TestOnly
         ],
     ];
 
-    /**
-     * @var array
-     */
-    private static $extensions = [
+    private static array $extensions = [
         Versioned::class,
     ];
 
-    /**
-     * @var array
-     */
-    private static $owns = [
+    private static array $owns = [
         'Images',
     ];
-
-    /**
-     * @var string
-     */
-    private static $table_name = 'SnapshotTest_Gallery';
 }

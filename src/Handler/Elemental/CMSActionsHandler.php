@@ -3,13 +3,15 @@
 namespace SilverStripe\Snapshots\Handler\Elemental;
 
 use DNADesign\Elemental\Models\BaseElement;
+use Psr\Container\NotFoundExceptionInterface;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\ValidationException;
 use SilverStripe\Snapshots\Handler\HandlerAbstract;
 use SilverStripe\Snapshots\Snapshot;
 
 /**
+ * Event hook for @see BaseElement
  * Handles save, publish on individual blocks
  */
 class CMSActionsHandler extends HandlerAbstract
@@ -18,6 +20,7 @@ class CMSActionsHandler extends HandlerAbstract
      * @param EventContextInterface $context
      * @return Snapshot|null
      * @throws ValidationException
+     * @throws NotFoundExceptionInterface
      */
     protected function createSnapshot(EventContextInterface $context): ?Snapshot
     {
