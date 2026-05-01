@@ -145,7 +145,9 @@ class Snapshot extends DataObject
     {
         /** @var SnapshotItem $item */
         $item = $this->getOriginItem();
-        $entry = ActivityEntry::singleton()->createFromSnapshotItem($item);
+        $entry = $item
+            ? ActivityEntry::singleton()->createFromSnapshotItem($item)
+            : null;
         $key = sprintf('%s.ACTIVITY_NONE', Snapshot::class);
         $default = _t($key, 'none');
 
@@ -198,7 +200,9 @@ class Snapshot extends DataObject
     {
         /** @var SnapshotItem $item */
         $item = $this->getOriginItem();
-        $entry = ActivityEntry::singleton()->createFromSnapshotItem($item);
+        $entry = $item
+            ? ActivityEntry::singleton()->createFromSnapshotItem($item)
+            : null;
 
         return $entry?->Action;
     }
