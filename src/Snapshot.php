@@ -122,6 +122,12 @@ class Snapshot extends DataObject
         $originItem = $this->getOriginItem();
 
         if ($originItem) {
+            // Cater to cases where model class was removed from the project codebase
+            // but related versioned records are still present
+            if (!class_exists($originItem->ObjectClass)) {
+                return null;
+            }
+
             return Versioned::get_version(
                 $originItem->ObjectClass,
                 $originItem->ObjectID,
