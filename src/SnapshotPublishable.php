@@ -46,6 +46,10 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getPublishedVersionNumber(string $class, int $id): ?int
     {
+        if (!class_exists($class)) {
+            return null;
+        }
+
         $inst = DataObject::singleton($class);
 
         if (!$inst->hasExtension(Versioned::class)) {
@@ -72,6 +76,10 @@ class SnapshotPublishable extends RecursivePublishable
      */
     public function getAtSnapshotByClassAndId(string $class, int $id, mixed $snapshot): ?DataObject
     {
+        if (!class_exists($class)) {
+            return null;
+        }
+
         $baseClass = DataObject::getSchema()->baseDataClass($class);
 
         if (is_numeric($snapshot)) {
@@ -98,6 +106,10 @@ class SnapshotPublishable extends RecursivePublishable
 
     public function getAtLastSnapshotByClassAndId(string $class, int $id): ?DataObject
     {
+        if (!class_exists($class)) {
+            return null;
+        }
+
         /** @var SnapshotItem $lastItem */
         $lastItem = $this->getLastSnapshotItemByClassAndId($class, $id);
 
@@ -110,6 +122,10 @@ class SnapshotPublishable extends RecursivePublishable
 
     public function getLastSnapshotItemByClassAndId(string $class, int $id): ?DataObject
     {
+        if (!class_exists($class)) {
+            return null;
+        }
+
         return SnapshotItem::get()
             ->sort('Created', 'DESC')
             ->find('ObjectHash', $this->hashForSnapshot($class, $id));
@@ -291,6 +307,10 @@ class SnapshotPublishable extends RecursivePublishable
             $class = $item->ObjectClass;
             $id = $item->ObjectID;
 
+            if (!class_exists($class)) {
+                continue;
+            }
+
             /** @var DataObject|SnapshotPublishable $obj */
             $obj = DataObject::get_by_id($class, $id);
             $map[$this->hashObjectForSnapshot($obj)] = $obj;
@@ -442,6 +462,11 @@ class SnapshotPublishable extends RecursivePublishable
 
         foreach ($currentTracking as $relationName => $currentMap) {
             $class = $owner->getRelationClass($relationName);
+
+            if (!class_exists($class)) {
+                continue;
+            }
+
             $type = $owner->getRelationType($relationName);
             $prevMap = $previousTracking[$relationName] ?? [];
             $diffs[] = RelationDiffer::create($class, $type, $prevMap, $currentMap);

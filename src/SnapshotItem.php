@@ -156,6 +156,10 @@ class SnapshotItem extends DataObject
      */
     public function getItem(?int $version = null): ?DataObject
     {
+        if (!class_exists($this->ObjectClass)) {
+            return null;
+        }
+
         $singleton = DataObject::singleton($this->ObjectClass);
 
         // Item is versioned - find the requested version
@@ -172,7 +176,13 @@ class SnapshotItem extends DataObject
 
     public function getItemTitle(): string
     {
-        return $this->getItem()->singular_name() . '    --  ' . $this->getItem()->getTitle();
+        $itemModel = $this->getItem();
+
+        if (!$itemModel) {
+            return '';
+        }
+
+        return sprintf('%s    --  %s', $itemModel->singular_name(), $itemModel->getTitle());
     }
 
     /**

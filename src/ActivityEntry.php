@@ -54,8 +54,8 @@ class ActivityEntry extends ArrayData
             $flag = ActivityEntry::MODIFIED;
         }
 
-        // If the items been deleted then we want to get the last version of it
-        if ($itemObj === null || $itemObj->WasDeleted) {
+        // If the items been deleted then we want to get the last version of it (if the model class is still around)
+        if (($itemObj === null || $itemObj->WasDeleted) && class_exists($item->ObjectClass)) {
             $singleton = DataObject::singleton($item->ObjectClass);
 
             if ($singleton->hasExtension(Versioned::class)) {
@@ -98,14 +98,22 @@ class ActivityEntry extends ArrayData
 
     public function getDescription(): string
     {
-        if ($this->Subject instanceof SnapshotEvent && $this->Subject->Title) {
-            return $this->Subject->Title;
+        $subjectModel = $this->Subject;
+
+        if ($subjectModel instanceof SnapshotEvent && $subjectModel->Title) {
+            return $subjectModel->Title;
         }
 
-        return ucfirst(sprintf(
+        if (!$subjectModel) {
+            return '';
+        }
+
+        $description = sprintf(
             '%s "%s"',
-            $this->Subject->singular_name(),
-            $this->Subject->getTitle()
-        ));
+            $subjectModel->singular_name(),
+            $subjectModel->getTitle()
+        );
+
+        return ucfirst($description);
     }
 }
