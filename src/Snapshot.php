@@ -74,9 +74,13 @@ class Snapshot extends DataObject
             'title' => 'Model type',
             'filter' => 'ExactMatchFilter',
         ],
-        'AuthorID' => [
-            'title' => 'Author',
-            'filter' => 'ExactMatchFilter',
+        'Author.FirstName' => [
+            'title' => 'Author (first name)',
+            'filter' => 'PartialMatchFilter',
+        ],
+        'Author.Surname' => [
+            'title' => 'Author (surname)',
+            'filter' => 'PartialMatchFilter',
         ],
         'LastEdited' => [
             'title' => 'More recent than',
