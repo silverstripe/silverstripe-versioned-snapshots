@@ -7,6 +7,7 @@ use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
+use SilverStripe\ORM\Filters\GreaterThanFilter;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
@@ -57,6 +58,30 @@ class Snapshot extends DataObject
 
     private static array $cascade_deletes = [
         'Items',
+    ];
+
+    private static array $summary_fields = [
+        'LastEdited.Nice' => 'Activity date',
+        'ActivityAgo' => 'Time ago',
+        'Author.Title' => 'Author',
+        'ActivityType' => 'Activity type',
+        'OriginObjectType' => 'Model type',
+        'ActivityDescription' => 'Description',
+    ];
+
+    private static array $searchable_fields = [
+        'OriginClass' => [
+            'title' => 'Model type',
+            'filter' => 'ExactMatchFilter',
+        ],
+        'AuthorID' => [
+            'title' => 'Author',
+            'filter' => 'ExactMatchFilter',
+        ],
+        'LastEdited' => [
+            'title' => 'More recent than',
+            'filter' => GreaterThanFilter::class,
+        ],
     ];
 
     /**
@@ -168,6 +193,26 @@ class Snapshot extends DataObject
         $lastEditedField = $this->obj('LastEdited');
 
         return $lastEditedField->Ago(false);
+    }
+
+    /**
+     * Get human-readable type of the origin object
+     *
+     * @return string|null
+     */
+    public function getOriginObjectType(): ?string
+    {
+        if (!$this->OriginClass) {
+            return null;
+        }
+
+        if (!class_exists($this->OriginClass)) {
+            return null;
+        }
+
+        $origin = DataObject::singleton($this->OriginClass);
+
+        return $origin?->i18n_singular_name();
     }
 
     public function getIsLiveSnapshot(): bool
