@@ -82,6 +82,8 @@ class SnapshotSiteTree extends Extension
             return;
         }
 
+        $publish->addExtraClass('btn-primary');
+        $publish->setIcon('rocket');
         $publish->setTitle(_t(SiteTree::class . '.BUTTONSAVEPUBLISH', 'Publish'));
         $publish->removeExtraClass('btn-outline-primary font-icon-tick');
     }
