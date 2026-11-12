@@ -13,9 +13,3 @@ SilverStripe\Core\Injector\Injector:
   # custom page save handler for elemental
   SilverStripe\Snapshots\Handler\Form\SaveHandler:
     class: SilverStripe\Snapshots\Handler\Elemental\PageSaveHandler
-  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
-    properties:
-      handlers:
-        elementalEditorCMS:
-          on: [ 'cmsAction.apiSaveForm' ]
-          handler: '%$SilverStripe\Snapshots\Handler\Elemental\CMSActionsHandler'
