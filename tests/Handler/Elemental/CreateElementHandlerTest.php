@@ -75,4 +75,26 @@ class CreateElementHandlerTest extends SnapshotTestAbstract
 
         $handler->fire($context);
     }
+
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFireForRestContext(): void
+    {
+        $handler = CreateElementHandler::create();
+        $this->mockSnapshotLegacy()
+            ->expects($this->once())
+            ->method('createSnapshot');
+
+        $area = ElementalArea::create();
+        $area->write();
+
+        $context = Event::create('action', [
+            'data' => [
+                'elementalAreaID' => $area->ID,
+            ],
+        ]);
+
+        $handler->fire($context);
+    }
 }

@@ -1,0 +1,30 @@
+---
+Name: snapshot-events-elemental-rest
+Only:
+  moduleexists: 'dnadesign/silverstripe-elemental'
+---
+# Elemental 6 inline editor actions are REST endpoints on ElementalAreaController
+DNADesign\Elemental\Controllers\ElementalAreaController:
+  extensions:
+    SnapshotsElementalAreaListener: SilverStripe\Snapshots\Elemental\ElementalAreaListener
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\EventDispatcher\Dispatch\Dispatcher:
+    properties:
+      handlers:
+        elementalRestCreate:
+          on: [ 'elementalAreaAction.apiCreate' ]
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\CreateElementHandler'
+        elementalRestDuplicate:
+          on: [ 'elementalAreaAction.apiDuplicate' ]
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\DuplicateElementHandler'
+        elementalRestSort:
+          on: [ 'elementalAreaAction.apiSort' ]
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\SortElementsHandler'
+        elementalRestArchive:
+          on: [ 'elementalAreaAction.apiDelete' ]
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\ArchiveElementHandler'
+        elementalRestModify:
+          on:
+            - 'elementalAreaAction.apiPublish'
+            - 'elementalAreaAction.apiUnpublish'
+          handler: '%$SilverStripe\Snapshots\Handler\Elemental\ModifyElementHandler'

@@ -13,6 +13,8 @@ use SilverStripe\Snapshots\Snapshot;
 /**
  * Event hook for @see BaseElement
  * Handles save, publish on individual blocks
+ *
+ * @deprecated Elemental 6 has no apiSaveForm action. Inline block saves are handled by PageSaveHandler
  */
 class CMSActionsHandler extends HandlerAbstract
 {

@@ -85,14 +85,19 @@ class ModifyElementHandlerTest extends SnapshotTestAbstract
      * @throws ValidationException
      */
     #[DataProvider('publishStateDataProvider')]
-    public function testHandlerSetsPublishState(string $actionName, bool $wasPublished, bool $wasUnpublished): void
-    {
+    public function testHandlerSetsPublishState(
+        string $actionName,
+        string $contextKey,
+        string $idKey,
+        bool $wasPublished,
+        bool $wasUnpublished
+    ): void {
         $handler = ModifyElementHandler::create();
         $block = BaseElement::create();
         $block->write();
         $context = Event::create($actionName, [
-            'params' => [
-                'blockId' => $block->ID,
+            $contextKey => [
+                $idKey => $block->ID,
             ],
         ]);
 
@@ -115,11 +120,29 @@ class ModifyElementHandlerTest extends SnapshotTestAbstract
         return [
             'publish block' => [
                 'PublishBlock',
+                'params',
+                'blockId',
                 true,
                 false,
             ],
             'un-publish block' => [
                 'UnpublishBlock',
+                'params',
+                'blockId',
+                false,
+                true,
+            ],
+            'publish block (REST)' => [
+                'apiPublish',
+                'data',
+                'id',
+                true,
+                false,
+            ],
+            'un-publish block (REST)' => [
+                'apiUnpublish',
+                'data',
+                'id',
                 false,
                 true,
             ],

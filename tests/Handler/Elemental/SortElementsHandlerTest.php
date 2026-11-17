@@ -130,4 +130,31 @@ class SortElementsHandlerTest extends SnapshotTestAbstract
             'We expect to trigger the event handler (params)'
         );
     }
+
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFireForRestContext(): void
+    {
+        $handler = SortElementsHandler::create();
+        $area = ElementalArea::create();
+        $area->write();
+
+        $block = BaseElement::create();
+        $block->ParentID = $area->ID;
+        $block->write();
+
+        $mockSnapshot = $this->mockSnapshot();
+
+        $context = Event::create('action', [
+            'data' => [
+                'id' => $block->ID,
+            ],
+        ]);
+
+        $handler->fire($context);
+
+        $createSnapshotEventCount = $mockSnapshot->wasMethodCalled('createSnapshotEvent');
+        $this->assertEquals(1, $createSnapshotEventCount, 'We expect to trigger the event handler');
+    }
 }

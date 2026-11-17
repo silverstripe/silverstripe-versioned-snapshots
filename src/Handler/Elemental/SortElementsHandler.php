@@ -7,14 +7,13 @@ use Exception;
 use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
-use SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotPublishable;
 
 /**
  * Event hook for @see BaseElement
  */
-class SortElementsHandler extends Handler
+class SortElementsHandler extends ElementalHandlerAbstract
 {
     /**
      * @param EventContextInterface $context
@@ -31,14 +30,7 @@ class SortElementsHandler extends Handler
             return null;
         }
 
-        // GraphQL 4 ?? GraphQL 3
-        $params = $context->get('variables') ?? $context->get('params');
-
-        if (!$params) {
-            return null;
-        }
-
-        $blockID = $params['blockId'] ?? null;
+        $blockID = $this->getBlockID($context);
 
         if (!$blockID) {
             return null;
@@ -52,7 +44,10 @@ class SortElementsHandler extends Handler
         }
 
         $area = $block->Parent();
-        $message = _t(SortElementsHandler::class . '.REORDER_BLOCKS', 'Reordered blocks');
+        $message = _t(
+            SortElementsHandler::class . '.REORDER_BLOCKS',
+            'Reordered blocks'
+        );
         $event = Snapshot::singleton()->createSnapshotEvent($message);
         $event->addOwnershipChain($area);
 

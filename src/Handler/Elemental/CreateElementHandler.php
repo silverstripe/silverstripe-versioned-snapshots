@@ -6,13 +6,12 @@ use DNADesign\Elemental\Models\ElementalArea;
 use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
-use SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler;
 use SilverStripe\Snapshots\Snapshot;
 
 /**
  * Event hook for @see BaseElement
  */
-class CreateElementHandler extends Handler
+class CreateElementHandler extends ElementalHandlerAbstract
 {
     /**
      * @param EventContextInterface $context
@@ -28,14 +27,7 @@ class CreateElementHandler extends Handler
             return null;
         }
 
-        // GraphQL 4 ?? GraphQL 3
-        $params = $context->get('variables') ?? $context->get('params');
-
-        if (!$params) {
-            return null;
-        }
-
-        $areaID = $params['elementalAreaID'] ?? null;
+        $areaID = $this->getElementalAreaID($context);
 
         if (!$areaID) {
             return null;

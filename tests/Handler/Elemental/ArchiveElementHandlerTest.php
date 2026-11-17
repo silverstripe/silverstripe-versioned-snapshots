@@ -94,4 +94,30 @@ class ArchiveElementHandlerTest extends SnapshotTestAbstract
         $createSnapshotCount = $mockSnapshot->wasMethodCalled('createSnapshot');
         $this->assertEquals(1, $createSnapshotCount, 'We expect to trigger the event handler');
     }
+
+    /**
+     * @throws ValidationException
+     */
+    public function testHandlerDoesFireForRestContext(): void
+    {
+        $handler = ArchiveElementHandler::create();
+
+        /** @var BaseElement|Versioned $block */
+        $block = BaseElement::create();
+        $block->write();
+        $this->createHistory($block);
+
+        $mockSnapshot = $this->mockSnapshot();
+
+        $block->doArchive();
+        $context = Event::create('action', [
+            'data' => [
+                'id' => $block->ID,
+            ],
+        ]);
+        $handler->fire($context);
+
+        $createSnapshotCount = $mockSnapshot->wasMethodCalled('createSnapshot');
+        $this->assertEquals(1, $createSnapshotCount, 'We expect to trigger the event handler');
+    }
 }

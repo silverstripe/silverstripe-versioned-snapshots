@@ -6,7 +6,6 @@ use DNADesign\Elemental\Models\BaseElement;
 use Psr\Container\NotFoundExceptionInterface;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\EventDispatcher\Event\EventContextInterface;
-use SilverStripe\Snapshots\Handler\GraphQL\Middleware\Handler;
 use SilverStripe\Snapshots\Snapshot;
 use SilverStripe\Snapshots\SnapshotHasher;
 use SilverStripe\Snapshots\SnapshotPublishable;
@@ -14,7 +13,7 @@ use SilverStripe\Snapshots\SnapshotPublishable;
 /**
  * Event hook for @see BaseElement
  */
-class ArchiveElementHandler extends Handler
+class ArchiveElementHandler extends ElementalHandlerAbstract
 {
 
     use SnapshotHasher;
@@ -33,14 +32,7 @@ class ArchiveElementHandler extends Handler
             return null;
         }
 
-        // GraphQL 4 ?? GraphQL 3
-        $params = $context->get('variables') ?? $context->get('params');
-
-        if (!$params) {
-            return null;
-        }
-
-        $blockID = $params['blockId'] ?? null;
+        $blockID = $this->getBlockID($context);
 
         if (!$blockID) {
             return null;
